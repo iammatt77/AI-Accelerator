@@ -127,12 +127,22 @@ export async function addInput(
 }
 
 // ── (c) "Draft generálása" → adapter.generateDraft → mentés ──
-// A második paraméter (FormData) a form-kötés miatt van; nem használjuk.
+// A kétlépéses flow (bemenet → külön "Draft generálása") szándékos (v0.2 §8).
+// useActionState-kompatibilis: (projectId, prevState, formData) → FormState.
+// NEM dob kivételt — a hibát visszaadja, hogy a felületen LÁTHATÓ legyen.
 export async function generateDraftAction(
   projectId: string,
-  _formData?: FormData,
-): Promise<void> {
-  const supabase = createServiceSupabaseClient();
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  let supabase;
+  try {
+    supabase = createServiceSupabaseClient();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`Supabase kliens hiba: ${message}`);
+    return { ok: false, error: `Konfigurációs hiba: ${message}` };
+  }
 
   const { data: inputs, error: inputErr } = await supabase
     .from("input_items")
@@ -140,22 +150,35 @@ export async function generateDraftAction(
     .eq("project_id", projectId)
     .order("created_at", { ascending: true });
   if (inputErr) {
-    throw new Error(`Bemenetek lekérése sikertelen: ${inputErr.message}`);
+    return {
+      ok: false,
+      error: formatSupabaseError("Bemenetek lekérése sikertelen", inputErr),
+    };
   }
   const inputRows = (inputs ?? []) as InputItemRow[];
   if (inputRows.length === 0) {
-    throw new Error("Nincs bemenet a draft generálásához. Illessz be nyers szöveget először.");
+    return {
+      ok: false,
+      error: "Adj hozzá legalább egy nyers bemenetet a draft generálása előtt.",
+    };
   }
 
   const rawMaterial = inputRows.map((row) => row.raw_text).join("\n\n---\n\n");
   const sourceInputIds = inputRows.map((row) => row.id);
 
   // ÉLŐ Anthropic-hívás az adapteren át. A hívó nem tud az Anthropicről.
-  const { body } = await generateDraft({
-    phase: "P0",
-    rawMaterial,
-    templateKey: "p0_summary",
-  });
+  let body: string;
+  try {
+    ({ body } = await generateDraft({
+      phase: "P0",
+      rawMaterial,
+      templateKey: "p0_summary",
+    }));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`Draft generálás sikertelen: ${message}`);
+    return { ok: false, error: `Draft generálás sikertelen: ${message}` };
+  }
 
   const nextVersion = await nextArtifactVersion(supabase, projectId);
 
@@ -168,11 +191,15 @@ export async function generateDraftAction(
     source_input_ids: sourceInputIds,
   });
   if (insertErr) {
-    throw new Error(`Draft mentése sikertelen: ${insertErr.message}`);
+    return {
+      ok: false,
+      error: formatSupabaseError("Draft mentése sikertelen", insertErr),
+    };
   }
 
   await logDecision(projectId, "generate_draft", `Draft generálva (v${nextVersion}, ${sourceInputIds.length} forrás).`);
   revalidatePath(`/project/${projectId}`);
+  return { ok: true, error: null };
 }
 
 // ── (d) Draft body szerkesztése (helyben mentés, verzió nem nő) ─

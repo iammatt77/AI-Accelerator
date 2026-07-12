@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
-import {
-  generateDraftAction,
-  saveDraftBody,
-  approveArtifact,
-} from "@/app/actions";
+import { saveDraftBody, approveArtifact } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { InputForm } from "@/components/InputForm";
+import { GenerateForm } from "@/components/GenerateForm";
 import type {
   ArtifactRow,
   ClientRow,
@@ -95,16 +92,11 @@ export default async function ProjectPage({
 
         <InputForm projectId={id} />
 
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
-          <span className="text-sm text-[var(--muted)]">
-            {inputs.length} bemenet · {artifacts.length} artefaktum
-          </span>
-          <form action={generateDraftAction.bind(null, id)}>
-            <SubmitButton pendingLabel="Generálás élő API-val…">
-              Draft generálása
-            </SubmitButton>
-          </form>
-        </div>
+        <GenerateForm
+          projectId={id}
+          inputsCount={inputs.length}
+          artifactsCount={artifacts.length}
+        />
       </section>
 
       {/* (d) SPLIT-VIEW: bal = draft body (szerkeszthető), jobb = forrás */}
