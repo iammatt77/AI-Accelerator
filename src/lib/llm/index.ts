@@ -12,6 +12,9 @@ import Anthropic from "@anthropic-ai/sdk";
 //
 // TILOS az adapteren kívül bárhol Anthropic-hívás. A kulcs sosem kerül kliensre
 // (a "server-only" import ezt build-időben kikényszeríti).
+//
+// i18n-VÉDŐKORLÁT: a generált artefaktum a UI-nyelvtől (hu/en) FÜGGETLENÜL
+// magyar — az adapter és a promptjai az i18n-rétegtől érintetlenek.
 // ─────────────────────────────────────────────────────────────
 
 const DEFAULT_MODEL = "claude-opus-4-8";

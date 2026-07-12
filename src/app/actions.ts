@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { generateDraft } from "@/lib/llm";
 import type { ArtifactRow, InputItemRow } from "@/lib/db/types";
@@ -45,8 +46,9 @@ export async function createClientAndProject(formData: FormData): Promise<void> 
   const projectName = String(formData.get("projectName") ?? "").trim();
   const packageName = String(formData.get("package") ?? "").trim();
 
+  const tErrors = await getTranslations("errors");
   if (!clientName || !projectName) {
-    throw new Error("Az ügyfél neve és a projekt neve kötelező.");
+    throw new Error(tErrors("requiredClientAndProject"));
   }
 
   const supabase = createServiceSupabaseClient();
@@ -57,7 +59,9 @@ export async function createClientAndProject(formData: FormData): Promise<void> 
     .select()
     .single();
   if (clientErr || !client) {
-    throw new Error(`Kliens létrehozása sikertelen: ${clientErr?.message}`);
+    throw new Error(
+      tErrors("clientCreateFailed", { message: clientErr?.message ?? "?" }),
+    );
   }
 
   const { data: project, error: projectErr } = await supabase
@@ -71,7 +75,9 @@ export async function createClientAndProject(formData: FormData): Promise<void> 
     .select()
     .single();
   if (projectErr || !project) {
-    throw new Error(`Projekt létrehozása sikertelen: ${projectErr?.message}`);
+    throw new Error(
+      tErrors("projectCreateFailed", { message: projectErr?.message ?? "?" }),
+    );
   }
 
   // P0 fázis-rekord (most csak ez az egy kell).
@@ -95,9 +101,10 @@ export async function addInput(
   _prevState: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
   const rawText = String(formData.get("rawText") ?? "").trim();
   if (!rawText) {
-    return { ok: false, error: "A nyers szöveg nem lehet üres." };
+    return { ok: false, error: tErrors("emptyInput") };
   }
 
   let supabase;
@@ -106,7 +113,7 @@ export async function addInput(
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`Supabase kliens hiba: ${message}`);
-    return { ok: false, error: `Konfigurációs hiba: ${message}` };
+    return { ok: false, error: tErrors("config", { message }) };
   }
 
   const { error } = await supabase.from("input_items").insert({
@@ -117,7 +124,7 @@ export async function addInput(
   if (error) {
     return {
       ok: false,
-      error: formatSupabaseError("Bemenet mentése sikertelen", error),
+      error: formatSupabaseError(tErrors("inputSaveFailed"), error),
     };
   }
 
@@ -135,13 +142,14 @@ export async function generateDraftAction(
   _prevState: FormState,
   _formData: FormData,
 ): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
   let supabase;
   try {
     supabase = createServiceSupabaseClient();
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`Supabase kliens hiba: ${message}`);
-    return { ok: false, error: `Konfigurációs hiba: ${message}` };
+    return { ok: false, error: tErrors("config", { message }) };
   }
 
   const { data: inputs, error: inputErr } = await supabase
@@ -152,15 +160,12 @@ export async function generateDraftAction(
   if (inputErr) {
     return {
       ok: false,
-      error: formatSupabaseError("Bemenetek lekérése sikertelen", inputErr),
+      error: formatSupabaseError(tErrors("inputsFetchFailed"), inputErr),
     };
   }
   const inputRows = (inputs ?? []) as InputItemRow[];
   if (inputRows.length === 0) {
-    return {
-      ok: false,
-      error: "Adj hozzá legalább egy nyers bemenetet a draft generálása előtt.",
-    };
+    return { ok: false, error: tErrors("noInputForDraft") };
   }
 
   const rawMaterial = inputRows.map((row) => row.raw_text).join("\n\n---\n\n");
@@ -177,7 +182,7 @@ export async function generateDraftAction(
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`Draft generálás sikertelen: ${message}`);
-    return { ok: false, error: `Draft generálás sikertelen: ${message}` };
+    return { ok: false, error: tErrors("generateFailed", { message }) };
   }
 
   const nextVersion = await nextArtifactVersion(supabase, projectId);
@@ -193,7 +198,7 @@ export async function generateDraftAction(
   if (insertErr) {
     return {
       ok: false,
-      error: formatSupabaseError("Draft mentése sikertelen", insertErr),
+      error: formatSupabaseError(tErrors("draftSaveFailed"), insertErr),
     };
   }
 
@@ -217,7 +222,10 @@ export async function saveDraftBody(
     .eq("id", artifactId)
     .eq("status", "draft"); // csak draft szerkeszthető helyben
   if (error) {
-    throw new Error(`Draft mentése sikertelen: ${error.message}`);
+    const tErrors = await getTranslations("errors");
+    throw new Error(
+      `${tErrors("draftSaveFailed")}: ${error.message}`,
+    );
   }
 
   await logDecision(projectId, "edit_draft", `Draft szerkesztve (${artifactId}).`);
@@ -238,7 +246,10 @@ export async function approveArtifact(
     .eq("id", artifactId)
     .single();
   if (fetchErr || !current) {
-    throw new Error(`Artefaktum lekérése sikertelen: ${fetchErr?.message}`);
+    const tErrors = await getTranslations("errors");
+    throw new Error(
+      tErrors("artifactFetchFailed", { message: fetchErr?.message ?? "?" }),
+    );
   }
   const artifact = current as ArtifactRow;
 
@@ -256,7 +267,10 @@ export async function approveArtifact(
     source_input_ids: artifact.source_input_ids,
   });
   if (insertErr) {
-    throw new Error(`Jóváhagyott verzió mentése sikertelen: ${insertErr.message}`);
+    const tErrors = await getTranslations("errors");
+    throw new Error(
+      tErrors("approvedSaveFailed", { message: insertErr.message }),
+    );
   }
 
   await logDecision(

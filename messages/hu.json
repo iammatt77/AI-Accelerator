@@ -1,0 +1,104 @@
+{
+  "common": {
+    "appTitle": "AI Consulting rendszer",
+    "appDescription": "Generálási vertikum: nyers anyag → draft → jóváhagyás",
+    "create": "Létrehozás",
+    "creating": "Létrehozás…",
+    "saving": "Mentés…",
+    "processing": "Feldolgozás…"
+  },
+  "nav": {
+    "brandTitle": "AI Consulting",
+    "brandSubtitle": "rendszer · P0–P6",
+    "projects": "Projektek"
+  },
+  "dashboard": {
+    "title": "Projektek",
+    "lead": "Nyers anyag → szerveroldali generálás → draft → jóváhagyás."
+  },
+  "clients": {
+    "unknown": "ismeretlen ügyfél",
+    "newTitle": "Új kliens + projekt",
+    "nameLabel": "Ügyfél neve",
+    "industryLabel": "Iparág"
+  },
+  "projects": {
+    "nameLabel": "Projekt neve",
+    "packageLabel": "Csomag",
+    "packagePlaceholder": "pl. Felmérés"
+  },
+  "cockpit": {
+    "backToProjects": "Projektek",
+    "inputAndGenerate": "Bemenet & generálás",
+    "counts": "{inputs} bemenet · {artifacts} artefaktum",
+    "addInputFirst": "Előbb adj hozzá bemenetet fentebb",
+    "generateCta": "Draft generálása",
+    "generating": "Generálás élő API-val…",
+    "generated": "Draft elkészült."
+  },
+  "phases": {
+    "p0": { "short": "Kickoff", "full": "Engagement-setup" },
+    "p1": { "short": "Felmérés", "full": "Felderítés & felmérés" },
+    "p2": { "short": "Megoldásterv", "full": "Priorizálás & megoldás-definíció" },
+    "p3": { "short": "Build", "full": "Build" },
+    "p4": { "short": "Pilot", "full": "Pilot & validáció" },
+    "p5": { "short": "Adopció", "full": "Adopció & skálázás" },
+    "p6": { "short": "Üzemeltetés", "full": "Üzemeltetés & optimalizálás" },
+    "state": {
+      "locked": "zárt",
+      "open": "nyitott",
+      "in_progress": "folyamatban",
+      "at_gate": "kapu előtt",
+      "completed": "lezárt",
+      "not_started": "nem indult"
+    }
+  },
+  "gates": {
+    "label": "Kapu",
+    "closed": "lezárva"
+  },
+  "inputs": {
+    "placeholder": "Illeszd be a nyers ügyfélanyagot…",
+    "addCta": "Bemenet hozzáadása",
+    "saved": "Bemenet elmentve.",
+    "sourcesTitle": "Forrás bemenetek"
+  },
+  "artifacts": {
+    "draftHeading": "Draft",
+    "saveDraft": "Draft mentése",
+    "approveCta": "Jóváhagyás (Draft → Approved)",
+    "approving": "Jóváhagyás…",
+    "approveHint": "A jóváhagyás új verziót ment; a draft megmarad az audithoz. (Előbb mentsd a szerkesztést, ha módosítottál.)",
+    "historyTitle": "Verziótörténet",
+    "status": {
+      "draft": "Draft",
+      "in_review": "In review",
+      "approved": "Approved"
+    }
+  },
+  "errors": {
+    "emptyInput": "A nyers szöveg nem lehet üres.",
+    "config": "Konfigurációs hiba: {message}",
+    "inputSaveFailed": "Bemenet mentése sikertelen",
+    "inputsFetchFailed": "Bemenetek lekérése sikertelen",
+    "draftSaveFailed": "Draft mentése sikertelen",
+    "noInputForDraft": "Adj hozzá legalább egy nyers bemenetet a draft generálása előtt.",
+    "generateFailed": "Draft generálás sikertelen: {message}",
+    "projectsFetchFailed": "Projektek lekérése sikertelen: {message}",
+    "requiredClientAndProject": "Az ügyfél neve és a projekt neve kötelező.",
+    "clientCreateFailed": "Kliens létrehozása sikertelen: {message}",
+    "projectCreateFailed": "Projekt létrehozása sikertelen: {message}",
+    "artifactFetchFailed": "Artefaktum lekérése sikertelen: {message}",
+    "approvedSaveFailed": "Jóváhagyott verzió mentése sikertelen: {message}"
+  },
+  "empty": {
+    "noProjects": "Még nincs projekt. Hozz létre egyet jobbra.",
+    "noArtifact": "Még nincs artefaktum. Adj hozzá bemenetet, majd generálj draftot.",
+    "noSources": "Nincs forrás bemenet."
+  },
+  "settings": {
+    "language": "Nyelv",
+    "hungarian": "magyar",
+    "english": "angol"
+  }
+}

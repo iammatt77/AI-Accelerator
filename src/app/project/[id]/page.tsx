@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { saveDraftBody, approveArtifact } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -14,14 +15,6 @@ import type {
 } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
-
-// Az artefaktum-státusz feliratok mindkét UI-nyelven angolul maradnak
-// (terminus technicus).
-const STATUS_LABEL: Record<ArtifactRow["status"], string> = {
-  draft: "Draft",
-  in_review: "In review",
-  approved: "Approved",
-};
 
 interface ProjectWithClient extends ProjectRow {
   clients: ClientRow | null;
@@ -69,6 +62,23 @@ export default async function ProjectPage({
 
   const { project, inputs, artifacts } = data;
 
+  const [locale, tCockpit, tCommon, tClients, tInputs, tArtifacts, tEmpty] =
+    await Promise.all([
+      getLocale(),
+      getTranslations("cockpit"),
+      getTranslations("common"),
+      getTranslations("clients"),
+      getTranslations("inputs"),
+      getTranslations("artifacts"),
+      getTranslations("empty"),
+    ]);
+  const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
+
+  // Az artefaktum-státusz feliratok mindkét UI-nyelven angolul maradnak
+  // (terminus technicus) — a messages-fájlok mindkét nyelven ugyanazt hordozzák.
+  const statusLabel = (status: ArtifactRow["status"]) =>
+    tArtifacts(`status.${status}`);
+
   // A megjelenítendő artefaktum: a legmagasabb verziójú (a lista már verzió
   // szerint csökkenő). A bal panel szerkeszthető, ha draft.
   const current = artifacts[0] ?? null;
@@ -88,11 +98,11 @@ export default async function ProjectPage({
           href="/"
           className="text-mono-sm text-ink-tertiary hover:text-ink-secondary hover:underline"
         >
-          ← Projektek
+          ← {tCockpit("backToProjects")}
         </Link>
         <h1 className="mt-2 text-title">{project.name}</h1>
         <p className="text-body text-ink-secondary">
-          {project.clients?.name ?? "ismeretlen ügyfél"}
+          {project.clients?.name ?? tClients("unknown")}
           {project.clients?.industry ? ` · ${project.clients.industry}` : ""}
           {project.package ? ` · ${project.package}` : ""}
         </p>
@@ -100,7 +110,7 @@ export default async function ProjectPage({
 
       {/* (b) Nyers szöveg beillesztése + (c) Draft generálása */}
       <section className="glass-tile p-5">
-        <h2 className="text-body font-semibold">Bemenet & generálás</h2>
+        <h2 className="text-body font-semibold">{tCockpit("inputAndGenerate")}</h2>
         <InputForm projectId={id} />
         <GenerateForm
           projectId={id}
@@ -114,19 +124,17 @@ export default async function ProjectPage({
         {/* Bal: draft */}
         <div className="glass-tile p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-body font-semibold">Draft</h2>
+            <h2 className="text-body font-semibold">{tArtifacts("draftHeading")}</h2>
             {current && (
               <StatusPill
                 variant={current.status}
-                label={`${STATUS_LABEL[current.status]} · v${current.version}`}
+                label={`${statusLabel(current.status)} · v${current.version}`}
               />
             )}
           </div>
 
           {!current && (
-            <p className="text-body text-ink-tertiary">
-              Még nincs artefaktum. Adj hozzá bemenetet, majd generálj draftot.
-            </p>
+            <p className="text-body text-ink-tertiary">{tEmpty("noArtifact")}</p>
           )}
 
           {current && current.status === "draft" && (
@@ -143,8 +151,8 @@ export default async function ProjectPage({
                   className="w-full rounded-control border border-line bg-surface px-3 py-2 font-mono text-mono-sm"
                 />
                 <div className="flex flex-wrap gap-3">
-                  <SubmitButton variant="secondary" pendingLabel="Mentés…">
-                    Draft mentése
+                  <SubmitButton variant="secondary" pendingLabel={tCommon("saving")}>
+                    {tArtifacts("saveDraft")}
                   </SubmitButton>
                 </div>
               </form>
@@ -155,12 +163,11 @@ export default async function ProjectPage({
                 className="border-t border-line pt-3"
               >
                 <input type="hidden" name="body" value={current.body} />
-                <SubmitButton pendingLabel="Jóváhagyás…">
-                  Jóváhagyás (Draft → Approved)
+                <SubmitButton pendingLabel={tArtifacts("approving")}>
+                  {tArtifacts("approveCta")}
                 </SubmitButton>
                 <p className="mt-2 text-mono-sm text-ink-tertiary">
-                  A jóváhagyás új verziót ment; a draft megmarad az audithoz.
-                  (Előbb mentsd a szerkesztést, ha módosítottál.)
+                  {tArtifacts("approveHint")}
                 </p>
               </form>
             </div>
@@ -175,15 +182,16 @@ export default async function ProjectPage({
 
         {/* Jobb: forrás input_item(ek) — öröklött kontextus: süllyesztett kártya */}
         <div className="glass-tile p-5">
-          <h2 className="mb-3 text-body font-semibold">Forrás bemenetek</h2>
+          <h2 className="mb-3 text-body font-semibold">{tInputs("sourcesTitle")}</h2>
           {sourceInputs.length === 0 && (
-            <p className="text-body text-ink-tertiary">Nincs forrás bemenet.</p>
+            <p className="text-body text-ink-tertiary">{tEmpty("noSources")}</p>
           )}
           <ul className="space-y-3">
             {sourceInputs.map((input) => (
               <li key={input.id} className="card-sunken p-3">
                 <div className="mb-1 text-mono-sm text-ink-tertiary">
-                  {input.type} · {new Date(input.created_at).toLocaleString("hu-HU")}
+                  {input.type} ·{" "}
+                  {new Date(input.created_at).toLocaleString(dateLocale)}
                 </div>
                 <pre className="whitespace-pre-wrap font-sans text-body">
                   {input.raw_text}
@@ -197,7 +205,9 @@ export default async function ProjectPage({
       {/* Verziótörténet */}
       {artifacts.length > 0 && (
         <section>
-          <h2 className="mb-3 text-body font-semibold">Verziótörténet</h2>
+          <h2 className="mb-3 text-body font-semibold">
+            {tArtifacts("historyTitle")}
+          </h2>
           <ul className="space-y-2">
             {artifacts.map((artifact) => (
               <li
@@ -210,9 +220,9 @@ export default async function ProjectPage({
                 <span className="flex items-center gap-3 text-ink-tertiary">
                   <StatusPill
                     variant={artifact.status}
-                    label={STATUS_LABEL[artifact.status]}
+                    label={statusLabel(artifact.status)}
                   />
-                  {new Date(artifact.created_at).toLocaleString("hu-HU")}
+                  {new Date(artifact.created_at).toLocaleString(dateLocale)}
                 </span>
               </li>
             ))}

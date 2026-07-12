@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import "./globals.css";
 
 // Fontok next/font-tal — latin + latin-ext subset (magyar ékezetek!).
@@ -16,50 +19,58 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "AI Consulting rendszer — foundation",
-  description: "Generálási vertikum: nyers anyag → draft → jóváhagyás",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common");
+  return {
+    title: t("appTitle"),
+    description: t("appDescription"),
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="hu" className={`${hanken.variable} ${jetbrains.variable}`}>
-      <body className="bg-app text-ink antialiased">
-        <div className="flex min-h-dvh">
-          {/* Minimális oldalsáv-shell (alap-chrome). A teljes navigációs
-              váz (fázis-nav, stepper) a #4 csomag dolga. */}
-          <aside className="flex w-56 shrink-0 flex-col border-r border-line bg-glass backdrop-blur-md">
-            <div className="px-5 py-6">
-              <Link href="/" className="block">
-                <span className="block text-body font-semibold tracking-tight">
-                  AI Consulting
-                </span>
-                <span className="mt-0.5 block font-mono text-mono-sm text-ink-tertiary">
-                  rendszer · P0–P6
-                </span>
-              </Link>
-            </div>
-            <nav className="px-3">
-              <Link
-                href="/"
-                className="block rounded-control px-2 py-1.5 text-body text-ink-secondary transition-colors duration-[var(--motion-fast)] hover:bg-sunken hover:text-ink"
-              >
-                Projektek
-              </Link>
-            </nav>
-            <div className="mt-auto px-5 py-4">
-              {/* nyelvváltó helye (i18n lépés) */}
-            </div>
-          </aside>
+  const locale = await getLocale();
+  const t = await getTranslations("nav");
 
-          <main className="min-w-0 flex-1">
-            <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
-          </main>
-        </div>
+  return (
+    <html lang={locale} className={`${hanken.variable} ${jetbrains.variable}`}>
+      <body className="bg-app text-ink antialiased">
+        <NextIntlClientProvider>
+          <div className="flex min-h-dvh">
+            {/* Minimális oldalsáv-shell (alap-chrome). A teljes navigációs
+                váz (fázis-nav, stepper) a #4 csomag dolga. */}
+            <aside className="flex w-56 shrink-0 flex-col border-r border-line bg-glass backdrop-blur-md">
+              <div className="px-5 py-6">
+                <Link href="/" className="block">
+                  <span className="block text-body font-semibold tracking-tight">
+                    {t("brandTitle")}
+                  </span>
+                  <span className="mt-0.5 block font-mono text-mono-sm text-ink-tertiary">
+                    {t("brandSubtitle")}
+                  </span>
+                </Link>
+              </div>
+              <nav className="px-3">
+                <Link
+                  href="/"
+                  className="block rounded-control px-2 py-1.5 text-body text-ink-secondary transition-colors duration-[var(--motion-fast)] hover:bg-sunken hover:text-ink"
+                >
+                  {t("projects")}
+                </Link>
+              </nav>
+              <div className="mt-auto px-5 py-4">
+                <LocaleSwitcher />
+              </div>
+            </aside>
+
+            <main className="min-w-0 flex-1">
+              <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
+            </main>
+          </div>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

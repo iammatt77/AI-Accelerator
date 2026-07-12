@@ -1,0 +1,104 @@
+{
+  "common": {
+    "appTitle": "AI Consulting System",
+    "appDescription": "Generation vertical: raw material → draft → approval",
+    "create": "Create",
+    "creating": "Creating…",
+    "saving": "Saving…",
+    "processing": "Processing…"
+  },
+  "nav": {
+    "brandTitle": "AI Consulting",
+    "brandSubtitle": "system · P0–P6",
+    "projects": "Projects"
+  },
+  "dashboard": {
+    "title": "Projects",
+    "lead": "Raw material → server-side generation → draft → approval."
+  },
+  "clients": {
+    "unknown": "unknown client",
+    "newTitle": "New client + project",
+    "nameLabel": "Client name",
+    "industryLabel": "Industry"
+  },
+  "projects": {
+    "nameLabel": "Project name",
+    "packageLabel": "Package",
+    "packagePlaceholder": "e.g. Discovery"
+  },
+  "cockpit": {
+    "backToProjects": "Projects",
+    "inputAndGenerate": "Input & generation",
+    "counts": "{inputs} inputs · {artifacts} artifacts",
+    "addInputFirst": "Add an input above first",
+    "generateCta": "Generate draft",
+    "generating": "Generating via live API…",
+    "generated": "Draft ready."
+  },
+  "phases": {
+    "p0": { "short": "Kickoff", "full": "Engagement setup" },
+    "p1": { "short": "Discovery", "full": "Discovery & assessment" },
+    "p2": { "short": "Solution design", "full": "Prioritization & solution definition" },
+    "p3": { "short": "Build", "full": "Build" },
+    "p4": { "short": "Pilot", "full": "Pilot & validation" },
+    "p5": { "short": "Adoption", "full": "Adoption & scale" },
+    "p6": { "short": "Operations", "full": "Operations & optimization" },
+    "state": {
+      "locked": "locked",
+      "open": "open",
+      "in_progress": "in progress",
+      "at_gate": "at gate",
+      "completed": "completed",
+      "not_started": "not started"
+    }
+  },
+  "gates": {
+    "label": "Gate",
+    "closed": "closed"
+  },
+  "inputs": {
+    "placeholder": "Paste the raw client material…",
+    "addCta": "Add input",
+    "saved": "Input saved.",
+    "sourcesTitle": "Source inputs"
+  },
+  "artifacts": {
+    "draftHeading": "Draft",
+    "saveDraft": "Save draft",
+    "approveCta": "Approve (Draft → Approved)",
+    "approving": "Approving…",
+    "approveHint": "Approval saves a new version; the draft is kept for the audit trail. (Save your edits first if you changed anything.)",
+    "historyTitle": "Version history",
+    "status": {
+      "draft": "Draft",
+      "in_review": "In review",
+      "approved": "Approved"
+    }
+  },
+  "errors": {
+    "emptyInput": "The raw text cannot be empty.",
+    "config": "Configuration error: {message}",
+    "inputSaveFailed": "Failed to save input",
+    "inputsFetchFailed": "Failed to load inputs",
+    "draftSaveFailed": "Failed to save draft",
+    "noInputForDraft": "Add at least one raw input before generating a draft.",
+    "generateFailed": "Draft generation failed: {message}",
+    "projectsFetchFailed": "Failed to load projects: {message}",
+    "requiredClientAndProject": "Client name and project name are required.",
+    "clientCreateFailed": "Failed to create client: {message}",
+    "projectCreateFailed": "Failed to create project: {message}",
+    "artifactFetchFailed": "Failed to load artifact: {message}",
+    "approvedSaveFailed": "Failed to save approved version: {message}"
+  },
+  "empty": {
+    "noProjects": "No projects yet. Create one on the right.",
+    "noArtifact": "No artifact yet. Add an input, then generate a draft.",
+    "noSources": "No source inputs."
+  },
+  "settings": {
+    "language": "Language",
+    "hungarian": "Hungarian",
+    "english": "English"
+  }
+}

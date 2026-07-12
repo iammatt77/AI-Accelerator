@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { addInput, type FormState } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 
@@ -10,6 +11,8 @@ const initialState: FormState = { ok: false, error: null };
 // A sikertelen mentés többé nem némán 500-zik: a Supabase valódi hibaüzenete
 // (message + code + details + hint) itt jelenik meg a felhasználónak.
 export function InputForm({ projectId }: { projectId: string }) {
+  const t = useTranslations("inputs");
+  const tCommon = useTranslations("common");
   const [state, formAction] = useActionState(
     addInput.bind(null, projectId),
     initialState,
@@ -21,7 +24,7 @@ export function InputForm({ projectId }: { projectId: string }) {
         name="rawText"
         required
         rows={4}
-        placeholder="Illeszd be a nyers ügyfélanyagot…"
+        placeholder={t("placeholder")}
         className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
       />
 
@@ -33,10 +36,10 @@ export function InputForm({ projectId }: { projectId: string }) {
           {state.error}
         </p>
       )}
-      {state.ok && <p className="text-body text-done">Bemenet elmentve.</p>}
+      {state.ok && <p className="text-body text-done">{t("saved")}</p>}
 
-      <SubmitButton variant="secondary" pendingLabel="Mentés…">
-        Bemenet hozzáadása
+      <SubmitButton variant="secondary" pendingLabel={tCommon("saving")}>
+        {t("addCta")}
       </SubmitButton>
     </form>
   );

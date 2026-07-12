@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 
 interface SubmitButtonProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function SubmitButton({
   className = "",
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
+  const tCommon = useTranslations("common");
 
   const base =
     "inline-flex items-center justify-center rounded-control px-4 py-2 text-body font-medium transition-all duration-[var(--motion-base)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none";
@@ -37,7 +39,7 @@ export function SubmitButton({
       disabled={pending}
       className={`${base} ${styles[variant]} ${className}`}
     >
-      {pending ? (pendingLabel ?? "Feldolgozás…") : children}
+      {pending ? (pendingLabel ?? tCommon("processing")) : children}
     </button>
   );
 }

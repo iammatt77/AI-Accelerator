@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { createClientAndProject } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -17,27 +18,33 @@ async function loadProjects(): Promise<ProjectWithClient[]> {
     .select("*, clients ( name, industry )")
     .order("created_at", { ascending: false });
   if (error) {
-    throw new Error(`Projektek lekérése sikertelen: ${error.message}`);
+    const t = await getTranslations("errors");
+    throw new Error(t("projectsFetchFailed", { message: error.message }));
   }
   return (data ?? []) as ProjectWithClient[];
 }
 
 export default async function HomePage() {
-  const projects = await loadProjects();
+  const [projects, t, tCommon, tClients, tProjects, tEmpty] = await Promise.all([
+    loadProjects(),
+    getTranslations("dashboard"),
+    getTranslations("common"),
+    getTranslations("clients"),
+    getTranslations("projects"),
+    getTranslations("empty"),
+  ]);
 
   return (
     <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_320px]">
       {/* Projektlista */}
       <section>
-        <h1 className="text-title">Projektek</h1>
-        <p className="mt-1 text-body text-ink-secondary">
-          Nyers anyag → szerveroldali generálás → draft → jóváhagyás.
-        </p>
+        <h1 className="text-title">{t("title")}</h1>
+        <p className="mt-1 text-body text-ink-secondary">{t("lead")}</p>
 
         <ul className="mt-6 space-y-3">
           {projects.length === 0 && (
             <li className="rounded-tile border border-dashed border-line p-6 text-body text-ink-tertiary">
-              Még nincs projekt. Hozz létre egyet jobbra.
+              {tEmpty("noProjects")}
             </li>
           )}
           {projects.map((project) => (
@@ -53,7 +60,7 @@ export default async function HomePage() {
                   </span>
                 </div>
                 <div className="mt-1 text-body text-ink-secondary">
-                  {project.clients?.name ?? "ismeretlen ügyfél"}
+                  {project.clients?.name ?? tClients("unknown")}
                   {project.clients?.industry ? ` · ${project.clients.industry}` : ""}
                 </div>
               </Link>
@@ -64,14 +71,18 @@ export default async function HomePage() {
 
       {/* (a) Kliens + projekt létrehozása */}
       <section>
-        <h2 className="text-body font-semibold">Új kliens + projekt</h2>
+        <h2 className="text-body font-semibold">{tClients("newTitle")}</h2>
         <form action={createClientAndProject} className="mt-4 space-y-3">
-          <Field label="Ügyfél neve" name="clientName" required />
-          <Field label="Iparág" name="industry" />
-          <Field label="Projekt neve" name="projectName" required />
-          <Field label="Csomag" name="package" placeholder="pl. Discovery" />
-          <SubmitButton pendingLabel="Létrehozás…" className="w-full">
-            Létrehozás
+          <Field label={tClients("nameLabel")} name="clientName" required />
+          <Field label={tClients("industryLabel")} name="industry" />
+          <Field label={tProjects("nameLabel")} name="projectName" required />
+          <Field
+            label={tProjects("packageLabel")}
+            name="package"
+            placeholder={tProjects("packagePlaceholder")}
+          />
+          <SubmitButton pendingLabel={tCommon("creating")} className="w-full">
+            {tCommon("create")}
           </SubmitButton>
         </form>
       </section>

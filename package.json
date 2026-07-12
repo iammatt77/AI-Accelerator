@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "i18n:check": "node scripts/i18n-check.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
     "@supabase/supabase-js": "^2.110.2",
     "next": "^16.2.10",
+    "next-intl": "^4.13.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "server-only": "^0.0.1"
