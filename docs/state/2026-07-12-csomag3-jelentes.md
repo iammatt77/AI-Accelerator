@@ -24,7 +24,7 @@ A 0. lépés auditja megállapította (részletek az audit-fájlban):
 | 1. Tokenek | `bc614f8` | `src/styles/tokens.css` + `@theme` mapping + fontok (next/font, latin-ext) + alap-chrome átállítás + `StatusPill` (ikon+szöveg) + minimál oldalsáv-shell |
 | 2. i18n | `374552b` | next-intl routing nélkül (cookie `locale`, default hu), `messages/hu.json`+`en.json` (13 névtér), minden UI-string kulcsosítva (FormState/throw hibák is), HU\|EN pill, `npm run i18n:check`, llm-adapter 1 soros védőkomment |
 | 3. Seed | `382b86e` | `scripts/seed.ts` + `npm run seed` (tsx), fix UUID-k + upsert, demo-tartalom szó szerint |
-| 4. Önellenőrzés | `75c66c6` | a review-workflow 12 megerősített leletének javítása (lásd 3. szakasz) |
+| 4. Önellenőrzés | `b324bef` | a review-workflow 12 megerősített leletének javítása (lásd 3. szakasz) |
 | 5. Jelentés | (ez a commit) | záró jelentés |
 
 ## 3. Önellenőrzés eredményei
@@ -93,7 +93,7 @@ verifikátorral — összesen 20 ügynök. Eredmény: **15 lelet → 12 megerős
 (a szó szerinti tartalmak, a séma-illeszkedés, az llm-adapter érintetlensége
 és a függőség-megkötés igazolva).
 
-Mind a 12 megerősített lelet javítva (`75c66c6`), élőben újra-ellenőrizve:
+Mind a 12 megerősített lelet javítva (`b324bef`), élőben újra-ellenőrizve:
 
 | Lelet | Javítás |
 | --- | --- |
