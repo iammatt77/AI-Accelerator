@@ -5,7 +5,8 @@
     "create": "Létrehozás",
     "creating": "Létrehozás…",
     "saving": "Mentés…",
-    "processing": "Feldolgozás…"
+    "processing": "Feldolgozás…",
+    "backHome": "Vissza a projektekhez"
   },
   "nav": {
     "brandTitle": "AI Consulting",
@@ -37,13 +38,34 @@
     "generated": "Draft elkészült."
   },
   "phases": {
-    "p0": { "short": "Kickoff", "full": "Engagement-setup" },
-    "p1": { "short": "Felmérés", "full": "Felderítés & felmérés" },
-    "p2": { "short": "Megoldásterv", "full": "Priorizálás & megoldás-definíció" },
-    "p3": { "short": "Build", "full": "Build" },
-    "p4": { "short": "Pilot", "full": "Pilot & validáció" },
-    "p5": { "short": "Adopció", "full": "Adopció & skálázás" },
-    "p6": { "short": "Üzemeltetés", "full": "Üzemeltetés & optimalizálás" },
+    "p0": {
+      "short": "Kickoff",
+      "full": "Engagement-setup"
+    },
+    "p1": {
+      "short": "Felmérés",
+      "full": "Felderítés & felmérés"
+    },
+    "p2": {
+      "short": "Megoldásterv",
+      "full": "Priorizálás & megoldás-definíció"
+    },
+    "p3": {
+      "short": "Build",
+      "full": "Build"
+    },
+    "p4": {
+      "short": "Pilot",
+      "full": "Pilot & validáció"
+    },
+    "p5": {
+      "short": "Adopció",
+      "full": "Adopció & skálázás"
+    },
+    "p6": {
+      "short": "Üzemeltetés",
+      "full": "Üzemeltetés & optimalizálás"
+    },
     "state": {
       "locked": "zárt",
       "open": "nyitott",
@@ -61,7 +83,8 @@
     "placeholder": "Illeszd be a nyers ügyfélanyagot…",
     "addCta": "Bemenet hozzáadása",
     "saved": "Bemenet elmentve.",
-    "sourcesTitle": "Forrás bemenetek"
+    "sourcesTitle": "Forrás bemenetek",
+    "listTitle": "Bemenetek"
   },
   "artifacts": {
     "draftHeading": "Draft",
@@ -89,7 +112,13 @@
     "clientCreateFailed": "Kliens létrehozása sikertelen: {message}",
     "projectCreateFailed": "Projekt létrehozása sikertelen: {message}",
     "artifactFetchFailed": "Artefaktum lekérése sikertelen: {message}",
-    "approvedSaveFailed": "Jóváhagyott verzió mentése sikertelen: {message}"
+    "approvedSaveFailed": "Jóváhagyott verzió mentése sikertelen: {message}",
+    "unknown": "ismeretlen hiba",
+    "notFoundTitle": "Az oldal nem található",
+    "notFoundBody": "A keresett projekt vagy oldal nem létezik.",
+    "genericTitle": "Váratlan hiba történt",
+    "genericBody": "A művelet nem fejeződött be. Próbáld újra; ha a hiba megmarad, nézd meg a szerver-logot.",
+    "retry": "Újrapróbálás"
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet jobbra.",

@@ -42,7 +42,7 @@ export default async function RootLayout({
           <div className="flex min-h-dvh">
             {/* Minimális oldalsáv-shell (alap-chrome). A teljes navigációs
                 váz (fázis-nav, stepper) a #4 csomag dolga. */}
-            <aside className="flex w-56 shrink-0 flex-col border-r border-line bg-glass backdrop-blur-md">
+            <aside className="glass-panel flex w-56 shrink-0 flex-col border-r border-line">
               <div className="px-5 py-6">
                 <Link href="/" className="block">
                   <span className="block text-body font-semibold tracking-tight">

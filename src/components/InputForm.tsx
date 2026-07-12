@@ -20,10 +20,15 @@ export function InputForm({ projectId }: { projectId: string }) {
 
   return (
     <form action={formAction} className="mt-3 space-y-3">
+      {/* key + defaultValue: React 19 a lezárult action után reseteli a nem
+          kontrollált mezőt — hibaágon a state.values.rawText-ből remountolva
+          a beillesztett szöveg NEM veszik el. */}
       <textarea
+        key={state.nonce ?? 0}
         name="rawText"
         required
         rows={4}
+        defaultValue={state.values?.rawText}
         placeholder={t("placeholder")}
         className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
       />

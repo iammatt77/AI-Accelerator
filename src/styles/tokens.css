@@ -92,6 +92,7 @@
   --blur-glass: blur(20px) saturate(150%);
   --blur-glass-soft: blur(10px);
   --shadow-tile: 0 10px 30px rgba(73, 77, 95, 0.1);
+  --shadow-tile-hover: 0 14px 40px rgba(73, 77, 95, 0.14);
   --shadow-tile-sm: 0 3px 12px rgba(73, 77, 95, 0.08);
   --shadow-action: 0 3px 8px rgba(132, 88, 179, 0.4);
   --shadow-action-hover: 0 6px 16px rgba(132, 88, 179, 0.32);

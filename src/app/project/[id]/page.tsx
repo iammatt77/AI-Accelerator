@@ -73,6 +73,9 @@ export default async function ProjectPage({
       getTranslations("empty"),
     ]);
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
+  // Szerver-komponensben formázunk: időzóna nélkül a SZERVER (prod: UTC)
+  // zónájában jelenne meg minden időbélyeg — fixen Europe/Budapest.
+  const dateOptions = { timeZone: "Europe/Budapest" } as const;
 
   // Az artefaktum-státusz feliratok mindkét UI-nyelven angolul maradnak
   // (terminus technicus) — a messages-fájlok mindkét nyelven ugyanazt hordozzák.
@@ -83,12 +86,18 @@ export default async function ProjectPage({
   // szerint csökkenő). A bal panel szerkeszthető, ha draft.
   const current = artifacts[0] ?? null;
   const inputsById = new Map(inputs.map((i) => [i.id, i]));
-  const sourceInputs =
-    current && current.source_input_ids.length > 0
-      ? current.source_input_ids
-          .map((sid) => inputsById.get(sid))
-          .filter((i): i is InputItemRow => Boolean(i))
-      : inputs;
+  // Igazmondó provenance: „Forrás bemenetek" cím CSAK akkor, ha az aktuális
+  // artefaktumnak tényleges forrásai vannak; különben a projekt bemeneteit
+  // semleges „Bemenetek" cím alatt listázzuk (nem állítjuk forrásnak).
+  const hasRealSources = Boolean(current && current.source_input_ids.length > 0);
+  const sourceInputs = hasRealSources
+    ? current!.source_input_ids
+        .map((sid) => inputsById.get(sid))
+        .filter((i): i is InputItemRow => Boolean(i))
+    : inputs;
+  const sourcesHeading = hasRealSources
+    ? tInputs("sourcesTitle")
+    : tInputs("listTitle");
 
   return (
     <div className="space-y-8">
@@ -182,7 +191,7 @@ export default async function ProjectPage({
 
         {/* Jobb: forrás input_item(ek) — öröklött kontextus: süllyesztett kártya */}
         <div className="glass-tile p-5">
-          <h2 className="mb-3 text-body font-semibold">{tInputs("sourcesTitle")}</h2>
+          <h2 className="mb-3 text-body font-semibold">{sourcesHeading}</h2>
           {sourceInputs.length === 0 && (
             <p className="text-body text-ink-tertiary">{tEmpty("noSources")}</p>
           )}
@@ -191,7 +200,7 @@ export default async function ProjectPage({
               <li key={input.id} className="card-sunken p-3">
                 <div className="mb-1 text-mono-sm text-ink-tertiary">
                   {input.type} ·{" "}
-                  {new Date(input.created_at).toLocaleString(dateLocale)}
+                  {new Date(input.created_at).toLocaleString(dateLocale, dateOptions)}
                 </div>
                 <pre className="whitespace-pre-wrap font-sans text-body">
                   {input.raw_text}
@@ -222,7 +231,7 @@ export default async function ProjectPage({
                     variant={artifact.status}
                     label={statusLabel(artifact.status)}
                   />
-                  {new Date(artifact.created_at).toLocaleString(dateLocale)}
+                  {new Date(artifact.created_at).toLocaleString(dateLocale, dateOptions)}
                 </span>
               </li>
             ))}

@@ -5,7 +5,8 @@
     "create": "Create",
     "creating": "Creating…",
     "saving": "Saving…",
-    "processing": "Processing…"
+    "processing": "Processing…",
+    "backHome": "Back to projects"
   },
   "nav": {
     "brandTitle": "AI Consulting",
@@ -30,20 +31,41 @@
   "cockpit": {
     "backToProjects": "Projects",
     "inputAndGenerate": "Input & generation",
-    "counts": "{inputs} inputs · {artifacts} artifacts",
+    "counts": "{inputs, plural, one {# input} other {# inputs}} · {artifacts, plural, one {# artifact} other {# artifacts}}",
     "addInputFirst": "Add an input above first",
     "generateCta": "Generate draft",
     "generating": "Generating via live API…",
     "generated": "Draft ready."
   },
   "phases": {
-    "p0": { "short": "Kickoff", "full": "Engagement setup" },
-    "p1": { "short": "Discovery", "full": "Discovery & assessment" },
-    "p2": { "short": "Solution design", "full": "Prioritization & solution definition" },
-    "p3": { "short": "Build", "full": "Build" },
-    "p4": { "short": "Pilot", "full": "Pilot & validation" },
-    "p5": { "short": "Adoption", "full": "Adoption & scale" },
-    "p6": { "short": "Operations", "full": "Operations & optimization" },
+    "p0": {
+      "short": "Kickoff",
+      "full": "Engagement setup"
+    },
+    "p1": {
+      "short": "Discovery",
+      "full": "Discovery & assessment"
+    },
+    "p2": {
+      "short": "Solution design",
+      "full": "Prioritization & solution definition"
+    },
+    "p3": {
+      "short": "Build",
+      "full": "Build"
+    },
+    "p4": {
+      "short": "Pilot",
+      "full": "Pilot & validation"
+    },
+    "p5": {
+      "short": "Adoption",
+      "full": "Adoption & scale"
+    },
+    "p6": {
+      "short": "Operations",
+      "full": "Operations & optimization"
+    },
     "state": {
       "locked": "locked",
       "open": "open",
@@ -61,7 +83,8 @@
     "placeholder": "Paste the raw client material…",
     "addCta": "Add input",
     "saved": "Input saved.",
-    "sourcesTitle": "Source inputs"
+    "sourcesTitle": "Source inputs",
+    "listTitle": "Inputs"
   },
   "artifacts": {
     "draftHeading": "Draft",
@@ -89,7 +112,13 @@
     "clientCreateFailed": "Failed to create client: {message}",
     "projectCreateFailed": "Failed to create project: {message}",
     "artifactFetchFailed": "Failed to load artifact: {message}",
-    "approvedSaveFailed": "Failed to save approved version: {message}"
+    "approvedSaveFailed": "Failed to save approved version: {message}",
+    "unknown": "unknown error",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The requested project or page does not exist.",
+    "genericTitle": "Something went wrong",
+    "genericBody": "The operation did not complete. Try again; if the error persists, check the server log.",
+    "retry": "Try again"
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the right.",

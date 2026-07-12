@@ -93,8 +93,26 @@ body {
     border-radius: var(--radius-tile);
     box-shadow: var(--shadow-tile), var(--edge-top);
   }
+  /* Interaktív üveg-csempe (pl. kattintható kártya): hover-nél mélyebb
+     árnyék, de a felső fény-él MEGMARAD (törvény 2). */
+  .glass-tile-interactive {
+    transition: box-shadow var(--motion-base) var(--motion-ease);
+  }
+  .glass-tile-interactive:hover {
+    box-shadow: var(--shadow-tile-hover), var(--edge-top);
+  }
+
+  /* Üveg chrome-felület (pl. oldalsáv): fátyol + lágy blur a tokenből,
+     árnyék és radius nélkül. */
+  .glass-panel {
+    background: var(--glass-tile);
+    -webkit-backdrop-filter: var(--blur-glass-soft);
+    backdrop-filter: var(--blur-glass-soft);
+  }
+
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .glass-tile {
+    .glass-tile,
+    .glass-panel {
       background: var(--surface-solid);
     }
   }

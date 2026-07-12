@@ -10,7 +10,7 @@ export function createBrowserSupabaseClient(): SupabaseClient {
 
   if (!url || !anonKey) {
     throw new Error(
-      "Hiányzó NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY környezeti változó.",
+      "NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY env var missing (.env.local)",
     );
   }
 

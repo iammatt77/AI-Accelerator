@@ -51,7 +51,7 @@ export default async function HomePage() {
             <li key={project.id}>
               <Link
                 href={`/project/${project.id}`}
-                className="glass-tile block p-4 transition-shadow duration-[var(--motion-base)] hover:shadow-tile-sm"
+                className="glass-tile glass-tile-interactive block p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium">{project.name}</span>

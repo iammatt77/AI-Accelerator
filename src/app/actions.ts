@@ -11,8 +11,16 @@ import type { ArtifactRow, InputItemRow } from "@/lib/db/types";
 const ARTIFACT_TYPE = "p0_summary";
 
 // Űrlap-action visszatérési állapot (useActionState-hez). A hiba a felületen
-// LÁTHATÓ lesz, nem némán 500-zik.
-export type FormState = { ok: boolean; error: string | null };
+// LÁTHATÓ lesz, nem némán 500-zik. A `values` a beküldött mezőértékeket adja
+// vissza hiba esetén (React 19 hibaágon is reseteli a nem kontrollált
+// mezőket — így nem veszik el a beillesztett szöveg); a `nonce` a mező
+// remountolásához kell (key).
+export type FormState = {
+  ok: boolean;
+  error: string | null;
+  values?: { rawText?: string };
+  nonce?: number;
+};
 
 interface SupabaseErrorLike {
   message?: string;
@@ -27,9 +35,13 @@ interface SupabaseErrorLike {
  * szerver-logban is látszik a valódi ok — pl. hiányzó tábla (PGRST205),
  * ismeretlen oszlop (42703), FK-sértés (23503), RLS-tiltás (42501).
  */
-function formatSupabaseError(prefix: string, error: SupabaseErrorLike | null): string {
-  if (!error) return `${prefix}: ismeretlen hiba.`;
-  const parts = [error.message ?? "ismeretlen hiba"];
+function formatSupabaseError(
+  prefix: string,
+  error: SupabaseErrorLike | null,
+  unknownLabel: string,
+): string {
+  if (!error) return `${prefix}: ${unknownLabel}`;
+  const parts = [error.message ?? unknownLabel];
   if (error.code) parts.push(`[${error.code}]`);
   if (error.details) parts.push(`— ${error.details}`);
   if (error.hint) parts.push(`(hint: ${error.hint})`);
@@ -103,8 +115,9 @@ export async function addInput(
 ): Promise<FormState> {
   const tErrors = await getTranslations("errors");
   const rawText = String(formData.get("rawText") ?? "").trim();
+  const nonce = Date.now();
   if (!rawText) {
-    return { ok: false, error: tErrors("emptyInput") };
+    return { ok: false, error: tErrors("emptyInput"), nonce };
   }
 
   let supabase;
@@ -113,7 +126,12 @@ export async function addInput(
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`Supabase kliens hiba: ${message}`);
-    return { ok: false, error: tErrors("config", { message }) };
+    return {
+      ok: false,
+      error: tErrors("config", { message }),
+      values: { rawText },
+      nonce,
+    };
   }
 
   const { error } = await supabase.from("input_items").insert({
@@ -124,13 +142,15 @@ export async function addInput(
   if (error) {
     return {
       ok: false,
-      error: formatSupabaseError(tErrors("inputSaveFailed"), error),
+      error: formatSupabaseError(tErrors("inputSaveFailed"), error, tErrors("unknown")),
+      values: { rawText },
+      nonce,
     };
   }
 
   await logDecision(projectId, "add_input", `Nyers bemenet hozzáadva (${rawText.length} karakter).`);
   revalidatePath(`/project/${projectId}`);
-  return { ok: true, error: null };
+  return { ok: true, error: null, nonce };
 }
 
 // ── (c) "Draft generálása" → adapter.generateDraft → mentés ──
@@ -160,7 +180,7 @@ export async function generateDraftAction(
   if (inputErr) {
     return {
       ok: false,
-      error: formatSupabaseError(tErrors("inputsFetchFailed"), inputErr),
+      error: formatSupabaseError(tErrors("inputsFetchFailed"), inputErr, tErrors("unknown")),
     };
   }
   const inputRows = (inputs ?? []) as InputItemRow[];
@@ -198,7 +218,7 @@ export async function generateDraftAction(
   if (insertErr) {
     return {
       ok: false,
-      error: formatSupabaseError(tErrors("draftSaveFailed"), insertErr),
+      error: formatSupabaseError(tErrors("draftSaveFailed"), insertErr, tErrors("unknown")),
     };
   }
 

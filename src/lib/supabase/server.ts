@@ -11,7 +11,7 @@ export function createServiceSupabaseClient(): SupabaseClient {
 
   if (!url || !serviceKey) {
     throw new Error(
-      "Hiányzó SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY környezeti változó.",
+      "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY env var missing (.env.local)",
     );
   }
 
