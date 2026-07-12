@@ -1,0 +1,99 @@
+/* ─────────────────────────────────────────────────────────────
+ * Design-tokenek — v0.4 „angular glass"
+ * EGYETLEN forrásfájl: minden szín/tipó/tér/mozgás token itt él.
+ * A komponensek Tailwind-osztályokon át (semantic mapping a
+ * globals.css @theme blokkjában) vagy közvetlen var()-ral
+ * hivatkoznak ezekre. Literál hex az alap-chrome-ban TILOS —
+ * csak ebben a fájlban szerepelhet.
+ *
+ * Törvények (v0.4):
+ *  1. üveg-csempe alatt tömör fátyol; törzs-kontraszt ≥7:1;
+ *     ink/tertiary csak meta-szövegre
+ *  2. lágy árnyék + 1px felső fény-él; erős gradiens/neon tilos
+ *  3. egy akcentus: lila csak döntési pontokon
+ *  4. státusz = ikon + szöveg, sosem csak szín
+ *  5. fókusz: 2px lila gyűrű
+ *  6. öröklött kontextus-kártya süllyesztett, nem üveg
+ *  7. zárt elem halk: ink/tertiary + lakat + tooltip
+ * ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── SZÍN ── */
+  --bg-app: #eaecf3;
+  --glass-tile: rgba(255, 255, 255, 0.55);
+  --surface-solid: #ffffff;
+  --surface-sunken: #f4f5f9;
+
+  --ink-primary: #23262f;
+  --ink-secondary: #5a5f70; /* származtatott */
+  --ink-tertiary: #8b90a3; /* csak meta-szöveg */
+
+  --border-subtle: #e2e4ec;
+  --edge-highlight: rgba(255, 255, 255, 0.9);
+
+  --action-primary: #8458b3; /* lila — csak döntési pontokon */
+  --action-hover: #9b6bce;
+  --action-light: #d0bdf4;
+  --info-sky: #a0d2eb;
+
+  --status-done: #3e9e6e;
+  --status-active: #8458b3;
+  --status-gate: #b4801e;
+  --status-pivot: #2e77a8;
+  --status-error: #c0455a;
+  --status-locked: #8b90a3;
+
+  /* ── TIPÓ ──
+   * display: Hanken Grotesk 34/800 · title: 18/600 · body: 14/400 lh 1.55
+   * metric: JetBrains Mono 22/700 · mono: JetBrains Mono ~12/500
+   * A --font-hanken / --font-jetbrains változókat a next/font tölti be
+   * (layout.tsx), latin + latin-ext subsettel (magyar ékezetek).
+   */
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+
+  --type-display-size: 34px;
+  --type-display-weight: 800;
+  --type-title-size: 18px;
+  --type-title-weight: 600;
+  --type-body-size: 14px;
+  --type-body-weight: 400;
+  --type-body-leading: 1.55;
+  --type-metric-size: 22px;
+  --type-metric-weight: 700;
+  --type-mono-size: 12px;
+  --type-mono-weight: 500;
+
+  /* ── TÉR (4px-rács) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* ── RADIUS („angular": szögletes alap) ── */
+  --radius-control: 2px;
+  --radius-tile: 4px;
+  --radius-shell: 6px;
+  --radius-pill: 999px;
+
+  /* ── MOZGÁS ── */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-gate: 320ms;
+  --motion-ease: cubic-bezier(0, 0, 0.2, 1); /* ease-out */
+
+  /* ── SZÁRMAZTATOTT RECEPTEK (a v0.4 referencia-HTML-ből) ──
+   * üveg: fátyol + blur(20px) saturate(150%); él: 1px felső fény-él
+   * árnyék: lágy, hűvös szürkéskék (73,77,95) alapú
+   */
+  --blur-glass: blur(20px) saturate(150%);
+  --blur-glass-soft: blur(10px);
+  --shadow-tile: 0 10px 30px rgba(73, 77, 95, 0.1);
+  --shadow-tile-sm: 0 3px 12px rgba(73, 77, 95, 0.08);
+  --shadow-action: 0 3px 8px rgba(132, 88, 179, 0.4);
+  --shadow-action-hover: 0 6px 16px rgba(132, 88, 179, 0.32);
+  --edge-top: inset 0 1px 0 var(--edge-highlight);
+}

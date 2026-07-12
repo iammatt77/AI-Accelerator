@@ -25,15 +25,15 @@ export function GenerateForm({
   const hasInput = inputsCount > 0;
 
   return (
-    <div className="mt-4 space-y-3 border-t border-[var(--border)] pt-4">
+    <div className="mt-4 space-y-3 border-t border-line pt-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-[var(--muted)]">
+        <span className="text-body text-ink-secondary">
           {inputsCount} bemenet · {artifactsCount} artefaktum
         </span>
         <form action={formAction} className="flex items-center gap-3">
           {/* Opcionális vizuális segítség — NEM tiltja/blokkolja a gombot. */}
           {!hasInput && !state.error && (
-            <span className="text-xs text-[var(--muted)]">
+            <span className="text-mono-sm text-ink-tertiary">
               Előbb adj hozzá bemenetet fentebb
             </span>
           )}
@@ -46,16 +46,12 @@ export function GenerateForm({
       {state.error && (
         <p
           role="alert"
-          className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+          className="rounded-tile border border-danger/40 bg-danger/10 px-3 py-2 text-body text-danger"
         >
           {state.error}
         </p>
       )}
-      {state.ok && (
-        <p className="text-sm text-green-600 dark:text-green-400">
-          Draft elkészült.
-        </p>
-      )}
+      {state.ok && <p className="text-body text-done">Draft elkészült.</p>}
     </div>
   );
 }

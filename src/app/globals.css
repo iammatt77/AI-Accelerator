@@ -1,38 +1,108 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
-/* Semleges, calm alap — a végleges vizuál a Claude Design handoff után. */
-:root {
-  --background: #fafafa;
-  --foreground: #1a1a1a;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --panel: #ffffff;
-  --accent: #2563eb;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f1115;
-    --foreground: #e7e7e7;
-    --muted: #9ca3af;
-    --border: #262b33;
-    --panel: #161a20;
-    --accent: #60a5fa;
-  }
-}
-
+/* ─────────────────────────────────────────────────────────────
+ * Semantic mapping: Tailwind-utility nevek → design-tokenek.
+ * A komponensek KIZÁRÓLAG ezeken az osztályokon (vagy var()-on)
+ * át színeznek — literál hex a chrome-ban nem megengedett.
+ * ───────────────────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-border: var(--border);
-  --color-panel: var(--panel);
-  --color-accent: var(--accent);
+  /* színek */
+  --color-*: initial;
+  --color-app: var(--bg-app);
+  --color-glass: var(--glass-tile);
+  --color-surface: var(--surface-solid);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-line: var(--border-subtle);
+  --color-edge: var(--edge-highlight);
+  --color-action: var(--action-primary);
+  --color-action-hover: var(--action-hover);
+  --color-action-light: var(--action-light);
+  --color-sky: var(--info-sky);
+  --color-done: var(--status-done);
+  --color-active: var(--status-active);
+  --color-gate: var(--status-gate);
+  --color-pivot: var(--status-pivot);
+  --color-danger: var(--status-error);
+  --color-locked: var(--status-locked);
+  --color-white: #ffffff;
+
+  /* fontok */
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+
+  /* tipó-skála → text-display / text-title / text-body / text-metric / text-mono-sm */
+  --text-display: var(--type-display-size);
+  --text-display--line-height: 1.15;
+  --text-display--font-weight: var(--type-display-weight);
+  --text-display--letter-spacing: -0.02em;
+  --text-title: var(--type-title-size);
+  --text-title--line-height: 1.3;
+  --text-title--font-weight: var(--type-title-weight);
+  --text-body: var(--type-body-size);
+  --text-body--line-height: var(--type-body-leading);
+  --text-body--font-weight: var(--type-body-weight);
+  --text-metric: var(--type-metric-size);
+  --text-metric--line-height: 1.2;
+  --text-metric--font-weight: var(--type-metric-weight);
+  --text-mono-sm: var(--type-mono-size);
+  --text-mono-sm--line-height: 1.5;
+  --text-mono-sm--font-weight: var(--type-mono-weight);
+
+  /* radius → rounded-control / rounded-tile / rounded-shell / rounded-pill */
+  --radius-*: initial;
+  --radius-control: var(--radius-control);
+  --radius-tile: var(--radius-tile);
+  --radius-shell: var(--radius-shell);
+  --radius-pill: var(--radius-pill);
+
+  /* árnyék → shadow-tile / shadow-tile-sm / shadow-action */
+  --shadow-*: initial;
+  --shadow-tile: var(--shadow-tile);
+  --shadow-tile-sm: var(--shadow-tile-sm);
+  --shadow-action: var(--shadow-action);
+  --shadow-action-hover: var(--shadow-action-hover);
 }
 
+/* ── Alap ── */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  background: var(--bg-app);
+  color: var(--ink-primary);
+  font-family: var(--font-sans);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-leading);
+}
+
+/* Törvény 5: fókusz = 2px lila gyűrű, mindenhol. */
+:focus-visible {
+  outline: 2px solid var(--action-primary);
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* Törvény 1+2: üveg-csempe — tömör fátyol + blur, lágy árnyék,
+     1px felső fény-él. Blur-t nem támogató böngészőben tömör felület. */
+  .glass-tile {
+    background: var(--glass-tile);
+    -webkit-backdrop-filter: var(--blur-glass);
+    backdrop-filter: var(--blur-glass);
+    border: 1px solid var(--edge-highlight);
+    border-radius: var(--radius-tile);
+    box-shadow: var(--shadow-tile), var(--edge-top);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-tile {
+      background: var(--surface-solid);
+    }
+  }
+
+  /* Törvény 6: öröklött kontextus-kártya — süllyesztett, NEM üveg. */
+  .card-sunken {
+    background: var(--surface-sunken);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-tile);
+  }
 }

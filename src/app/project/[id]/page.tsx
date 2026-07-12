@@ -5,6 +5,7 @@ import { saveDraftBody, approveArtifact } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { InputForm } from "@/components/InputForm";
 import { GenerateForm } from "@/components/GenerateForm";
+import { StatusPill } from "@/components/StatusPill";
 import type {
   ArtifactRow,
   ClientRow,
@@ -13,6 +14,14 @@ import type {
 } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
+
+// Az artefaktum-státusz feliratok mindkét UI-nyelven angolul maradnak
+// (terminus technicus).
+const STATUS_LABEL: Record<ArtifactRow["status"], string> = {
+  draft: "Draft",
+  in_review: "In review",
+  approved: "Approved",
+};
 
 interface ProjectWithClient extends ProjectRow {
   clients: ClientRow | null;
@@ -60,8 +69,8 @@ export default async function ProjectPage({
 
   const { project, inputs, artifacts } = data;
 
-  // A megjelenítendő artefaktum: a legmagasabb verziójú (a lista már verzió szerint
-  // csökkenő). A bal panel szerkeszthető, ha draft.
+  // A megjelenítendő artefaktum: a legmagasabb verziójú (a lista már verzió
+  // szerint csökkenő). A bal panel szerkeszthető, ha draft.
   const current = artifacts[0] ?? null;
   const inputsById = new Map(inputs.map((i) => [i.id, i]));
   const sourceInputs =
@@ -75,11 +84,14 @@ export default async function ProjectPage({
     <div className="space-y-8">
       {/* Fejléc */}
       <div>
-        <Link href="/" className="text-xs text-[var(--muted)] hover:underline">
+        <Link
+          href="/"
+          className="text-mono-sm text-ink-tertiary hover:text-ink-secondary hover:underline"
+        >
           ← Projektek
         </Link>
-        <h1 className="mt-2 text-lg font-semibold">{project.name}</h1>
-        <p className="text-sm text-[var(--muted)]">
+        <h1 className="mt-2 text-title">{project.name}</h1>
+        <p className="text-body text-ink-secondary">
           {project.clients?.name ?? "ismeretlen ügyfél"}
           {project.clients?.industry ? ` · ${project.clients.industry}` : ""}
           {project.package ? ` · ${project.package}` : ""}
@@ -87,11 +99,9 @@ export default async function ProjectPage({
       </div>
 
       {/* (b) Nyers szöveg beillesztése + (c) Draft generálása */}
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--panel)] p-5">
-        <h2 className="text-sm font-semibold">Bemenet & generálás</h2>
-
+      <section className="glass-tile p-5">
+        <h2 className="text-body font-semibold">Bemenet & generálás</h2>
         <InputForm projectId={id} />
-
         <GenerateForm
           projectId={id}
           inputsCount={inputs.length}
@@ -102,14 +112,19 @@ export default async function ProjectPage({
       {/* (d) SPLIT-VIEW: bal = draft body (szerkeszthető), jobb = forrás */}
       <section className="grid gap-6 lg:grid-cols-2">
         {/* Bal: draft */}
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--panel)] p-5">
+        <div className="glass-tile p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Draft</h2>
-            {current && <StatusBadge status={current.status} version={current.version} />}
+            <h2 className="text-body font-semibold">Draft</h2>
+            {current && (
+              <StatusPill
+                variant={current.status}
+                label={`${STATUS_LABEL[current.status]} · v${current.version}`}
+              />
+            )}
           </div>
 
           {!current && (
-            <p className="text-sm text-[var(--muted)]">
+            <p className="text-body text-ink-tertiary">
               Még nincs artefaktum. Adj hozzá bemenetet, majd generálj draftot.
             </p>
           )}
@@ -125,7 +140,7 @@ export default async function ProjectPage({
                   name="body"
                   rows={16}
                   defaultValue={current.body}
-                  className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 font-mono text-sm outline-none focus:border-[var(--accent)]"
+                  className="w-full rounded-control border border-line bg-surface px-3 py-2 font-mono text-mono-sm"
                 />
                 <div className="flex flex-wrap gap-3">
                   <SubmitButton variant="secondary" pendingLabel="Mentés…">
@@ -137,13 +152,13 @@ export default async function ProjectPage({
               {/* (e) Jóváhagyás: a legfrissebb body-val, version+1 */}
               <form
                 action={approveArtifact.bind(null, id, current.id)}
-                className="border-t border-[var(--border)] pt-3"
+                className="border-t border-line pt-3"
               >
                 <input type="hidden" name="body" value={current.body} />
                 <SubmitButton pendingLabel="Jóváhagyás…">
                   Jóváhagyás (Draft → Approved)
                 </SubmitButton>
-                <p className="mt-2 text-xs text-[var(--muted)]">
+                <p className="mt-2 text-mono-sm text-ink-tertiary">
                   A jóváhagyás új verziót ment; a draft megmarad az audithoz.
                   (Előbb mentsd a szerkesztést, ha módosítottál.)
                 </p>
@@ -152,28 +167,27 @@ export default async function ProjectPage({
           )}
 
           {current && current.status !== "draft" && (
-            <pre className="whitespace-pre-wrap rounded-md border border-[var(--border)] bg-[var(--background)] p-3 text-sm">
+            <pre className="card-sunken whitespace-pre-wrap p-3 font-sans text-body">
               {current.body}
             </pre>
           )}
         </div>
 
-        {/* Jobb: forrás input_item(ek) */}
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--panel)] p-5">
-          <h2 className="mb-3 text-sm font-semibold">Forrás bemenetek</h2>
+        {/* Jobb: forrás input_item(ek) — öröklött kontextus: süllyesztett kártya */}
+        <div className="glass-tile p-5">
+          <h2 className="mb-3 text-body font-semibold">Forrás bemenetek</h2>
           {sourceInputs.length === 0 && (
-            <p className="text-sm text-[var(--muted)]">Nincs forrás bemenet.</p>
+            <p className="text-body text-ink-tertiary">Nincs forrás bemenet.</p>
           )}
           <ul className="space-y-3">
             {sourceInputs.map((input) => (
-              <li
-                key={input.id}
-                className="rounded-md border border-[var(--border)] bg-[var(--background)] p-3"
-              >
-                <div className="mb-1 text-xs text-[var(--muted)]">
+              <li key={input.id} className="card-sunken p-3">
+                <div className="mb-1 text-mono-sm text-ink-tertiary">
                   {input.type} · {new Date(input.created_at).toLocaleString("hu-HU")}
                 </div>
-                <pre className="whitespace-pre-wrap text-sm">{input.raw_text}</pre>
+                <pre className="whitespace-pre-wrap font-sans text-body">
+                  {input.raw_text}
+                </pre>
               </li>
             ))}
           </ul>
@@ -183,18 +197,21 @@ export default async function ProjectPage({
       {/* Verziótörténet */}
       {artifacts.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold">Verziótörténet</h2>
+          <h2 className="mb-3 text-body font-semibold">Verziótörténet</h2>
           <ul className="space-y-2">
             {artifacts.map((artifact) => (
               <li
                 key={artifact.id}
-                className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--panel)] px-4 py-2 text-sm"
+                className="flex items-center justify-between rounded-tile border border-line bg-surface px-4 py-2 text-body shadow-tile-sm"
               >
                 <span>
                   v{artifact.version} · {artifact.type}
                 </span>
-                <span className="flex items-center gap-3 text-[var(--muted)]">
-                  <StatusBadge status={artifact.status} />
+                <span className="flex items-center gap-3 text-ink-tertiary">
+                  <StatusPill
+                    variant={artifact.status}
+                    label={STATUS_LABEL[artifact.status]}
+                  />
                   {new Date(artifact.created_at).toLocaleString("hu-HU")}
                 </span>
               </li>
@@ -203,32 +220,5 @@ export default async function ProjectPage({
         </section>
       )}
     </div>
-  );
-}
-
-function StatusBadge({
-  status,
-  version,
-}: {
-  status: ArtifactRow["status"];
-  version?: number;
-}) {
-  const label: Record<ArtifactRow["status"], string> = {
-    draft: "Draft",
-    in_review: "Review",
-    approved: "Approved",
-  };
-  const color: Record<ArtifactRow["status"], string> = {
-    draft: "border-amber-500/40 text-amber-600 dark:text-amber-400",
-    in_review: "border-blue-500/40 text-blue-600 dark:text-blue-400",
-    approved: "border-green-500/40 text-green-600 dark:text-green-400",
-  };
-  return (
-    <span
-      className={`rounded-full border px-2 py-0.5 text-xs ${color[status]}`}
-    >
-      {label[status]}
-      {version ? ` · v${version}` : ""}
-    </span>
   );
 }

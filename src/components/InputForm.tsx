@@ -22,22 +22,18 @@ export function InputForm({ projectId }: { projectId: string }) {
         required
         rows={4}
         placeholder="Illeszd be a nyers ügyfélanyagot…"
-        className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
       />
 
       {state.error && (
         <p
           role="alert"
-          className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+          className="rounded-tile border border-danger/40 bg-danger/10 px-3 py-2 text-body text-danger"
         >
           {state.error}
         </p>
       )}
-      {state.ok && (
-        <p className="text-sm text-green-600 dark:text-green-400">
-          Bemenet elmentve.
-        </p>
-      )}
+      {state.ok && <p className="text-body text-done">Bemenet elmentve.</p>}
 
       <SubmitButton variant="secondary" pendingLabel="Mentés…">
         Bemenet hozzáadása
