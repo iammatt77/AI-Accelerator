@@ -140,7 +140,8 @@
     "zoneInput": "① Input",
     "zoneTools": "② Work tools",
     "zoneOutput": "③ Output",
-    "zoneGate": "④ Gate"
+    "zoneGate": "④ Gate",
+    "confirmLabel": "I confirm closing the gate"
   },
   "inputs": {
     "placeholder": "Paste the raw client material…",

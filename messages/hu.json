@@ -140,7 +140,8 @@
     "zoneInput": "① Bemenet",
     "zoneTools": "② Munkaeszközök",
     "zoneOutput": "③ Kimenet",
-    "zoneGate": "④ Kapu"
+    "zoneGate": "④ Kapu",
+    "confirmLabel": "Megerősítem a kapu lezárását"
   },
   "inputs": {
     "placeholder": "Illeszd be a nyers ügyfélanyagot…",
