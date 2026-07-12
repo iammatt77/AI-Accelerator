@@ -15,7 +15,7 @@ export default async function NotFound() {
       <h1 className="mt-2 text-title">{tErrors("notFoundTitle")}</h1>
       <p className="mt-2 text-body text-ink-secondary">{tErrors("notFoundBody")}</p>
       <Link
-        href="/"
+        href="/projects"
         className="mt-6 inline-flex items-center justify-center rounded-control border border-line bg-surface px-4 py-2 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
       >
         {tCommon("backHome")}

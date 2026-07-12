@@ -4,6 +4,7 @@ import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { SidebarNav } from "@/components/SidebarNav";
 import "./globals.css";
 
 // Fontok next/font-tal — latin + latin-ext subset (magyar ékezetek!).
@@ -40,8 +41,8 @@ export default async function RootLayout({
       <body className="bg-app text-ink antialiased">
         <NextIntlClientProvider>
           <div className="flex min-h-dvh">
-            {/* Minimális oldalsáv-shell (alap-chrome). A teljes navigációs
-                váz (fázis-nav, stepper) a #4 csomag dolga. */}
+            {/* Navigációs váz (#4): 3 valós + 3 placeholder szakasz.
+                A nyelvváltó a #3 helyén, az oldalsáv alján marad. */}
             <aside className="glass-panel flex w-56 shrink-0 flex-col border-r border-line">
               <div className="px-5 py-6">
                 <Link href="/" className="block">
@@ -53,14 +54,7 @@ export default async function RootLayout({
                   </span>
                 </Link>
               </div>
-              <nav className="px-3">
-                <Link
-                  href="/"
-                  className="block rounded-control px-2 py-1.5 text-body text-ink-secondary transition-colors duration-[var(--motion-fast)] hover:bg-sunken hover:text-ink"
-                >
-                  {t("projects")}
-                </Link>
-              </nav>
+              <SidebarNav />
               <div className="mt-auto px-5 py-4">
                 <LocaleSwitcher />
               </div>

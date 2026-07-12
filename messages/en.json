@@ -19,8 +19,8 @@
     "settings": "Settings"
   },
   "dashboard": {
-    "title": "Projects",
-    "lead": "Raw material → server-side generation → draft → approval.",
+    "title": "Dashboard",
+    "lead": "Active projects at a glance — phase progress and the next step.",
     "nextStepLabel": "Next step",
     "progressLabel": "{completed}/7 closed"
   },
@@ -102,7 +102,14 @@
     "stepperAria": "Phase stepper",
     "lockedTooltip": "Requires: closing the {prev} gate",
     "activeBadge": "ACTIVE",
-    "goToPhase": "Open phase {phase}"
+    "goToPhase": "Open phase {phase}",
+    "lexicon": {
+      "locked": "Locked",
+      "open": "Open",
+      "in_progress": "In progress",
+      "gate_pending": "Decision pending",
+      "completed": "Closed"
+    }
   },
   "gates": {
     "label": "Gate",
@@ -182,7 +189,7 @@
     "clientFetchFailed": "Failed to load client: {message}"
   },
   "empty": {
-    "noProjects": "No projects yet. Create one on the right.",
+    "noProjects": "No projects yet. Create one on the Projects page.",
     "noArtifact": "No artifact yet. Add an input, then generate a draft.",
     "noSources": "No source inputs.",
     "comingSoon": "Coming soon",

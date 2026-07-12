@@ -1,115 +1,91 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
-import { createClientAndProject } from "./actions";
-import { SubmitButton } from "@/components/SubmitButton";
+import { computeNextStep, countCompleted, loadPhaseBoard } from "@/lib/phases/service";
+import { nextStepLabel } from "@/components/NextStep";
+import { PhaseStepperV2 } from "@/components/PhaseStepper";
 import type { ClientRow, ProjectRow } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
+
+// Dashboard — projekt-kártyák: név, ügyfél, mini fázis-progressz,
+// következő lépés egy sorban. Egyszerű: egy user, kevés projekt.
 
 interface ProjectWithClient extends ProjectRow {
   clients: Pick<ClientRow, "name" | "industry"> | null;
 }
 
-async function loadProjects(): Promise<ProjectWithClient[]> {
+export default async function DashboardPage() {
   const supabase = createServiceSupabaseClient();
+  const [tDashboard, tClients, tEmpty, tErrors] = await Promise.all([
+    getTranslations("dashboard"),
+    getTranslations("clients"),
+    getTranslations("empty"),
+    getTranslations("errors"),
+  ]);
+
   const { data, error } = await supabase
     .from("projects")
     .select("*, clients ( name, industry )")
     .order("created_at", { ascending: false });
   if (error) {
-    const t = await getTranslations("errors");
-    throw new Error(t("projectsFetchFailed", { message: error.message }));
+    throw new Error(tErrors("projectsFetchFailed", { message: error.message }));
   }
-  return (data ?? []) as ProjectWithClient[];
-}
+  const projects = (data ?? []) as ProjectWithClient[];
 
-export default async function HomePage() {
-  const [projects, t, tCommon, tClients, tProjects, tEmpty] = await Promise.all([
-    loadProjects(),
-    getTranslations("dashboard"),
-    getTranslations("common"),
-    getTranslations("clients"),
-    getTranslations("projects"),
-    getTranslations("empty"),
-  ]);
-
-  return (
-    <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_320px]">
-      {/* Projektlista */}
-      <section>
-        <h1 className="text-title">{t("title")}</h1>
-        <p className="mt-1 text-body text-ink-secondary">{t("lead")}</p>
-
-        <ul className="mt-6 space-y-3">
-          {projects.length === 0 && (
-            <li className="rounded-tile border border-dashed border-line p-6 text-body text-ink-tertiary">
-              {tEmpty("noProjects")}
-            </li>
-          )}
-          {projects.map((project) => (
-            <li key={project.id}>
-              <Link
-                href={`/project/${project.id}`}
-                className="glass-tile glass-tile-interactive block p-4"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-medium">{project.name}</span>
-                  <span className="rounded-pill border border-line px-2 py-0.5 text-mono-sm font-sans text-ink-tertiary">
-                    {project.package ?? "—"}
-                  </span>
-                </div>
-                <div className="mt-1 text-body text-ink-secondary">
-                  {project.clients?.name ?? tClients("unknown")}
-                  {project.clients?.industry ? ` · ${project.clients.industry}` : ""}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* (a) Kliens + projekt létrehozása */}
-      <section>
-        <h2 className="text-body font-semibold">{tClients("newTitle")}</h2>
-        <form action={createClientAndProject} className="mt-4 space-y-3">
-          <Field label={tClients("nameLabel")} name="clientName" required />
-          <Field label={tClients("industryLabel")} name="industry" />
-          <Field label={tProjects("nameLabel")} name="projectName" required />
-          <Field
-            label={tProjects("packageLabel")}
-            name="package"
-            placeholder={tProjects("packagePlaceholder")}
-          />
-          <SubmitButton pendingLabel={tCommon("creating")} className="w-full">
-            {tCommon("create")}
-          </SubmitButton>
-        </form>
-      </section>
-    </div>
+  const cards = await Promise.all(
+    projects.map(async (project) => {
+      const board = await loadPhaseBoard(supabase, project.id);
+      const step = computeNextStep(board);
+      return {
+        project,
+        board: board.map(({ phase, state }) => ({ phase, state })),
+        completed: countCompleted(board),
+        stepText: await nextStepLabel(step),
+      };
+    }),
   );
-}
 
-function Field({
-  label,
-  name,
-  required,
-  placeholder,
-}: {
-  label: string;
-  name: string;
-  required?: boolean;
-  placeholder?: string;
-}) {
   return (
-    <label className="block">
-      <span className="text-mono-sm font-medium text-ink-secondary">{label}</span>
-      <input
-        name={name}
-        required={required}
-        placeholder={placeholder}
-        className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
-      />
-    </label>
+    <div>
+      <h1 className="text-title">{tDashboard("title")}</h1>
+      <p className="mt-1 text-body text-ink-secondary">{tDashboard("lead")}</p>
+
+      <ul className="mt-6 grid gap-4 lg:grid-cols-2">
+        {cards.length === 0 && (
+          <li className="rounded-tile border border-dashed border-line p-6 text-body text-ink-tertiary">
+            {tEmpty("noProjects")}
+          </li>
+        )}
+        {cards.map(({ project, board, completed, stepText }) => (
+          <li key={project.id}>
+            <Link
+              href={`/project/${project.id}`}
+              className="glass-tile glass-tile-interactive block p-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="min-w-0 truncate font-medium">{project.name}</span>
+                <span className="shrink-0 font-mono text-mono-sm text-ink-tertiary">
+                  {tDashboard("progressLabel", { completed })}
+                </span>
+              </div>
+              <div className="mt-0.5 text-body text-ink-secondary">
+                {project.clients?.name ?? tClients("unknown")}
+                {project.clients?.industry ? ` · ${project.clients.industry}` : ""}
+              </div>
+              <div className="mt-3">
+                <PhaseStepperV2 projectId={project.id} board={board} size="xs" />
+              </div>
+              <div className="mt-3 border-t border-line pt-2 text-body">
+                <span className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
+                  {tDashboard("nextStepLabel")}
+                </span>
+                <span className="ml-2">{stepText}</span>
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

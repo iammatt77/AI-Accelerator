@@ -19,8 +19,8 @@
     "settings": "Beállítások"
   },
   "dashboard": {
-    "title": "Projektek",
-    "lead": "Nyers anyag → szerveroldali generálás → draft → jóváhagyás.",
+    "title": "Vezérlőpult",
+    "lead": "Aktív projektek egy pillantásra — fázis-progressz és a következő lépés.",
     "nextStepLabel": "Következő lépés",
     "progressLabel": "{completed}/7 lezárva"
   },
@@ -102,7 +102,14 @@
     "stepperAria": "Fázis-stepper",
     "lockedTooltip": "Ehhez kell: a {prev} kapu lezárása",
     "activeBadge": "AKTÍV",
-    "goToPhase": "{phase} fázis megnyitása"
+    "goToPhase": "{phase} fázis megnyitása",
+    "lexicon": {
+      "locked": "Zárt",
+      "open": "Nyitott",
+      "in_progress": "Folyamatban",
+      "gate_pending": "Döntés vár",
+      "completed": "Lezárva"
+    }
   },
   "gates": {
     "label": "Kapu",
@@ -182,7 +189,7 @@
     "clientFetchFailed": "Ügyfél lekérése sikertelen: {message}"
   },
   "empty": {
-    "noProjects": "Még nincs projekt. Hozz létre egyet jobbra.",
+    "noProjects": "Még nincs projekt. Hozz létre egyet a Projektek oldalon.",
     "noArtifact": "Még nincs artefaktum. Adj hozzá bemenetet, majd generálj draftot.",
     "noSources": "Nincs forrás bemenet.",
     "comingSoon": "Hamarosan",
