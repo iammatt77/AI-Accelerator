@@ -11,22 +11,34 @@
   "nav": {
     "brandTitle": "AI Consulting",
     "brandSubtitle": "system · P0–P6",
-    "projects": "Projects"
+    "projects": "Projects",
+    "dashboard": "Dashboard",
+    "clients": "Clients",
+    "inbox": "Inbox",
+    "library": "Library",
+    "settings": "Settings"
   },
   "dashboard": {
     "title": "Projects",
-    "lead": "Raw material → server-side generation → draft → approval."
+    "lead": "Raw material → server-side generation → draft → approval.",
+    "nextStepLabel": "Next step",
+    "progressLabel": "{completed}/7 closed"
   },
   "clients": {
     "unknown": "unknown client",
     "newTitle": "New client + project",
     "nameLabel": "Client name",
-    "industryLabel": "Industry"
+    "industryLabel": "Industry",
+    "listTitle": "Clients",
+    "projectsOfClient": "Projects of this client",
+    "noProjects": "This client has no projects yet.",
+    "sinceLabel": "Client since"
   },
   "projects": {
     "nameLabel": "Project name",
     "packageLabel": "Package",
-    "packagePlaceholder": "e.g. Discovery"
+    "packagePlaceholder": "e.g. Discovery",
+    "listTitle": "Projects"
   },
   "cockpit": {
     "backToProjects": "Projects",
@@ -35,7 +47,21 @@
     "addInputFirst": "Add an input above first",
     "generateCta": "Generate draft",
     "generating": "Generating via live API…",
-    "generated": "Draft ready."
+    "generated": "Draft ready.",
+    "weekCounter": "Week {week}",
+    "phasesClosed": "{completed}/7 closed",
+    "nextStepTitle": "Next best step",
+    "statInputs": "raw inputs",
+    "statArtifacts": "artifacts",
+    "statOpenGates": "open gates",
+    "recentArtifacts": "Recent artifacts",
+    "gateChecklistTitle": "Current phase — gate checklist",
+    "projectMetaTitle": "Project details",
+    "metaClient": "Client",
+    "metaIndustry": "Industry",
+    "metaPackage": "Package",
+    "metaStart": "Start",
+    "openCockpit": "Open cockpit"
   },
   "phases": {
     "p0": {
@@ -70,14 +96,44 @@
       "locked": "locked",
       "open": "open",
       "in_progress": "in progress",
-      "at_gate": "at gate",
       "completed": "completed",
-      "not_started": "not started"
-    }
+      "gate_pending": "at gate"
+    },
+    "stepperAria": "Phase stepper",
+    "lockedTooltip": "Requires: closing the {prev} gate",
+    "activeBadge": "ACTIVE",
+    "goToPhase": "Open phase {phase}"
   },
   "gates": {
     "label": "Gate",
-    "closed": "closed"
+    "closed": "closed",
+    "startPhaseCta": "Start phase",
+    "closeGateCta": "Close gate",
+    "closing": "Closing…",
+    "starting": "Starting…",
+    "reasonLabel": "Reason (required)",
+    "reasonPlaceholder": "Why can this gate be closed? Recorded in the Decision log.",
+    "confirmHint": "Closing cannot be undone in this package: the next phase opens and the decision is logged.",
+    "temporaryBadge": "temporary manual close",
+    "temporaryHint": "Real exit criteria will replace this in later packages.",
+    "criteriaTitle": "Exit criteria",
+    "criterionSatisfied": "satisfied",
+    "criterionPending": "not satisfied",
+    "noGate": "Cyclical phase — no gate",
+    "noGateBody": "P6 operations is continuous: there is no next phase, work proceeds in cycles.",
+    "decisionsTitle": "Gate decisions (log)",
+    "noDecisions": "No gate decisions for this phase yet.",
+    "closedAt": "Closed: {date}",
+    "gateDecisionTitle": "Gate decision",
+    "lockedTitle": "This phase is still locked",
+    "lockedBody": "Closing the {prev} gate unlocks it. No work can be done here until then.",
+    "goToPrev": "Go to {prev}",
+    "completedTitle": "Phase completed",
+    "zonesPlaceholder": "This workspace is built in upcoming packages",
+    "zoneInput": "① Input",
+    "zoneTools": "② Work tools",
+    "zoneOutput": "③ Output",
+    "zoneGate": "④ Gate"
   },
   "inputs": {
     "placeholder": "Paste the raw client material…",
@@ -118,16 +174,37 @@
     "notFoundBody": "The requested project or page does not exist.",
     "genericTitle": "Something went wrong",
     "genericBody": "The operation did not complete. Try again; if the error persists, check the server log.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "invalidTransition": "Invalid phase transition — the state may have changed. Refresh the page.",
+    "noteRequired": "A reason is required to close the gate.",
+    "noGateForPhase": "Phase {phase} has no gate.",
+    "phaseActionFailed": "Phase action failed: {message}",
+    "clientFetchFailed": "Failed to load client: {message}"
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the right.",
     "noArtifact": "No artifact yet. Add an input, then generate a draft.",
-    "noSources": "No source inputs."
+    "noSources": "No source inputs.",
+    "comingSoon": "Coming soon",
+    "comingSoonBody": "This section will be built in a later package.",
+    "noClients": "No clients yet. One is created with your first project."
   },
   "settings": {
     "language": "Language",
     "hungarian": "Hungarian",
     "english": "English"
+  },
+  "criteria": {
+    "charter_approved": "An approved Project charter exists",
+    "manual_close": "Manual close (temporary)"
+  },
+  "nextstep": {
+    "start": "Start phase {phase}",
+    "satisfy": "Satisfy: {criterion}",
+    "close": "Close the {phase} gate",
+    "closeTemporary": "Close the {phase} gate (temporary manual)",
+    "noGate": "P6 — cyclical operations, no gate",
+    "allDone": "All gated phases are closed",
+    "cta": "Go to phase"
   }
 }

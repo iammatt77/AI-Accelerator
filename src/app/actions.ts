@@ -92,12 +92,15 @@ export async function createClientAndProject(formData: FormData): Promise<void> 
     );
   }
 
-  // P0 fázis-rekord (most csak ez az egy kell).
-  await supabase.from("phase_instances").insert({
-    project_id: project.id,
-    phase: "P0",
-    state: "in_progress",
-  });
+  // Mind a 7 fázis-sor létrejön: P0 nyitott (indítható), P1–P6 zárt —
+  // az állapotgép (v0.2 §11 / #4) szerint.
+  await supabase.from("phase_instances").insert(
+    ["P0", "P1", "P2", "P3", "P4", "P5", "P6"].map((phase) => ({
+      project_id: project.id,
+      phase,
+      state: phase === "P0" ? "open" : "locked",
+    })),
+  );
 
   await logDecision(project.id, "create_project", `Projekt létrehozva: ${projectName}`);
 

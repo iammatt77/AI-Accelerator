@@ -11,22 +11,34 @@
   "nav": {
     "brandTitle": "AI Consulting",
     "brandSubtitle": "rendszer · P0–P6",
-    "projects": "Projektek"
+    "projects": "Projektek",
+    "dashboard": "Vezérlőpult",
+    "clients": "Ügyfelek",
+    "inbox": "Beérkező",
+    "library": "Könyvtár",
+    "settings": "Beállítások"
   },
   "dashboard": {
     "title": "Projektek",
-    "lead": "Nyers anyag → szerveroldali generálás → draft → jóváhagyás."
+    "lead": "Nyers anyag → szerveroldali generálás → draft → jóváhagyás.",
+    "nextStepLabel": "Következő lépés",
+    "progressLabel": "{completed}/7 lezárva"
   },
   "clients": {
     "unknown": "ismeretlen ügyfél",
     "newTitle": "Új kliens + projekt",
     "nameLabel": "Ügyfél neve",
-    "industryLabel": "Iparág"
+    "industryLabel": "Iparág",
+    "listTitle": "Ügyfelek",
+    "projectsOfClient": "A kliens projektjei",
+    "noProjects": "Ennek a kliensnek még nincs projektje.",
+    "sinceLabel": "Ügyfél ekkortól"
   },
   "projects": {
     "nameLabel": "Projekt neve",
     "packageLabel": "Csomag",
-    "packagePlaceholder": "pl. Felmérés"
+    "packagePlaceholder": "pl. Felmérés",
+    "listTitle": "Projektek"
   },
   "cockpit": {
     "backToProjects": "Projektek",
@@ -35,7 +47,21 @@
     "addInputFirst": "Előbb adj hozzá bemenetet fentebb",
     "generateCta": "Draft generálása",
     "generating": "Generálás élő API-val…",
-    "generated": "Draft elkészült."
+    "generated": "Draft elkészült.",
+    "weekCounter": "{week}. hét",
+    "phasesClosed": "{completed}/7 lezárva",
+    "nextStepTitle": "Következő legjobb lépés",
+    "statInputs": "nyersanyag",
+    "statArtifacts": "artefaktum",
+    "statOpenGates": "nyitott kapu",
+    "recentArtifacts": "Legutóbbi artefaktumok",
+    "gateChecklistTitle": "Aktuális fázis — kapu-checklist",
+    "projectMetaTitle": "Projekt-adatok",
+    "metaClient": "Ügyfél",
+    "metaIndustry": "Iparág",
+    "metaPackage": "Csomag",
+    "metaStart": "Kezdés",
+    "openCockpit": "Pilótafülke megnyitása"
   },
   "phases": {
     "p0": {
@@ -70,14 +96,44 @@
       "locked": "zárt",
       "open": "nyitott",
       "in_progress": "folyamatban",
-      "at_gate": "kapu előtt",
       "completed": "lezárt",
-      "not_started": "nem indult"
-    }
+      "gate_pending": "kapu előtt"
+    },
+    "stepperAria": "Fázis-stepper",
+    "lockedTooltip": "Ehhez kell: a {prev} kapu lezárása",
+    "activeBadge": "AKTÍV",
+    "goToPhase": "{phase} fázis megnyitása"
   },
   "gates": {
     "label": "Kapu",
-    "closed": "lezárva"
+    "closed": "lezárva",
+    "startPhaseCta": "Fázis indítása",
+    "closeGateCta": "Kapu lezárása",
+    "closing": "Zárás…",
+    "starting": "Indítás…",
+    "reasonLabel": "Indoklás (kötelező)",
+    "reasonPlaceholder": "Miért zárható a kapu? Ez a Decision-naplóba kerül.",
+    "confirmHint": "A zárás nem vonható vissza ebben a csomagban: a következő fázis megnyílik, a döntés naplózódik.",
+    "temporaryBadge": "ideiglenes kézi lezárás",
+    "temporaryHint": "Valódi kilépő kritériumok a későbbi csomagokban váltják ki.",
+    "criteriaTitle": "Kilépő kritériumok",
+    "criterionSatisfied": "teljesül",
+    "criterionPending": "nem teljesül",
+    "noGate": "Ciklikus fázis — nincs kapu",
+    "noGateBody": "A P6 üzemeltetés folyamatos: innen nincs továbblépés, a munka ciklusokban folyik.",
+    "decisionsTitle": "Kapu-döntések (napló)",
+    "noDecisions": "Ehhez a fázishoz még nincs kapu-döntés.",
+    "closedAt": "Lezárva: {date}",
+    "gateDecisionTitle": "Kapu-döntés",
+    "lockedTitle": "Ez a fázis még zárt",
+    "lockedBody": "A(z) {prev} fázis kapujának lezárása nyitja meg. Addig itt nem végezhető munka.",
+    "goToPrev": "Ugrás: {prev}",
+    "completedTitle": "A fázis lezárva",
+    "zonesPlaceholder": "Ez a munkaterület a következő csomagokban épül",
+    "zoneInput": "① Bemenet",
+    "zoneTools": "② Munkaeszközök",
+    "zoneOutput": "③ Kimenet",
+    "zoneGate": "④ Kapu"
   },
   "inputs": {
     "placeholder": "Illeszd be a nyers ügyfélanyagot…",
@@ -118,16 +174,37 @@
     "notFoundBody": "A keresett projekt vagy oldal nem létezik.",
     "genericTitle": "Váratlan hiba történt",
     "genericBody": "A művelet nem fejeződött be. Próbáld újra; ha a hiba megmarad, nézd meg a szerver-logot.",
-    "retry": "Újrapróbálás"
+    "retry": "Újrapróbálás",
+    "invalidTransition": "Érvénytelen fázis-átmenet — az állapot időközben változhatott. Frissítsd az oldalt.",
+    "noteRequired": "A kapu-zárás indoklása kötelező.",
+    "noGateForPhase": "A(z) {phase} fázisnak nincs kapuja.",
+    "phaseActionFailed": "Fázis-művelet sikertelen: {message}",
+    "clientFetchFailed": "Ügyfél lekérése sikertelen: {message}"
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet jobbra.",
     "noArtifact": "Még nincs artefaktum. Adj hozzá bemenetet, majd generálj draftot.",
-    "noSources": "Nincs forrás bemenet."
+    "noSources": "Nincs forrás bemenet.",
+    "comingSoon": "Hamarosan",
+    "comingSoonBody": "Ez a szakasz egy későbbi csomagban épül meg.",
+    "noClients": "Még nincs ügyfél. Az első projekt létrehozásakor jön létre."
   },
   "settings": {
     "language": "Nyelv",
     "hungarian": "magyar",
     "english": "angol"
+  },
+  "criteria": {
+    "charter_approved": "Jóváhagyott Projekt-charter létezik",
+    "manual_close": "Kézi lezárás (ideiglenes)"
+  },
+  "nextstep": {
+    "start": "Indítsd el a(z) {phase} fázist",
+    "satisfy": "Teljesítsd: {criterion}",
+    "close": "Zárd le a(z) {phase} kapuját",
+    "closeTemporary": "Zárd le a(z) {phase} kapuját (ideiglenes kézi)",
+    "noGate": "P6 — ciklikus üzemeltetés, nincs kapu",
+    "allDone": "Minden kapuzárható fázis lezárva",
+    "cta": "Ugrás a fázisra"
   }
 }

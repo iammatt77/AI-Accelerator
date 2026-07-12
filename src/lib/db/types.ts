@@ -23,7 +23,10 @@ export interface PhaseInstanceRow {
   id: string;
   project_id: string;
   phase: string;
+  // A DB-ben phase_state enum (0002 migráció); itt string marad, mert a
+  // határon defenzíven parse-oljuk (ismeretlen érték → 'locked').
   state: string;
+  cycle_count: number;
 }
 
 export interface InputItemRow {
