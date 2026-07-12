@@ -18,7 +18,7 @@ const ARTIFACT_TYPE = "p0_summary";
 export type FormState = {
   ok: boolean;
   error: string | null;
-  values?: { rawText?: string };
+  values?: { rawText?: string; reason?: string };
   nonce?: number;
 };
 
@@ -94,13 +94,16 @@ export async function createClientAndProject(formData: FormData): Promise<void> 
 
   // Mind a 7 fázis-sor létrejön: P0 nyitott (indítható), P1–P6 zárt —
   // az állapotgép (v0.2 §11 / #4) szerint.
-  await supabase.from("phase_instances").insert(
+  const { error: phaseErr } = await supabase.from("phase_instances").insert(
     ["P0", "P1", "P2", "P3", "P4", "P5", "P6"].map((phase) => ({
       project_id: project.id,
       phase,
       state: phase === "P0" ? "open" : "locked",
     })),
   );
+  if (phaseErr) {
+    throw new Error(tErrors("phaseActionFailed", { message: phaseErr.message }));
+  }
 
   await logDecision(project.id, "create_project", `Projekt létrehozva: ${projectName}`);
 

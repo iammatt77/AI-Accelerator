@@ -41,11 +41,12 @@ export type NextStep =
   | { kind: "no_gate"; phase: PhaseId }
   | { kind: "all_done" };
 
-/** A P0 puha kritériumának auto-kiértékelése: létezik-e jóváhagyott charter. */
+/** A P0 puha kritériumának auto-kiértékelése: létezik-e jóváhagyott charter.
+ *  `null` = a kiértékelés maga hibázott (≠ nem teljesül). */
 async function evaluateCharterApproved(
   supabase: SupabaseClient,
   projectId: string,
-): Promise<boolean> {
+): Promise<boolean | null> {
   // Az élő adat 'Projekt-charter' típussal seedelt; a korábbi #3-seed
   // 'project_charter'-t írt — mindkettőt elfogadjuk (defenzív).
   const { data, error } = await supabase
@@ -56,9 +57,11 @@ async function evaluateCharterApproved(
     .eq("status", "approved")
     .limit(1);
   if (error) {
-    // Kiértékelési hiba nem törheti el a felületet: nem-teljesültként kezeljük.
+    // Kiértékelési hiba nem törheti el a felületet — de nem is azonos a
+    // „nem teljesül"-lel: null-t adunk, a hívó dönt (kijelzés: nem teljesül;
+    // állapot-átmenet: NEM írunk vissza hibás kiértékelésből).
     console.error(`charter_approved kiértékelés sikertelen: ${error.message}`);
-    return false;
+    return null;
   }
   return (data ?? []).length > 0;
 }
@@ -67,17 +70,20 @@ async function evaluateCriteria(
   supabase: SupabaseClient,
   projectId: string,
   phase: PhaseId,
-): Promise<EvaluatedCriterion[]> {
+): Promise<{ criteria: EvaluatedCriterion[]; degraded: boolean }> {
   const result: EvaluatedCriterion[] = [];
+  let degraded = false;
   for (const criterion of PHASE_CRITERIA[phase]) {
     let satisfied = false;
     if (criterion.mode === "auto" && criterion.id === "charter_approved") {
-      satisfied = await evaluateCharterApproved(supabase, projectId);
+      const value = await evaluateCharterApproved(supabase, projectId);
+      if (value === null) degraded = true;
+      satisfied = value ?? false;
     }
     // manual kritérium: csak maga a kézi zárás „teljesíti" — itt mindig false.
     result.push({ ...criterion, satisfied });
   }
-  return result;
+  return { criteria: result, degraded };
 }
 
 /** gate_pending-készség: minden kemény auto-kritérium teljesül; ha nincs
@@ -169,7 +175,7 @@ export async function loadPhaseBoard(
     const row = byPhase.get(phase) ?? null;
     // Defenzív degradáció: hiányzó sor vagy ismeretlen state → locked.
     let state = parsePhaseState(row?.state);
-    const criteria = await evaluateCriteria(supabase, projectId, phase);
+    const { criteria, degraded } = await evaluateCriteria(supabase, projectId, phase);
     const gateReady = computeGateReady(criteria);
 
     if (row) {
@@ -195,10 +201,12 @@ export async function loadPhaseBoard(
           state = "gate_pending";
         }
       }
-      // gate_pending → in_progress (kritérium visszaesett)
+      // gate_pending → in_progress (kritérium visszaesett) — kiértékelési
+      // HIBA nem visszaesés: degradált körben nem írunk tartós átmenetet.
       if (
         state === "gate_pending" &&
         !gateReady &&
+        !degraded &&
         canTransition("gate_pending", "in_progress", "auto_criteria_regressed")
       ) {
         if (await setPhaseState(supabase, row.id, "gate_pending", "in_progress")) {

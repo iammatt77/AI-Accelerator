@@ -74,7 +74,13 @@ export default async function DashboardPage() {
                 {project.clients?.industry ? ` · ${project.clients.industry}` : ""}
               </div>
               <div className="mt-3">
-                <PhaseStepperV2 projectId={project.id} board={board} size="xs" />
+                {/* interactive={false}: a kártya maga Link — nincs beágyazott anchor */}
+                <PhaseStepperV2
+                  projectId={project.id}
+                  board={board}
+                  size="xs"
+                  interactive={false}
+                />
               </div>
               <div className="mt-3 border-t border-line pt-2 text-body">
                 <span className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">

@@ -73,7 +73,7 @@ export default async function ProjectCockpitPage({
 
   const { project, inputs, artifacts, board } = data;
 
-  const [locale, tCockpit, tCommon, tClients, tInputs, tArtifacts, tEmpty, tGates, tCriteria] =
+  const [locale, tCockpit, tCommon, tClients, tInputs, tArtifacts, tEmpty, tGates, tCriteria, tLex] =
     await Promise.all([
       getLocale(),
       getTranslations("cockpit"),
@@ -84,6 +84,7 @@ export default async function ProjectCockpitPage({
       getTranslations("empty"),
       getTranslations("gates"),
       getTranslations("criteria"),
+      getTranslations("phases.lexicon"),
     ]);
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   // Szerver-komponensben formázunk: időzóna nélkül a SZERVER (prod: UTC)
@@ -205,9 +206,13 @@ export default async function ProjectCockpitPage({
               <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
                 {tCockpit("gateChecklistTitle")}
               </h2>
+              {/* Állapot mindig ikon + szöveg (törvény 4) */}
               <p className="mt-1 flex items-center gap-2 text-body font-semibold">
-                <span className={PHASE_STATE_TEXT[currentPhase.state]}>
+                <span
+                  className={`inline-flex items-center gap-1 ${PHASE_STATE_TEXT[currentPhase.state]}`}
+                >
                   <PhaseStateIcon state={currentPhase.state} size={12} />
+                  {tLex(currentPhase.state)}
                 </span>
                 {currentPhase.phase}
               </p>
@@ -242,6 +247,16 @@ export default async function ProjectCockpitPage({
                           {tGates("temporaryBadge")}
                         </span>
                       )}
+                      {/* Státusz mindig ikon + szöveg (törvény 4) */}
+                      <span
+                        className={`shrink-0 text-mono-sm font-medium ${
+                          criterion.satisfied ? "text-done" : "text-gate"
+                        }`}
+                      >
+                        {criterion.satisfied
+                          ? tGates("criterionSatisfied")
+                          : tGates("criterionPending")}
+                      </span>
                     </li>
                   ))}
                 </ul>

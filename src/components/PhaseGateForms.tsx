@@ -79,10 +79,16 @@ export function GateCloseForm({
         <span className="text-mono-sm font-medium text-ink-secondary">
           {t("reasonLabel")}
         </span>
+        {/* key + defaultValue: hibaágon a beírt indoklás nem veszik el
+            (React 19 minden beküldés után reseteli a nem kontrollált mezőt).
+            A megerősítő jelölőt szándékosan NEM állítjuk vissza: hiba után
+            újra meg kell erősíteni a zárást (poka-yoke). */}
         <textarea
+          key={state.nonce ?? 0}
           name="reason"
           required
           rows={3}
+          defaultValue={state.values?.reason}
           placeholder={t("reasonPlaceholder")}
           className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
         />

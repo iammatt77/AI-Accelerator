@@ -75,15 +75,24 @@ export async function closeGate(
 ): Promise<FormState> {
   const tErrors = await getTranslations("errors");
   const reason = String(formData.get("reason") ?? "").trim();
+  // Hibaágon a beírt indoklás visszakerül a mezőbe (values + nonce —
+  // React 19 hibaágon is reseteli a nem kontrollált mezőket).
+  const nonce = Date.now();
+  const fail = (error: string): FormState => ({
+    ok: false,
+    error,
+    values: { reason },
+    nonce,
+  });
 
   if (!isPhaseId(phase)) {
-    return { ok: false, error: tErrors("invalidTransition") };
+    return fail(tErrors("invalidTransition"));
   }
   if (!hasGate(phase)) {
-    return { ok: false, error: tErrors("noGateForPhase", { phase }) };
+    return fail(tErrors("noGateForPhase", { phase }));
   }
   if (!reason) {
-    return { ok: false, error: tErrors("noteRequired") };
+    return fail(tErrors("noteRequired"));
   }
 
   let supabase;
@@ -92,19 +101,24 @@ export async function closeGate(
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`Supabase kliens hiba: ${message}`);
-    return { ok: false, error: tErrors("config", { message }) };
+    return fail(tErrors("config", { message }));
   }
 
   // TS-oldali elővalidálás (barátságos hiba, mielőtt a DB-hez nyúlnánk).
-  const { data: row } = await supabase
+  // Olvasási hiba ≠ érvénytelen átmenet: azt a valódi okkal jelentjük.
+  const { data: row, error: readError } = await supabase
     .from("phase_instances")
     .select("state")
     .eq("project_id", projectId)
     .eq("phase", phase)
     .maybeSingle();
+  if (readError) {
+    console.error(`Fázis-állapot olvasása sikertelen: ${readError.message}`);
+    return fail(tErrors("phaseActionFailed", { message: readError.message }));
+  }
   const state = parsePhaseState(row?.state);
   if (state !== "in_progress" && state !== "gate_pending") {
-    return { ok: false, error: tErrors("invalidTransition") };
+    return fail(tErrors("invalidTransition"));
   }
 
   // Decision note: fázis-azonosítóval kezdődik (a fázis-oldali történet
@@ -120,16 +134,13 @@ export async function closeGate(
   if (error) {
     // A DB-függvény kivételei ismert, lefordítható hibák.
     if (error.message.includes("invalid_transition")) {
-      return { ok: false, error: tErrors("invalidTransition") };
+      return fail(tErrors("invalidTransition"));
     }
     if (error.message.includes("note_required")) {
-      return { ok: false, error: tErrors("noteRequired") };
+      return fail(tErrors("noteRequired"));
     }
     console.error(`Kapu-zárás sikertelen: ${error.message}`);
-    return {
-      ok: false,
-      error: tErrors("phaseActionFailed", { message: error.message }),
-    };
+    return fail(tErrors("phaseActionFailed", { message: error.message }));
   }
 
   revalidateProject(projectId);
