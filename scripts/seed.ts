@@ -6,9 +6,9 @@
  * (lásd docs/state/2026-07-12-audit.md, 6. szakasz):
  *   - projekt „kezdés" → created_at (nincs külön start-oszlop)
  *   - input item címe → type oszlop (nincs title oszlop); raw_text szó szerint
- *   - decision cím + indoklás → note; kind = 'gate_closed'
- *   - fázis-állapotok kanonikus szöveges értékek (enum még nincs):
- *     P0 completed · P1 in_progress · P2–P6 locked (lineáris kapu-értelmezés)
+ *   - decision cím + indoklás → note; kind = 'gate_close'
+ *   - fázis-állapotok: phase_state ENUM-értékek (a 0002 migráció után
+ *     futtatandó): P0 completed · P1 in_progress · P2–P6 locked
  *
  * Futtatás: npm run seed
  * Env: SUPABASE_URL (vagy NEXT_PUBLIC_SUPABASE_URL) + SUPABASE_SERVICE_ROLE_KEY
@@ -41,25 +41,27 @@ function fail(message: string): never {
 
 // ── fix azonosítók (idempotencia-kulcsok) ────────────────────
 
+// Az ÉLŐ (frankfurti) demo-adat azonosítói (B melléklet) — a seed ezekre
+// upsertál, hogy második futás ne hozzon létre duplikált demo-projektet.
 const ID = {
-  client: "11111111-1111-4111-8111-000000000001",
-  project: "22222222-2222-4222-8222-000000000001",
+  client: "a0000000-0000-4000-8000-000000000001",
+  project: "b0000000-0000-4000-8000-000000000001",
   phases: {
-    P0: "33333333-3333-4333-8333-000000000000",
-    P1: "33333333-3333-4333-8333-000000000001",
-    P2: "33333333-3333-4333-8333-000000000002",
-    P3: "33333333-3333-4333-8333-000000000003",
-    P4: "33333333-3333-4333-8333-000000000004",
-    P5: "33333333-3333-4333-8333-000000000005",
-    P6: "33333333-3333-4333-8333-000000000006",
+    P0: "c0000000-0000-4000-8000-000000000000",
+    P1: "c0000000-0000-4000-8000-000000000001",
+    P2: "c0000000-0000-4000-8000-000000000002",
+    P3: "c0000000-0000-4000-8000-000000000003",
+    P4: "c0000000-0000-4000-8000-000000000004",
+    P5: "c0000000-0000-4000-8000-000000000005",
+    P6: "c0000000-0000-4000-8000-000000000006",
   } as Record<string, string>,
   inputs: [
-    "44444444-4444-4444-8444-000000000001",
-    "44444444-4444-4444-8444-000000000002",
-    "44444444-4444-4444-8444-000000000003",
+    "d0000000-0000-4000-8000-000000000001",
+    "d0000000-0000-4000-8000-000000000002",
+    "d0000000-0000-4000-8000-000000000003",
   ],
-  artifact: "55555555-5555-4555-8555-000000000001",
-  decision: "66666666-6666-4666-8666-000000000001",
+  artifact: "e0000000-0000-4000-8000-000000000001",
+  decision: "f0000000-0000-4000-8000-000000000001",
 };
 
 // ── seed-tartalom (a #3 spec szerint szó szerint) ────────────
@@ -198,7 +200,8 @@ async function main(): Promise<void> {
       id: ID.phases[phase],
       project_id: ID.project,
       phase,
-      state,
+      state, // phase_state enum-érték (a 0002 migráció UTÁN futtatandó)
+      cycle_count: 1,
     })),
   );
 
@@ -211,7 +214,7 @@ async function main(): Promise<void> {
   await upsert(supabase, "artifacts", {
     id: ID.artifact,
     project_id: ID.project,
-    type: "project_charter", // „Projekt-charter" · P0
+    type: "Projekt-charter", // az élő adat típus-értéke (P0-kritérium erre szűr)
     version: 1,
     status: "approved",
     body: CHARTER_BODY,
@@ -222,7 +225,7 @@ async function main(): Promise<void> {
   await upsert(supabase, "decisions", {
     id: ID.decision,
     project_id: ID.project,
-    kind: "gate_closed",
+    kind: "gate_close",
     note: "P0 kapu lezárva — Charter jóváhagyva, stakeholder-kör rögzítve.",
     created_at: "2026-06-19T09:00:00Z",
   });
