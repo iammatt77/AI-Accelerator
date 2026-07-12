@@ -90,3 +90,11 @@ alter table phase_instances enable row level security;
 alter table input_items     enable row level security;
 alter table artifacts       enable row level security;
 alter table decisions       enable row level security;
+
+-- ─────────────────────────────────────────────────────────────
+-- PostgREST séma-cache frissítése.
+-- Enélkül egy frissen létrehozott tábla (pl. input_items) a REST API-n át
+-- "PGRST205 — Could not find the table in the schema cache" hibát dobhat,
+-- miközben a korábban cache-elt táblák (clients, projects) még működnek.
+-- ─────────────────────────────────────────────────────────────
+notify pgrst, 'reload schema';

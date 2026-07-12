@@ -2,12 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import {
-  addInput,
   generateDraftAction,
   saveDraftBody,
   approveArtifact,
 } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { InputForm } from "@/components/InputForm";
 import type {
   ArtifactRow,
   ClientRow,
@@ -93,18 +93,7 @@ export default async function ProjectPage({
       <section className="rounded-lg border border-[var(--border)] bg-[var(--panel)] p-5">
         <h2 className="text-sm font-semibold">Bemenet & generálás</h2>
 
-        <form action={addInput.bind(null, id)} className="mt-3 space-y-3">
-          <textarea
-            name="rawText"
-            required
-            rows={4}
-            placeholder="Illeszd be a nyers ügyfélanyagot…"
-            className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
-          />
-          <SubmitButton variant="secondary" pendingLabel="Mentés…">
-            Bemenet hozzáadása
-          </SubmitButton>
-        </form>
+        <InputForm projectId={id} />
 
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
           <span className="text-sm text-[var(--muted)]">

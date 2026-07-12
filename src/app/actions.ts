@@ -9,6 +9,35 @@ import type { ArtifactRow, InputItemRow } from "@/lib/db/types";
 // A draft artefaktumok típusa a foundation vertikumban (P0 összefoglaló).
 const ARTIFACT_TYPE = "p0_summary";
 
+// Űrlap-action visszatérési állapot (useActionState-hez). A hiba a felületen
+// LÁTHATÓ lesz, nem némán 500-zik.
+export type FormState = { ok: boolean; error: string | null };
+
+interface SupabaseErrorLike {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+}
+
+/**
+ * A Supabase/PostgREST hiba minden diagnosztikus mezőjét egy olvasható
+ * üzenetbe fűzi (message + code + details + hint). Így a felületen és a
+ * szerver-logban is látszik a valódi ok — pl. hiányzó tábla (PGRST205),
+ * ismeretlen oszlop (42703), FK-sértés (23503), RLS-tiltás (42501).
+ */
+function formatSupabaseError(prefix: string, error: SupabaseErrorLike | null): string {
+  if (!error) return `${prefix}: ismeretlen hiba.`;
+  const parts = [error.message ?? "ismeretlen hiba"];
+  if (error.code) parts.push(`[${error.code}]`);
+  if (error.details) parts.push(`— ${error.details}`);
+  if (error.hint) parts.push(`(hint: ${error.hint})`);
+  const msg = `${prefix}: ${parts.join(" ")}`;
+  // Szerver-log: a teljes üzenet a terminálban is megjelenik.
+  console.error(msg);
+  return msg;
+}
+
 // ── (a) Kliens + projekt létrehozása ─────────────────────────
 export async function createClientAndProject(formData: FormData): Promise<void> {
   const clientName = String(formData.get("clientName") ?? "").trim();
@@ -59,24 +88,42 @@ export async function createClientAndProject(formData: FormData): Promise<void> 
 }
 
 // ── (b) Nyers szöveg beillesztése → input_items ──────────────
-export async function addInput(projectId: string, formData: FormData): Promise<void> {
+// useActionState-kompatibilis: (projectId, prevState, formData) → FormState.
+// NEM dob kivételt — a hibát visszaadja, hogy a felületen LÁTHATÓ legyen.
+export async function addInput(
+  projectId: string,
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
   const rawText = String(formData.get("rawText") ?? "").trim();
   if (!rawText) {
-    throw new Error("A nyers szöveg nem lehet üres.");
+    return { ok: false, error: "A nyers szöveg nem lehet üres." };
   }
 
-  const supabase = createServiceSupabaseClient();
+  let supabase;
+  try {
+    supabase = createServiceSupabaseClient();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`Supabase kliens hiba: ${message}`);
+    return { ok: false, error: `Konfigurációs hiba: ${message}` };
+  }
+
   const { error } = await supabase.from("input_items").insert({
     project_id: projectId,
     type: "raw",
     raw_text: rawText,
   });
   if (error) {
-    throw new Error(`Bemenet mentése sikertelen: ${error.message}`);
+    return {
+      ok: false,
+      error: formatSupabaseError("Bemenet mentése sikertelen", error),
+    };
   }
 
   await logDecision(projectId, "add_input", `Nyers bemenet hozzáadva (${rawText.length} karakter).`);
   revalidatePath(`/project/${projectId}`);
+  return { ok: true, error: null };
 }
 
 // ── (c) "Draft generálása" → adapter.generateDraft → mentés ──
