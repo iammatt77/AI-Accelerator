@@ -303,21 +303,33 @@ function mockExtract(sources: LlmSource[], typeDef: ArtifactTypeDef): ExtractRes
   const validIndices = new Set(sources.map((s) => s.index));
   const result: ExtractResult = {};
   for (const fieldDef of typeDef.fields) {
-    const fixture = MOCK_FIELD_VALUES[fieldDef.key];
-    if (!fixture) {
-      result[fieldDef.key] = null;
+    // A charter-fixture SPECIÁLIS: a missing- és az all-invalid-citáció
+    // viselkedést demonstrálja (szponzor/stakeholderek üres; sikerkritérium
+    // [3] — 2 forrásnál fabrikáció-jel → missing).
+    if (typeDef.key === "Projekt-charter") {
+      const fixture = MOCK_FIELD_VALUES[fieldDef.key];
+      if (!fixture) {
+        result[fieldDef.key] = null;
+        continue;
+      }
+      // Azonos szabály, mint az éles parse-ban: csak-érvénytelen hivatkozás →
+      // fabrikáció-jel → missing (a fixture ezt is demonstrálja).
+      const source_indices = [
+        ...new Set(fixture.source_indices.filter((n) => validIndices.has(n))),
+      ];
+      if (fixture.source_indices.length > 0 && source_indices.length === 0) {
+        result[fieldDef.key] = null;
+        continue;
+      }
+      result[fieldDef.key] = { value: fixture.value, source_indices };
       continue;
     }
-    // Azonos szabály, mint az éles parse-ban: csak-érvénytelen hivatkozás →
-    // fabrikáció-jel → missing (a fixture ezt is demonstrálja).
-    const source_indices = [
-      ...new Set(fixture.source_indices.filter((n) => validIndices.has(n))),
-    ];
-    if (fixture.source_indices.length > 0 && source_indices.length === 0) {
-      result[fieldDef.key] = null;
-      continue;
-    }
-    result[fieldDef.key] = { value: fixture.value, source_indices };
+    // Generikus fixture (#6): BÁRMELY típusdefiníció mezője determinisztikus
+    // értéket kap [1]-es forrás-hivatkozással (ha van forrás).
+    result[fieldDef.key] = {
+      value: `${fieldDef.labelHu} — fixture-érték a forrásanyagból`,
+      source_indices: validIndices.has(1) ? [1] : [],
+    };
   }
   return result;
 }
