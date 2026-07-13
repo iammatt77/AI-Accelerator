@@ -1,11 +1,14 @@
 -- ─────────────────────────────────────────────────────────────
 -- reset-demo.sql — a demo-projekt visszaállítása a seed-alapállapotra
--- (Coding-csomag #4). Böngészőből (Supabase SQL-editor) EGYBEN
--- futtatható; IDEMPOTENS — többszöri futtatás ugyanazt az állapotot adja.
+-- (Coding-csomag #4, a #5a-ban bővítve). Böngészőből (Supabase
+-- SQL-editor) EGYBEN futtatható; IDEMPOTENS.
 --
 -- Alapállapot: P0 completed · P1 in_progress · P2–P6 locked ·
--- cycle_count = 1; a projekt gate_close Decision-jei törlődnek,
--- KIVÉVE a seedelt f0000000-0000-4000-8000-000000000001-et.
+-- cycle_count = 1; a demo-projekt MINDEN nem-seedelt sora törlődik:
+--   - decisions: csak a seedelt f0000000-…-0001 marad (minden kind)
+--   - artifacts: csak a seedelt charter (e0000000-…-0001) marad,
+--     approved v1 státuszban (a #5a „Új verzió"-klónjai törlődnek)
+--   - input_items: csak a 3 seedelt bemenet (d0000000-…-0001…0003) marad
 -- ─────────────────────────────────────────────────────────────
 
 update phase_instances set state = 'completed', cycle_count = 1
@@ -23,7 +26,27 @@ update phase_instances set state = 'locked', cycle_count = 1
     'c0000000-0000-4000-8000-000000000006'  -- P6
   );
 
+-- Nem-seedelt döntések törlése (a #5a óta minden kind: add_input, extract,
+-- generate_draft, edit_draft, status_change, approve_artifact, new_version
+-- és a teszt-kapuzárások is).
 delete from decisions
   where project_id = 'b0000000-0000-4000-8000-000000000001'
-    and kind = 'gate_close'
     and id <> 'f0000000-0000-4000-8000-000000000001';
+
+-- Nem-seedelt artefaktumok törlése (#5a „Új verzió"-klónok, tesztek);
+-- a seedelt charter visszaáll approved v1-re.
+delete from artifacts
+  where project_id = 'b0000000-0000-4000-8000-000000000001'
+    and id <> 'e0000000-0000-4000-8000-000000000001';
+
+update artifacts set status = 'approved', version = 1
+  where id = 'e0000000-0000-4000-8000-000000000001';
+
+-- Nem-seedelt bemenetek törlése (a ① zónában felvett teszt-inputok).
+delete from input_items
+  where project_id = 'b0000000-0000-4000-8000-000000000001'
+    and id not in (
+      'd0000000-0000-4000-8000-000000000001',
+      'd0000000-0000-4000-8000-000000000002',
+      'd0000000-0000-4000-8000-000000000003'
+    );

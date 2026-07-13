@@ -33,6 +33,9 @@ export interface ArtifactFieldDef {
   key: string;
   /** i18n label-kulcs (messages `fields` névtér). */
   labelKey: string;
+  /** Locale-független magyar label a GENERÁLÁSI prompthoz — az adapter
+   *  promptja nem függhet a UI-nyelvtől (i18n-védőkorlát). */
+  labelHu: string;
   required: boolean;
   /** Rövid magyar leírás a promptnak: mit jelent a mező. */
   promptHint: string;
@@ -71,6 +74,7 @@ export const PROJECT_CHARTER: ArtifactTypeDef = {
     {
       key: "cel",
       labelKey: "fields.charter.cel",
+      labelHu: "Cél",
       required: true,
       promptHint:
         "A projekt célja: mit akar elérni az ügyfél ezzel a projekttel (1-2 tömör mondat).",
@@ -78,6 +82,7 @@ export const PROJECT_CHARTER: ArtifactTypeDef = {
     {
       key: "scope",
       labelKey: "fields.charter.scope",
+      labelHu: "Scope",
       required: true,
       promptHint:
         "A projekt terjedelme: mely fázisok, folyamatok, területek tartoznak bele (és mi nem).",
@@ -85,18 +90,21 @@ export const PROJECT_CHARTER: ArtifactTypeDef = {
     {
       key: "szponzor",
       labelKey: "fields.charter.szponzor",
+      labelHu: "Szponzor",
       required: true,
       promptHint: "A projekt szponzora az ügyfél szervezetében (szerep vagy név).",
     },
     {
       key: "idokeret",
       labelKey: "fields.charter.idokeret",
+      labelHu: "Időkeret",
       required: true,
       promptHint: "A projekt időkerete (időtartam vagy határidő).",
     },
     {
       key: "sikerkriterium",
       labelKey: "fields.charter.sikerkriterium",
+      labelHu: "Sikerkritérium",
       required: true,
       promptHint:
         "Mitől számít sikeresnek a projekt: elvárt, lehetőleg mérhető kimenetek.",
@@ -104,6 +112,7 @@ export const PROJECT_CHARTER: ArtifactTypeDef = {
     {
       key: "stakeholderek",
       labelKey: "fields.charter.stakeholderek",
+      labelHu: "Stakeholderek",
       required: false,
       promptHint:
         "Érintett szereplők az ügyfél oldalán (szerepek, csapatok), ha a forrás említi.",
@@ -188,7 +197,11 @@ export function parseArtifactFields(
       const value = typeof obj.value === "string" && obj.value.trim() !== "" ? obj.value : null;
       const state = isFieldState(obj.state) ? obj.state : value ? "manual" : "missing";
       const source_indices = Array.isArray(obj.source_indices)
-        ? obj.source_indices.filter((n): n is number => Number.isInteger(n) && (n as number) > 0)
+        ? [...new Set(
+            obj.source_indices.filter(
+              (n): n is number => Number.isInteger(n) && (n as number) > 0,
+            ),
+          )]
         : [];
       // érték nélkül nem lehet "kitöltött" állapot
       result[fieldDef.key] = value

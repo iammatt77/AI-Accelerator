@@ -184,6 +184,8 @@
     "generating": "Generating…",
     "generated": "Draft body ready.",
     "generateNeedsConfirmed": "Generation needs at least one confirmed or manual field.",
+    "generateConfirmLabel": "I confirm overwriting the body",
+    "generateOverwriteWarn": "Generating fully overwrites the existing body — manual edits are lost.",
     "openEditor": "Open editor",
     "noArtifactYet": "No artifact of this type yet."
   },
@@ -227,7 +229,8 @@
     "unconfirmedWarnTitle": "Unconfirmed (AI proposal) fields — a warning, does not block:",
     "newVersionCta": "New version",
     "creatingVersion": "Creating new version…",
-    "newVersionHint": "\"New version\" creates a version+1 draft clone (fields + body carried over)."
+    "newVersionHint": "\"New version\" creates a version+1 draft clone (fields + body carried over).",
+    "notHead": "This is not the latest version — a new version can only start from the latest."
   },
   "errors": {
     "emptyInput": "The raw text cannot be empty.",
@@ -266,7 +269,8 @@
     "approveBlocked": "Approve is blocked — missing required fields: {fields}",
     "statusChangeFailed": "Status change failed: {message}",
     "invalidStatusTransition": "Invalid status transition — the state may have changed. Refresh the page.",
-    "newVersionOnlyApproved": "A new version can only be created from an approved artifact."
+    "newVersionOnlyApproved": "A new version can only be created from an approved artifact.",
+    "newVersionOnlyLatest": "A new version can only be created from the latest version."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",

@@ -34,14 +34,17 @@ export async function PhaseWorkspace({
   projectId: string;
   phase: PhaseId;
 }) {
-  const [locale, t, tGates, tArtifacts, tFields, tEmpty] = await Promise.all([
+  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty] = await Promise.all([
     getLocale(),
     getTranslations("workspace"),
     getTranslations("gates"),
     getTranslations("artifacts"),
+    getTranslations("artifactTypes"),
     getTranslations("fields"),
     getTranslations("empty"),
   ]);
+  const typeName = (typeDef: ArtifactTypeDef) =>
+    tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""));
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   const dateOptions = { timeZone: "Europe/Budapest" } as const;
 
@@ -142,7 +145,7 @@ export async function PhaseWorkspace({
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <h4 className="text-body font-semibold">
-                          {t("fieldsTitle", { type: typeDef.key })}
+                          {t("fieldsTitle", { type: typeName(typeDef) })}
                         </h4>
                         <span className="rounded-pill border border-line bg-surface px-2 py-0.5 font-mono text-mono-sm text-ink-secondary">
                           {t("completeness", completeness(typeDef, fields))}
@@ -202,7 +205,7 @@ export async function PhaseWorkspace({
                   <p className="mt-1 text-mono-sm text-ink-tertiary">{t("outputLead")}</p>
                   <div className="rounded-tile border border-line bg-surface p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-body font-medium">{typeDef.key}</span>
+                      <span className="text-body font-medium">{typeName(typeDef)}</span>
                       {latest ? (
                         <StatusPill
                           variant={latest.status}
@@ -227,6 +230,7 @@ export async function PhaseWorkspace({
                             <GenerateBodyForm
                               projectId={projectId}
                               artifactId={latest.id}
+                              hasBody={latest.body.trim() !== ""}
                             />
                           ) : (
                             <p className="text-mono-sm text-ink-tertiary">

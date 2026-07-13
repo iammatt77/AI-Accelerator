@@ -184,6 +184,8 @@
     "generating": "Generálás…",
     "generated": "A draft body elkészült.",
     "generateNeedsConfirmed": "A generáláshoz legalább egy megerősített vagy kézi mező kell.",
+    "generateConfirmLabel": "Megerősítem a body felülírását",
+    "generateOverwriteWarn": "A generálás a meglévő body-t teljesen felülírja — a kézi szerkesztés elvész.",
     "openEditor": "Szerkesztő megnyitása",
     "noArtifactYet": "Még nincs artefaktum ebből a típusból."
   },
@@ -227,7 +229,8 @@
     "unconfirmedWarnTitle": "Nem megerősített (AI-javaslat) mezők — figyelmeztetés, nem blokkol:",
     "newVersionCta": "Új verzió",
     "creatingVersion": "Új verzió létrehozása…",
-    "newVersionHint": "Az „Új verzió” version+1 draft-klónt hoz létre (mezők + body átvéve)."
+    "newVersionHint": "Az „Új verzió” version+1 draft-klónt hoz létre (mezők + body átvéve).",
+    "notHead": "Ez nem a legfrissebb verzió — új verzió csak a legfrissebbből indítható."
   },
   "errors": {
     "emptyInput": "A nyers szöveg nem lehet üres.",
@@ -266,7 +269,8 @@
     "approveBlocked": "Az Approve blokkolva — hiányzó kötelező mezők: {fields}",
     "statusChangeFailed": "Státusz-váltás sikertelen: {message}",
     "invalidStatusTransition": "Érvénytelen státusz-átmenet — az állapot időközben változhatott. Frissítsd az oldalt.",
-    "newVersionOnlyApproved": "Új verzió csak jóváhagyott (Approved) artefaktumból hozható létre."
+    "newVersionOnlyApproved": "Új verzió csak jóváhagyott (Approved) artefaktumból hozható létre.",
+    "newVersionOnlyLatest": "Új verzió csak a legfrissebb verzióból hozható létre."
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet a Projektek oldalon.",

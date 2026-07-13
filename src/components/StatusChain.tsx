@@ -40,12 +40,15 @@ export function StatusChain({
   projectId,
   artifactId,
   status,
+  isHead,
   missingRequiredLabels,
   unconfirmedLabels,
 }: {
   projectId: string;
   artifactId: string;
   status: ArtifactStatus;
+  /** Ez-e a típus legfrissebb verziója (új verzió csak a fejből indulhat). */
+  isHead: boolean;
   missingRequiredLabels: string[];
   unconfirmedLabels: string[];
 }) {
@@ -147,16 +150,21 @@ export function StatusChain({
         </div>
       )}
 
-      {/* ── Approved: Új verzió ── */}
-      {status === "approved" && (
-        <form action={versionAction} className="mt-3 space-y-2">
-          <p className="text-mono-sm text-ink-tertiary">{t("newVersionHint")}</p>
-          <ErrorAlert error={versionState.error} />
-          <SubmitButton variant="secondary" pendingLabel={t("creatingVersion")}>
-            {t("newVersionCta")}
-          </SubmitButton>
-        </form>
-      )}
+      {/* ── Approved: Új verzió — CSAK a fej-verzióból (a nem-fej klón
+          elágazó láncot / párhuzamos draftokat hozna létre; a szerver
+          RPC-je is elutasítja) ── */}
+      {status === "approved" &&
+        (isHead ? (
+          <form action={versionAction} className="mt-3 space-y-2">
+            <p className="text-mono-sm text-ink-tertiary">{t("newVersionHint")}</p>
+            <ErrorAlert error={versionState.error} />
+            <SubmitButton variant="secondary" pendingLabel={t("creatingVersion")}>
+              {t("newVersionCta")}
+            </SubmitButton>
+          </form>
+        ) : (
+          <p className="mt-3 text-mono-sm text-ink-tertiary">{t("notHead")}</p>
+        ))}
     </section>
   );
 }

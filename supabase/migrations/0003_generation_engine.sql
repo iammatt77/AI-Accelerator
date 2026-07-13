@@ -113,6 +113,14 @@ begin
   if src.status <> 'approved' then
     raise exception 'not_approved: % (status: %)', p_artifact_id, src.status;
   end if;
+  -- ... és csak a LEGFRISSEBB verzióból: nem-fej verzió klónozása
+  -- párhuzamos draftokat (elágazó láncot) hozna létre.
+  if src.version <> (
+    select max(a.version) from artifacts a
+    where a.project_id = src.project_id and a.type = src.type
+  ) then
+    raise exception 'not_latest: % (v%)', p_artifact_id, src.version;
+  end if;
 
   return query
   insert into artifacts (project_id, type, version, status, body, source_input_ids, fields)

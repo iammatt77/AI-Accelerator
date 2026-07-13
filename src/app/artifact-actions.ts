@@ -556,6 +556,9 @@ export async function newVersionAction(
     if (message.includes("not_approved")) {
       return { ok: false, error: tErrors("newVersionOnlyApproved") };
     }
+    if (message.includes("not_latest")) {
+      return { ok: false, error: tErrors("newVersionOnlyLatest") };
+    }
     return { ok: false, error: tErrors("statusChangeFailed", { message }) };
   }
   const rows = (Array.isArray(data) ? data : data ? [data] : []) as ArtifactRow[];
@@ -616,7 +619,6 @@ export async function generateBodyAction(
   _formData: FormData,
 ): Promise<FormState> {
   const tErrors = await getTranslations("errors");
-  const tFields = await getTranslations("fields");
   const supabase = createServiceSupabaseClient();
 
   const { data, error: fetchErr } = await supabase
@@ -644,6 +646,8 @@ export async function generateBodyAction(
 
   const fields = parseArtifactFields(typeDef, artifact.fields);
   // Tényként kezelt mezők: ember által megerősített VAGY kézzel írt.
+  // A label a locale-FÜGGETLEN magyar labelHu — az adapter promptja nem
+  // változhat a UI-nyelvvel (i18n-védőkorlát).
   const confirmedFields = typeDef.fields
     .filter((f) => {
       const value = fields[f.key];
@@ -654,7 +658,7 @@ export async function generateBodyAction(
     })
     .map((f) => ({
       key: f.key,
-      label: tFields(f.labelKey.replace(/^fields\./, "")),
+      label: f.labelHu,
       value: fields[f.key].value as string,
     }));
   if (confirmedFields.length === 0) {

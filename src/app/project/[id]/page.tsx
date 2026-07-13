@@ -8,6 +8,7 @@ import {
   countOpenGates,
   loadPhaseBoard,
 } from "@/lib/phases/service";
+import { getTypeDef } from "@/lib/artifacts/config";
 import { StatusPill } from "@/components/StatusPill";
 import { PhaseStepperV1 } from "@/components/PhaseStepper";
 import { NextStepWidget } from "@/components/NextStep";
@@ -46,7 +47,9 @@ async function loadWorkspace(projectId: string) {
       .from("artifacts")
       .select("*")
       .eq("project_id", projectId)
-      .order("version", { ascending: false }),
+      // „Legutóbbi" = utoljára érintett: a verziószám #5a óta típusonként
+      // számolódik, típusok KÖZÖTT nem közelíti a frissességet.
+      .order("updated_at", { ascending: false }),
     loadPhaseBoard(supabase, projectId),
   ]);
 
@@ -69,17 +72,23 @@ export default async function ProjectCockpitPage({
 
   const { project, inputs, artifacts, board } = data;
 
-  const [locale, tCockpit, tClients, tArtifacts, tEmpty, tGates, tCriteria, tLex] =
+  const [locale, tCockpit, tClients, tArtifacts, tTypes, tEmpty, tGates, tCriteria, tLex] =
     await Promise.all([
       getLocale(),
       getTranslations("cockpit"),
       getTranslations("clients"),
       getTranslations("artifacts"),
+      getTranslations("artifactTypes"),
       getTranslations("empty"),
       getTranslations("gates"),
       getTranslations("criteria"),
       getTranslations("phases.lexicon"),
     ]);
+  // Lokalizált típusnév, ha van típusdefiníció (örökség-típus: nyers kulcs).
+  const typeName = (type: string) => {
+    const def = getTypeDef(type);
+    return def ? tTypes(def.nameKey.replace(/^artifactTypes\./, "")) : type;
+  };
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   // Szerver-komponensben formázunk: időzóna nélkül a SZERVER (prod: UTC)
   // zónájában jelenne meg minden időbélyeg — fixen Europe/Budapest.
@@ -169,7 +178,7 @@ export default async function ProjectCockpitPage({
                       className="flex items-center justify-between gap-3 rounded-tile border border-line bg-surface px-3 py-2 text-body transition-colors duration-[var(--motion-base)] hover:bg-sunken"
                     >
                       <span className="min-w-0 truncate">
-                        v{artifact.version} · {artifact.type}
+                        v{artifact.version} · {typeName(artifact.type)}
                       </span>
                       <StatusPill
                         variant={artifact.status}

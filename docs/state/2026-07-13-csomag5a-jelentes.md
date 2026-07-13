@@ -57,7 +57,7 @@ verifikálni — az a Preview-teszt része (5. szakasz).**
 - `new_artifact_version()`: csak `approved` forrásból klónoz; a
   verseny-teszt eredményét lásd lent.
 
-### Teljes lánc — valós böngészővel, fixture-móddal (35/35 PASS)
+### Teljes lánc — valós böngészővel, fixture-móddal (37/37 PASS)
 
 `node walkthrough5a.mjs` (Playwright + Chromium, a UI-ból létrehozott
 FRISS projekten):
@@ -66,32 +66,38 @@ FRISS projekten):
   a munkaterület-CTA a P0-ra visz.
 - **① Bemenet:** két input hozzáadva címmel — mindkettő `P0`
   fázis-címkét kapott, a lista számozva ([1], [2]).
-- **② Kivonatolás (E1):** a fixture 4 mezőre ad AI-javaslatot
-  forrás-jelöléssel; a szponzor **missing marad** (a hiányzó adat nem
-  hiba); az érvénytelen forrás-index (fixture [3], 2 forrás mellett)
-  kiszűrve; extract után **nincs confirmed mező** — megerősítés nélkül
-  nincs confirmed (E1-hűség bizonyítva); teljesség 4/5.
-- **Megerősítés:** mind a 4 javaslat kártyánként megerősítve →
+- **② Kivonatolás (E1):** a fixture AI-javaslatokat ad forrás-jelöléssel;
+  a szponzor **missing marad** (a hiányzó adat nem hiba); a KIZÁRÓLAG
+  érvénytelen forrásra hivatkozó javaslat (fixture-sikerkritérium [3],
+  2 forrás mellett) **fabrikáció-jelként elutasítva → missing** (review-
+  javítás); extract után **nincs confirmed mező** — megerősítés nélkül
+  nincs confirmed (E1-hűség bizonyítva); teljesség 3/5.
+- **Megerősítés:** mind a 3 javaslat kártyánként megerősítve →
   „megerősítve" állapot ikon+szöveggel.
 - **③ Generálás:** a megerősített mezőkből sablon-vezérelt body készül
   (## szekció-váz), Draft · v1 pill.
 - **Szerkesztő (1f):** mező-panel teljesség-pillel; **kattintható [n]
   citáció**: az [1] jelölőre kattintva pontosan egy forrás emelődik ki,
-  és az a helyes ([1] Interjú-jegyzet); body szerkesztve és mentve.
+  és az a helyes ([1] Interjú-jegyzet); body szerkesztve és mentve; a
+  kézi mentés UTÁN a ③ re-generálás már csak **felülírás-megerősítővel**
+  fut (review-javítás: az emberi munka a body-n is védett).
 - **Lánc:** Review-ra küldés → In review; **Approve-kísérlet hiányzó
-  kötelező mezővel → kemény blokk**, a hibalista a Szponzort nevezi meg
-  (`role="alert"`, nem 500); vissza draftba → szponzor kézi pótlása
-  („kézi" állapot, 5/5) → újra review → **Approve** → Approved pill,
-  a body **immutábilis** (nincs textarea, „Csak olvasható").
+  kötelező mezőkkel → kemény blokk**, a hibalista a Szponzort ÉS a
+  Sikerkritériumot nevezi meg (`role="alert"`, nem 500); vissza draftba
+  → mindkét mező kézi pótlása („kézi" állapot, 5/5) → újra review →
+  **Approve** → Approved pill, a body **immutábilis** (nincs textarea,
+  „Csak olvasható").
 - **Új verzió:** version+1 (v2) draft-klón nyílik meg, a mezők (5/5) és
-  a szerkesztett body átvéve.
+  a szerkesztett body átvéve; a régi (nem-fej) v1-en az „Új verzió"
+  gomb helyett magyarázat áll, a szerver-RPC is elutasítja
+  (review-javítás: nincs elágazó lánc).
 - **#4-integráció:** az approved charter (v1) zöldíti a P0
   `charter_approved` kritériumot → a fázis-oldal „Döntés vár"
   (gate_pending) állapotot mutat — a kapu-logika változatlanul él.
 
 Decision-napló a lánc után (psql): `create_project` → 2× `add_input`
-(fázis-jelöléssel) → `extract` → `generate_draft` → `edit_draft` → 3×
-`status_change` → `approve_artifact` → `new_version` — minden lépés
+(fázis-jelöléssel) → `extract` → `generate_draft` → `edit_draft` →
+`status_change`-ek → `approve_artifact` → `new_version` — minden lépés
 naplózott.
 
 ### Verseny-teszt — két párhuzamos „Új verzió"
@@ -112,11 +118,46 @@ charter `fields` a backfill-értékekkel, duplikáció nélkül.
 - `npm run build`: **zöld** (TS strict 0 hiba, 11 route — az új
   szerkesztő-útvonallal).
 - `npm run i18n:check`: **üres diff** — „244 kulcs, mindkét nyelven
-  azonos készlet".
+  azonos készlet" (a review-javítások
+  utáni végállapot: 248 kulcs).
 
 ### Review-workflow (többlencsés, adverszáriális ellenőrzéssel)
 
-<!-- REVIEW_SECTION -->
+A 6 független review-lencse (LLM-adapter/governance · E1
+mező-életciklus · státuszlánc/verziózás · SQL/0003-biztonság ·
+UI/i18n/design-törvények · regresszió #1–#4 ellen) párhuzamos
+al-ügynökökként futott a `75586dc..HEAD` tartomány felett; minden
+leletet adverszáriális ellenőrző vizsgált (cáfolásra utasítva).
+
+**14 lelet → 8 megerősítve és javítva, 6 elvetve.** A javítások:
+
+| # | Súly | Lelet | Javítás |
+| --- | --- | --- | --- |
+| 1 | közepes | A típusnév sosem lokalizált — az EN felület is a nyers „Projekt-charter" DB-kulcsot mutatta | `nameKey` fogyasztása: szerkesztő-fejléc, ② mező-cím, ③ típuskártya, fülke „legutóbbi artefaktumok" (örökség-típus: nyers kulcs, törés nélkül) |
+| 2 | közepes | A ③ „Draft generálása" figyelmeztetés nélkül, visszavonhatatlanul felülírta a kézzel szerkesztett body-t | Meglévő body mellett kötelező felülírás-megerősítő jelölő + borostyán figyelmeztetés (az emberi munka védelme a body-ra is) |
+| 3 | közepes | „Új verzió" nem-fej approved verzióról is indítható volt → párhuzamos draftok, elágazó lánc, árván maradó szerkesztések | `new_artifact_version()` `not_latest` őr + `errors.newVersionOnlyLatest` + a szerkesztő nem-fej verzión magyarázatot mutat gomb helyett |
+| 4 | közepes | A csak-érvénytelen forrásra hivatkozó extract-érték normál (idézetlen) AI-javaslatként jelent meg — a legerősebb fabrikáció-jel elveszett; duplikált indexek átjutottak (duplikált React-key) | `parseExtractResult`: hivatkozott-de-mind-érvénytelen → missing; index-dedupe a parse-ban és a `parseArtifactFields`-ben; a mock azonos szabállyal fut (a walkthrough bizonyítja) |
+| 5 | alacsony | A generálási prompt mező-labelje a UI-locale-ból jött (EN felületen „Goal (cel)") — az adapter i18n-függetlensége sérült | Locale-független `labelHu` a típusdefinícióban; a prompt ebből épül |
+| 6 | alacsony | A fence-eltávolítás korrumpálta az érvényes, fence-nélküli JSON-t, ha egy mezőérték ```-párt tartalmazott | Előbb nyers `JSON.parse`, a fence-strip csak fallback |
+| 7 | alacsony | Fülke „legutóbbi artefaktumok": verzió szerinti rendezés — a #5a típusonkénti verziózásával a típusok KÖZÖTT nem frissesség-sorrend | Rendezés `updated_at desc` szerint |
+| 8 | alacsony | A reset-demo.sql a #5a-sorokat (verzió-klónok, ①-inputok, új decision-kindok) nem takarította — az alapállapot nem állt helyre | Bővített reset: minden nem-seedelt artifact/input/decision törlése, a seedelt charter approved v1-re áll; 2× futtatva bizonyítva |
+
+Elvetett leletek (az ellenőrzők cáfolták): a lila „Draft generálása"
+gomb (dokumentált döntési pont; a törvény az akcentus-SZÍNT köti
+döntési pontokhoz, nem darabszámot); két a11y-lelet (a [n] gombok
+látható szövege az accessible name; az `aria-controls` feltételesen
+renderelt tartalomnál éppen hibát okozna); a `parseArtifactFields`
+manual-fallback forgatókönyve kódútról nem elérhető (minden író érvényes
+state-et ír); az approve-TOCTOU (három teljes akció-kör kellene egyetlen
+kör ablakában — egyfelhasználós rendszerben elfogadott kockázat,
+parkolóban); a munkaterület „open" állapotú elérhetősége (a #4-ben is
+minden zóna azonos ágban élt; a kemény kapuk — zárás csak indítás után —
+érintetlenek).
+
+A javítások után: build zöld, i18n:check zöld (248 kulcs), a teljes
+walkthrough újrafuttatva **37/37 PASS** (az új ellenőrzésekkel: all-invalid
+citáció → missing; felülírás-megerősítő; nem-fej verzió tiltás), a
+verseny-teszt a bővített RPC-vel is PASS.
 
 ## 4. Kezelt eltérések
 
@@ -145,6 +186,9 @@ charter `fields` a backfill-értékekkel, duplikáció nélkül.
   a spec nyitott kérdése).
 - `input_items.phase` CHECK-kényszer (most szabad szöveg, a UI csak
   érvényes fáziskódot ír).
+- Approve-TOCTOU szigorítás (mező-revalidáció a guardolt UPDATE-ben /
+  `updated_at`-guard) — egyfelhasználós rendszerben elfogadott kockázat,
+  több felhasználónál zárandó.
 
 ## 6. Nálad zárandó (Máté)
 

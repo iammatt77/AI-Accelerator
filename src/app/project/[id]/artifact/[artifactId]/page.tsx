@@ -80,13 +80,30 @@ export default async function ArtifactEditorPage({
     }));
   }
 
-  const [locale, tEditor, tArtifacts] = await Promise.all([
+  const [locale, tEditor, tArtifacts, tTypes, tFields] = await Promise.all([
     getLocale(),
     getTranslations("editor"),
     getTranslations("artifacts"),
+    getTranslations("artifactTypes"),
+    getTranslations("fields"),
   ]);
-  const tFields = await getTranslations("fields");
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
+  const typeName = typeDef
+    ? tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""))
+    : artifact.type;
+
+  // Fej-verzió-e: „Új verzió" csak a legfrissebbből indulhat (elágazás-tilalom).
+  const { data: headData } = await supabase
+    .from("artifacts")
+    .select("version")
+    .eq("project_id", id)
+    .eq("type", artifact.type)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const isHead =
+    ((headData as { version?: number } | null)?.version ?? artifact.version) ===
+    artifact.version;
 
   const parsedFields = typeDef ? parseArtifactFields(typeDef, artifact.fields) : null;
   const editorFields: EditorField[] =
@@ -131,7 +148,7 @@ export default async function ArtifactEditorPage({
             {typeDef ? ` · ${typeDef.phase}` : ""}
           </Link>
           <h1 className="mt-1 flex flex-wrap items-center gap-2 text-title">
-            {artifact.type}
+            {typeName}
             <span className="font-mono text-body text-ink-tertiary">
               v{artifact.version}
             </span>
@@ -162,6 +179,7 @@ export default async function ArtifactEditorPage({
         projectId={id}
         artifactId={artifact.id}
         status={artifact.status}
+        isHead={isHead}
         missingRequiredLabels={missingRequiredLabels}
         unconfirmedLabels={unconfirmedLabels}
       />

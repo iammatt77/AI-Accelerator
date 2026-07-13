@@ -246,9 +246,12 @@ export function FieldCard({
 export function GenerateBodyForm({
   projectId,
   artifactId,
+  hasBody,
 }: {
   projectId: string;
   artifactId: string;
+  /** Van már body — a generálás FELÜLÍRJA (a kézi szerkesztést is). */
+  hasBody: boolean;
 }) {
   const t = useTranslations("workspace");
   const [state, formAction] = useActionState(
@@ -260,6 +263,19 @@ export function GenerateBodyForm({
     <form action={formAction} className="space-y-2">
       <ErrorAlert error={state.error} />
       {state.ok && <p className="text-body text-done">{t("generated")}</p>}
+      {/* Poka-yoke: meglévő (akár kézzel szerkesztett) body felülírása csak
+          explicit megerősítéssel — az emberi munka védelme a body-ra is áll. */}
+      {hasBody && (
+        <label className="flex items-start gap-2 rounded-tile border border-gate/50 bg-surface px-3 py-2 text-body text-gate">
+          <input type="checkbox" required className="mt-1 accent-[var(--action-primary)]" />
+          <span>
+            {t("generateConfirmLabel")}
+            <span className="mt-0.5 block text-mono-sm text-ink-tertiary">
+              {t("generateOverwriteWarn")}
+            </span>
+          </span>
+        </label>
+      )}
       {/* Generálás = döntési pont → lila (törvény 3) */}
       <SubmitButton pendingLabel={t("generating")}>{t("generateCta")}</SubmitButton>
     </form>

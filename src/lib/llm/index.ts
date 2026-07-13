@@ -154,7 +154,14 @@ function parseExtractResult(
 ): ExtractResult {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(stripCodeFences(raw));
+    // Előbb a nyers választ próbáljuk (a fence-nélküli érvényes JSON a
+    // megfelelő eset); a fence-eltávolítás csak fallback — így a mező-
+    // értékekben előforduló ``` nem korrumpálja az érvényes választ.
+    try {
+      parsed = JSON.parse(raw.trim());
+    } catch {
+      parsed = JSON.parse(stripCodeFences(raw));
+    }
   } catch {
     throw new Error(
       `A modell válasza nem érvényes JSON (első 120 karakter): ${raw.slice(0, 120)}`,
@@ -172,11 +179,20 @@ function parseExtractResult(
       const obj = candidate as Record<string, unknown>;
       const value = typeof obj.value === "string" ? obj.value.trim() : "";
       if (value !== "") {
-        const source_indices = Array.isArray(obj.source_indices)
-          ? obj.source_indices.filter(
+        const rawIndices = Array.isArray(obj.source_indices) ? obj.source_indices : [];
+        const source_indices = [
+          ...new Set(
+            rawIndices.filter(
               (n): n is number => Number.isInteger(n) && validIndices.has(n as number),
-            )
-          : [];
+            ),
+          ),
+        ];
+        // Fabrikáció-jel: a modell hivatkozott forrásokra, de EGYIK sem
+        // létezik → az érték nem fogadható el javaslatként (missing).
+        if (rawIndices.length > 0 && source_indices.length === 0) {
+          result[fieldDef.key] = null;
+          continue;
+        }
         result[fieldDef.key] = { value, source_indices };
         continue;
       }
@@ -291,7 +307,15 @@ function mockExtract(sources: LlmSource[], typeDef: ArtifactTypeDef): ExtractRes
       result[fieldDef.key] = null;
       continue;
     }
-    const source_indices = fixture.source_indices.filter((n) => validIndices.has(n));
+    // Azonos szabály, mint az éles parse-ban: csak-érvénytelen hivatkozás →
+    // fabrikáció-jel → missing (a fixture ezt is demonstrálja).
+    const source_indices = [
+      ...new Set(fixture.source_indices.filter((n) => validIndices.has(n))),
+    ];
+    if (fixture.source_indices.length > 0 && source_indices.length === 0) {
+      result[fieldDef.key] = null;
+      continue;
+    }
     result[fieldDef.key] = { value: fixture.value, source_indices };
   }
   return result;
