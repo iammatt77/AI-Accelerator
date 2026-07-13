@@ -132,6 +132,11 @@ export async function PhaseWorkspace({
                 : null;
               return (
                 <div key={typeDef.key} className="space-y-3">
+                  {/* Típusnév MINDIG látszik (#6): többtípusos fázisban enélkül
+                      a kivonatolás-blokkok megkülönböztethetetlenek */}
+                  <h4 className="border-t border-line pt-3 text-body font-semibold first:border-t-0 first:pt-0">
+                    {typeName(typeDef)}
+                  </h4>
                   <p className="text-mono-sm text-ink-tertiary">{t("toolsLead")}</p>
                   {latest && !editable && (
                     <p className="rounded-tile border border-dashed border-line px-3 py-2 text-body text-ink-tertiary">
