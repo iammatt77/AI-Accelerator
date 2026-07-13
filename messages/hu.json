@@ -187,6 +187,24 @@
     "openEditor": "Szerkesztő megnyitása",
     "noArtifactYet": "Még nincs artefaktum ebből a típusból."
   },
+  "editor": {
+    "fieldPanelTitle": "Mezők",
+    "bodyTitle": "Body (markdown)",
+    "editCta": "Szerkesztés",
+    "viewCta": "Olvasó nézet",
+    "saveCta": "Body mentése",
+    "saving": "Mentés…",
+    "saved": "Body elmentve.",
+    "readOnly": "Csak olvasható — a jóváhagyott verzió immutábilis",
+    "noBody": "Még nincs body — generáld a ③ zónából, vagy írd meg itt.",
+    "bodyPlaceholder": "A draft body-ja (markdown)…",
+    "citationHint": "A [n] jelölők kattinthatók — a hivatkozott forrás kiemelődik.",
+    "citationTitle": "Forrás [{n}] kiemelése",
+    "sourcesTitle": "Számozott források",
+    "noSources": "Ehhez az artefaktumhoz nincs rögzített forrás.",
+    "updatedAt": "Utolsó mentés: {date}",
+    "noTypeDef": "Ehhez a típushoz ({type}) nincs típusdefiníció — a mező-panel nem elérhető, a body olvasható/szerkeszthető."
+  },
   "artifacts": {
     "draftHeading": "Draft",
     "saveDraft": "Draft mentése",

@@ -187,6 +187,24 @@
     "openEditor": "Open editor",
     "noArtifactYet": "No artifact of this type yet."
   },
+  "editor": {
+    "fieldPanelTitle": "Fields",
+    "bodyTitle": "Body (markdown)",
+    "editCta": "Edit",
+    "viewCta": "Reader view",
+    "saveCta": "Save body",
+    "saving": "Saving…",
+    "saved": "Body saved.",
+    "readOnly": "Read-only — the approved version is immutable",
+    "noBody": "No body yet — generate it from zone ③, or write it here.",
+    "bodyPlaceholder": "The draft body (markdown)…",
+    "citationHint": "The [n] markers are clickable — the referenced source gets highlighted.",
+    "citationTitle": "Highlight source [{n}]",
+    "sourcesTitle": "Numbered sources",
+    "noSources": "No sources recorded for this artifact.",
+    "updatedAt": "Last saved: {date}",
+    "noTypeDef": "No type definition for this type ({type}) — the field panel is unavailable; the body stays readable/editable."
+  },
   "artifacts": {
     "draftHeading": "Draft",
     "saveDraft": "Save draft",

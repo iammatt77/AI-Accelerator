@@ -385,6 +385,42 @@ export async function dismissFieldAction(
   return updateField(projectId, artifactId, fieldKey, "dismiss");
 }
 
+// ── Szerkesztő: body mentése (csak draft; updated_at frissül) ─
+
+export async function saveArtifactBody(
+  projectId: string,
+  artifactId: string,
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const body = String(formData.get("body") ?? "");
+  const nonce = Date.now();
+
+  const supabase = createServiceSupabaseClient();
+  const { data, error } = await supabase
+    .from("artifacts")
+    .update({ body, updated_at: new Date().toISOString() })
+    .eq("id", artifactId)
+    .eq("project_id", projectId)
+    .eq("status", "draft") // csak draft szerkeszthető (Approved immutábilis)
+    .select("id");
+  if (error || (data ?? []).length === 0) {
+    return {
+      ok: false,
+      error: error
+        ? tErrors("draftSaveFailed") + `: ${errMessage(error)}`
+        : tErrors("artifactNotDraft"),
+      values: { body },
+      nonce,
+    };
+  }
+
+  await logDecision(supabase, projectId, "edit_draft", `Draft szerkesztve (${artifactId}).`);
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null, nonce };
+}
+
 // ── ③ Draft-generálás: megerősített mezők + sablon → body ────
 
 export async function generateBodyAction(
