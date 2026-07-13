@@ -27,8 +27,9 @@ export function nextPhase(phase: PhaseId): PhaseId | null {
 
 // Kritérium-módok:
 //  - auto: a rendszer értékeli ki (olvasáskor + kapu-akciókor)
-//  - manual: ideiglenes-kézi zárás (a #5+ csomagok váltják ki valódi
-//    kritériumokra) — a felületen láthatóan megkülönböztetve
+//  - manual: ideiglenes-kézi zárás — a #6-tól NEM használt (a valós,
+//    deliverable-alapú kritériumok váltották ki); a típus a defenzív
+//    parse miatt marad.
 export type CriterionMode = "auto" | "manual";
 // Súly: a puha kritérium teljesülése gate_pending-et ad, ha nincs mellette
 // kemény; kemény kritérium kötelező a gate_pending-hez.
@@ -38,19 +39,43 @@ export interface PhaseCriterion {
   id: string;
   mode: CriterionMode;
   weight: CriterionWeight;
+  /** Deliverable-alapú kritériumnál a kapu-hordozó artifacts.type kulcsa. */
+  typeKey?: string;
+  /** Interim küszöb (#6): a kanonikus kritérium (golden set küszöb /
+   *  scale-pivot-stop / adopciós küszöb) mélység-csomaggal érkezik. */
+  interim?: boolean;
 }
 
-// Fázisonkénti KILÉPŐ kritériumok (A melléklet):
-//  P0: charter_approved — auto, PUHA (artifacts: Projekt-charter + approved)
-//  P1–P5: manual_close — ideiglenes-kézi
-//  P6: nincs kapu (ciklikus fázis)
+// A P1–P5 kilépő kritériumai a TÍPUS-KONFIGBÓL SZÁRMAZNAK (#6): a fázis
+// összes kapu-hordozó ([K]) deliverable-je Approved — kritériumonként egy
+// deliverable, KEMÉNY súllyal. (A körkörös importot az artifacts-konfig
+// type-only visszahivatkozása zárja ki.)
+import { gateTypesForPhase } from "@/lib/artifacts/config";
+
+const INTERIM_PHASES: ReadonlySet<PhaseId> = new Set(["P3", "P4", "P5"]);
+
+function deliverableCriteria(phase: PhaseId): PhaseCriterion[] {
+  return gateTypesForPhase(phase).map((typeDef) => ({
+    id: `deliverable_approved:${typeDef.key}`,
+    mode: "auto" as const,
+    weight: "hard" as const,
+    typeKey: typeDef.key,
+    interim: INTERIM_PHASES.has(phase) || undefined,
+  }));
+}
+
+// Fázisonkénti KILÉPŐ kritériumok (#6, Melléklet A):
+//  P0: charter_approved — auto, PUHA (változatlan)
+//  P1–P5: a fázis [K] deliverable-jei Approved — auto, KEMÉNY
+//         (P3–P5: interim jelöléssel)
+//  P6: nincs kapu (ciklikus fázis — változatlan)
 export const PHASE_CRITERIA: Record<PhaseId, PhaseCriterion[]> = {
   P0: [{ id: "charter_approved", mode: "auto", weight: "soft" }],
-  P1: [{ id: "manual_close", mode: "manual", weight: "hard" }],
-  P2: [{ id: "manual_close", mode: "manual", weight: "hard" }],
-  P3: [{ id: "manual_close", mode: "manual", weight: "hard" }],
-  P4: [{ id: "manual_close", mode: "manual", weight: "hard" }],
-  P5: [{ id: "manual_close", mode: "manual", weight: "hard" }],
+  P1: deliverableCriteria("P1"),
+  P2: deliverableCriteria("P2"),
+  P3: deliverableCriteria("P3"),
+  P4: deliverableCriteria("P4"),
+  P5: deliverableCriteria("P5"),
   P6: [],
 };
 

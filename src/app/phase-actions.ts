@@ -5,6 +5,8 @@ import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { isPhaseId, hasGate, isManualClose } from "@/lib/phases/config";
 import { parsePhaseState } from "@/lib/phases/machine";
+import { evaluatePhaseCriteria } from "@/lib/phases/service";
+import { criterionLabel } from "@/lib/phases/criterion-label";
 import type { FormState } from "./actions";
 
 // ─────────────────────────────────────────────────────────────
@@ -119,6 +121,31 @@ export async function closeGate(
   const state = parsePhaseState(row?.state);
   if (state !== "in_progress" && state !== "gate_pending") {
     return fail(tErrors("invalidTransition"));
+  }
+
+  // APP-SZINTŰ KAPU-ŐR (#6): a zárás elutasítva, amíg bármely KEMÉNY
+  // kritérium nem teljesül — a hiányzó deliverable-ök lokalizált nevével.
+  // Rétegzés: a close_gate() DB-fn az állapot-átmenet tranzakcionális őre
+  // (érintetlen); a kritérium-őr itt, app-szinten él.
+  const { criteria, degraded } = await evaluatePhaseCriteria(
+    supabase,
+    projectId,
+    phase,
+  );
+  const unmetHard = criteria.filter((c) => c.weight === "hard" && !c.satisfied);
+  if (degraded && unmetHard.length > 0) {
+    // Kiértékelési hiba: nem tudjuk bizonyítani a teljesülést → fail-safe.
+    return fail(tErrors("phaseActionFailed", { message: "criteria" }));
+  }
+  if (unmetHard.length > 0) {
+    const [tCriteria, tTypes] = await Promise.all([
+      getTranslations("criteria"),
+      getTranslations("artifactTypes"),
+    ]);
+    const names = unmetHard
+      .map((criterion) => criterionLabel(criterion, tCriteria, tTypes))
+      .join(", ");
+    return fail(tErrors("gateBlocked", { criteria: names }));
   }
 
   // Decision note: fázis-azonosítóval kezdődik (a fázis-oldali történet

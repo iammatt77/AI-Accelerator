@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { criterionLabel } from "@/lib/phases/criterion-label";
 import type { NextStep } from "@/lib/phases/service";
 
 // „Következő legjobb lépés" — az állapotgépből SZÁMÍTOTT lépés szövege és
 // widgetje (hardcode tilos: minden ág a computeNextStep kimenetéből jön).
 
 export async function nextStepLabel(step: NextStep): Promise<string> {
-  const [t, tPhases, tCriteria] = await Promise.all([
+  const [t, tPhases, tCriteria, tTypes] = await Promise.all([
     getTranslations("nextstep"),
     getTranslations("phases"),
     getTranslations("criteria"),
+    getTranslations("artifactTypes"),
   ]);
   const phaseLabel = (phase: string) =>
     `${phase} · ${tPhases(`${phase.toLowerCase()}.short`)}`;
@@ -22,7 +24,13 @@ export async function nextStepLabel(step: NextStep): Promise<string> {
     case "start":
       return t("start", { phase: phaseLabel(step.phase) });
     case "satisfy_criterion":
-      return t("satisfy", { criterion: tCriteria(step.criterionId) });
+      return t("satisfy", {
+        criterion: criterionLabel(
+          { id: step.criterionId, typeKey: step.typeKey },
+          tCriteria,
+          tTypes,
+        ),
+      });
     case "close_gate":
       return step.temporary
         ? t("closeTemporary", { phase: phaseLabel(step.phase) })

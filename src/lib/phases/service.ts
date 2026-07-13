@@ -36,54 +36,70 @@ export interface PhaseBoardEntry {
 
 export type NextStep =
   | { kind: "start"; phase: PhaseId }
-  | { kind: "satisfy_criterion"; phase: PhaseId; criterionId: string }
+  | { kind: "satisfy_criterion"; phase: PhaseId; criterionId: string; typeKey?: string }
   | { kind: "close_gate"; phase: PhaseId; temporary: boolean }
   | { kind: "no_gate"; phase: PhaseId }
   | { kind: "all_done" };
 
-/** A P0 puha kritériumának auto-kiértékelése: létezik-e jóváhagyott charter.
- *  `null` = a kiértékelés maga hibázott (≠ nem teljesül). */
-async function evaluateCharterApproved(
+/** A projekt jóváhagyott artefaktum-TÍPUSAINAK halmaza — minden auto
+ *  kritérium ebből értékelődik ki (fázisonkénti külön lekérdezés helyett
+ *  EGY lekérdezés board-betöltésenként). `null` = a lekérdezés hibázott
+ *  (≠ üres halmaz): degradált kör, tartós állapot-írás nélkül. */
+export async function fetchApprovedTypes(
   supabase: SupabaseClient,
   projectId: string,
-): Promise<boolean | null> {
-  // Az élő adat 'Projekt-charter' típussal seedelt; a korábbi #3-seed
-  // 'project_charter'-t írt — mindkettőt elfogadjuk (defenzív).
+): Promise<Set<string> | null> {
   const { data, error } = await supabase
     .from("artifacts")
-    .select("id")
+    .select("type")
     .eq("project_id", projectId)
-    .in("type", ["Projekt-charter", "project_charter"])
-    .eq("status", "approved")
-    .limit(1);
+    .eq("status", "approved");
   if (error) {
-    // Kiértékelési hiba nem törheti el a felületet — de nem is azonos a
-    // „nem teljesül"-lel: null-t adunk, a hívó dönt (kijelzés: nem teljesül;
-    // állapot-átmenet: NEM írunk vissza hibás kiértékelésből).
-    console.error(`charter_approved kiértékelés sikertelen: ${error.message}`);
+    console.error(`Jóváhagyott típusok lekérése sikertelen: ${error.message}`);
     return null;
   }
-  return (data ?? []).length > 0;
+  return new Set(((data ?? []) as { type: string }[]).map((row) => row.type));
 }
 
-async function evaluateCriteria(
-  supabase: SupabaseClient,
-  projectId: string,
+function evaluateCriteria(
   phase: PhaseId,
-): Promise<{ criteria: EvaluatedCriterion[]; degraded: boolean }> {
+  approvedTypes: Set<string> | null,
+): { criteria: EvaluatedCriterion[]; degraded: boolean } {
   const result: EvaluatedCriterion[] = [];
   let degraded = false;
   for (const criterion of PHASE_CRITERIA[phase]) {
     let satisfied = false;
-    if (criterion.mode === "auto" && criterion.id === "charter_approved") {
-      const value = await evaluateCharterApproved(supabase, projectId);
-      if (value === null) degraded = true;
-      satisfied = value ?? false;
+    if (criterion.mode === "auto") {
+      if (approvedTypes === null) {
+        // Kiértékelési hiba nem törheti el a felületet — de nem is azonos a
+        // „nem teljesül"-lel: degradált kör (kijelzés: nem teljesül;
+        // állapot-átmenet: NEM írunk vissza hibás kiértékelésből).
+        degraded = true;
+      } else if (criterion.id === "charter_approved") {
+        // Az élő adat 'Projekt-charter' típussal seedelt; a korábbi #3-seed
+        // 'project_charter'-t írt — mindkettőt elfogadjuk (defenzív).
+        satisfied =
+          approvedTypes.has("Projekt-charter") || approvedTypes.has("project_charter");
+      } else if (criterion.typeKey) {
+        // Deliverable-alapú kritérium (#6): bármely approved verzió számít
+        // (a #5a v1-döntése szerint).
+        satisfied = approvedTypes.has(criterion.typeKey);
+      }
     }
-    // manual kritérium: csak maga a kézi zárás „teljesíti" — itt mindig false.
     result.push({ ...criterion, satisfied });
   }
   return { criteria: result, degraded };
+}
+
+/** Egy fázis kritériumainak kiértékelése (a kapu-zárás app-szintű őre is
+ *  ezt használja — a close_gate() DB-fn érintetlen). */
+export async function evaluatePhaseCriteria(
+  supabase: SupabaseClient,
+  projectId: string,
+  phase: PhaseId,
+): Promise<{ criteria: EvaluatedCriterion[]; degraded: boolean }> {
+  const approvedTypes = await fetchApprovedTypes(supabase, projectId);
+  return evaluateCriteria(phase, approvedTypes);
 }
 
 /** gate_pending-készség: minden kemény auto-kritérium teljesül; ha nincs
@@ -171,11 +187,15 @@ export async function loadPhaseBoard(
   const byPhase = new Map(rows.map((r) => [r.phase, r]));
   const board: PhaseBoardEntry[] = [];
 
+  // Egyetlen lekérdezés a projekt approved típusairól — minden fázis
+  // kritériumai ebből értékelődnek ki.
+  const approvedTypes = await fetchApprovedTypes(supabase, projectId);
+
   for (const phase of PHASE_IDS) {
     const row = byPhase.get(phase) ?? null;
     // Defenzív degradáció: hiányzó sor vagy ismeretlen state → locked.
     let state = parsePhaseState(row?.state);
-    const { criteria, degraded } = await evaluateCriteria(supabase, projectId, phase);
+    const { criteria, degraded } = evaluateCriteria(phase, approvedTypes);
     const gateReady = computeGateReady(criteria);
 
     if (row) {
@@ -244,7 +264,12 @@ export function computeNextStep(board: PhaseBoardEntry[]): NextStep {
       }
       const unmetAuto = first.criteria.find((c) => c.mode === "auto" && !c.satisfied);
       if (unmetAuto) {
-        return { kind: "satisfy_criterion", phase: first.phase, criterionId: unmetAuto.id };
+        return {
+          kind: "satisfy_criterion",
+          phase: first.phase,
+          criterionId: unmetAuto.id,
+          typeKey: unmetAuto.typeKey,
+        };
       }
       return { kind: "close_gate", phase: first.phase, temporary: isManualClose(first.phase) };
     }

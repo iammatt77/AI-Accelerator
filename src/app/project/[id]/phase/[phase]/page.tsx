@@ -10,6 +10,7 @@ import {
   previousPhase,
   type PhaseId,
 } from "@/lib/phases/config";
+import { criterionLabel } from "@/lib/phases/criterion-label";
 import { PhaseStepperV2 } from "@/components/PhaseStepper";
 import { PhaseWorkspace } from "@/components/PhaseWorkspace";
 import { StartPhaseForm, GateCloseForm } from "@/components/PhaseGateForms";
@@ -72,12 +73,13 @@ export default async function PhasePage({
     phase,
   );
 
-  const [locale, tPhases, tLex, tGates, tCriteria] = await Promise.all([
+  const [locale, tPhases, tLex, tGates, tCriteria, tTypes] = await Promise.all([
     getLocale(),
     getTranslations("phases"),
     getTranslations("phases.lexicon"),
     getTranslations("gates"),
     getTranslations("criteria"),
+    getTranslations("artifactTypes"),
   ]);
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   const dateOptions = { timeZone: "Europe/Budapest" } as const;
@@ -205,25 +207,30 @@ export default async function PhasePage({
                 {tGates("zoneGate")} — {tGates("criteriaTitle")}
               </h3>
 
-              {/* Kritérium-checklist: élő kiértékelés, zöld/borostyán,
-                  MINDIG ikon + szöveg */}
+              {/* Kritérium-checklist (#6: többkritériumos, deliverable-alapú):
+                  élő kiértékelés, zöld/borostyán, MINDIG ikon + szöveg */}
               <ul className="mt-2 space-y-1.5">
                 {entry.criteria.map((criterion) => (
-                  <li
-                    key={criterion.id}
-                    className={`flex items-center gap-2 text-body ${
-                      criterion.mode === "manual"
-                        ? "rounded-tile border border-dashed border-gate/40 px-2 py-1.5"
-                        : ""
-                    }`}
-                  >
+                  <li key={criterion.id} className="flex items-center gap-2 text-body">
                     <span className={criterion.satisfied ? "text-done" : "text-gate"}>
                       <PhaseStateIcon
                         state={criterion.satisfied ? "completed" : "gate_pending"}
                         size={11}
                       />
                     </span>
-                    <span className="min-w-0 flex-1">{tCriteria(criterion.id)}</span>
+                    <span className="min-w-0 flex-1">
+                      {criterionLabel(criterion, tCriteria, tTypes)}
+                    </span>
+                    {/* interim küszöb (#6): a kanonikus kritérium mélység-
+                        csomaggal érkezik — halk, szaggatott jelölés */}
+                    {criterion.interim && (
+                      <span
+                        title={tGates("interimHint")}
+                        className="shrink-0 rounded-pill border border-dashed border-line px-1.5 py-px text-[10px] font-medium text-ink-tertiary"
+                      >
+                        {tGates("interimBadge")}
+                      </span>
+                    )}
                     <span
                       className={`shrink-0 text-mono-sm font-medium ${
                         criterion.satisfied ? "text-done" : "text-gate"

@@ -138,7 +138,9 @@
     "zoneTools": "② Work tools",
     "zoneOutput": "③ Output",
     "zoneGate": "④ Gate",
-    "confirmLabel": "I confirm closing the gate"
+    "confirmLabel": "I confirm closing the gate",
+    "interimBadge": "interim threshold",
+    "interimHint": "The canonical threshold (golden set / scale-pivot-stop / adoption) arrives with the depth packages."
   },
   "inputs": {
     "placeholder": "Paste the raw client material…",
@@ -288,7 +290,8 @@
     "statusChangeFailed": "Status change failed: {message}",
     "invalidStatusTransition": "Invalid status transition — the state may have changed. Refresh the page.",
     "newVersionOnlyApproved": "A new version can only be created from an approved artifact.",
-    "newVersionOnlyLatest": "A new version can only be created from the latest version."
+    "newVersionOnlyLatest": "A new version can only be created from the latest version.",
+    "gateBlocked": "The gate cannot be closed — unmet exit criteria: {criteria}"
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",
@@ -444,7 +447,7 @@
   },
   "criteria": {
     "charter_approved": "An approved Project charter exists",
-    "manual_close": "Manual close (temporary)"
+    "deliverable_approved": "{type} approved"
   },
   "nextstep": {
     "start": "Start phase {phase}",

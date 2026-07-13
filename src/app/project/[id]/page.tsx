@@ -9,6 +9,7 @@ import {
   loadPhaseBoard,
 } from "@/lib/phases/service";
 import { getTypeDef } from "@/lib/artifacts/config";
+import { criterionLabel } from "@/lib/phases/criterion-label";
 import { StatusPill } from "@/components/StatusPill";
 import { PhaseStepperV1 } from "@/components/PhaseStepper";
 import { NextStepWidget } from "@/components/NextStep";
@@ -222,14 +223,7 @@ export default async function ProjectCockpitPage({
               ) : (
                 <ul className="mt-2 space-y-1.5">
                   {currentPhase.criteria.map((criterion) => (
-                    <li
-                      key={criterion.id}
-                      className={`flex items-center gap-2 text-body ${
-                        criterion.mode === "manual"
-                          ? "rounded-tile border border-dashed border-line px-2 py-1.5"
-                          : ""
-                      }`}
-                    >
+                    <li key={criterion.id} className="flex items-center gap-2 text-body">
                       <span
                         className={
                           criterion.satisfied ? "text-done" : "text-gate"
@@ -241,11 +235,14 @@ export default async function ProjectCockpitPage({
                         />
                       </span>
                       <span className="min-w-0 flex-1">
-                        {tCriteria(criterion.id)}
+                        {criterionLabel(criterion, tCriteria, tTypes)}
                       </span>
-                      {criterion.mode === "manual" && (
-                        <span className="shrink-0 rounded-pill border border-dashed border-gate/60 px-1.5 py-px text-[10px] font-medium text-gate">
-                          {tGates("temporaryBadge")}
+                      {criterion.interim && (
+                        <span
+                          title={tGates("interimHint")}
+                          className="shrink-0 rounded-pill border border-dashed border-line px-1.5 py-px text-[10px] font-medium text-ink-tertiary"
+                        >
+                          {tGates("interimBadge")}
                         </span>
                       )}
                       {/* Státusz mindig ikon + szöveg (törvény 4) */}
