@@ -53,6 +53,40 @@ export interface ArtifactRow {
   created_at: string;
 }
 
+/** E1 entitás-szinten (0004): AI-javaslat → emberi megerősítés / elvetés;
+ *  manual = kézi felvétel (emberi eredetű, megerősített-erősségű). */
+export type EntityState = "ai_suggested" | "confirmed" | "manual" | "rejected";
+
+export interface PainPointRow {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  quote: string | null;
+  severity: "low" | "medium" | "high" | null;
+  source_input_ids: string[];
+  state: EntityState;
+  created_at: string;
+}
+
+export interface UseCaseRow {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  pain_point_ids: string[];
+  score_value: number | null;
+  score_feasibility: number | null;
+  risk: "low" | "medium" | "high" | null;
+  quick_win: boolean;
+  list_status: "candidate" | "shortlist" | "excluded" | "selected";
+  exclusion_reason: string | null;
+  source_input_ids: string[];
+  state: EntityState;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DecisionRow {
   id: string;
   project_id: string;

@@ -14,6 +14,7 @@ import {
   type ArtifactTypeDef,
 } from "@/lib/artifacts/config";
 import { isPhaseId } from "@/lib/phases/config";
+import { loadNumberedSources } from "@/lib/sources";
 import type { ArtifactRow, InputItemRow } from "@/lib/db/types";
 import type { FormState } from "./actions";
 
@@ -32,30 +33,8 @@ function errMessage(error: SupabaseErrorLike | null): string {
   return error?.message ?? "?";
 }
 
-/** A projekt bemenetei stabil sorrendben (created_at, majd id) — ez adja a
- *  forrás-SZÁMOZÁST (1..n). A source_input_ids az artefaktumon PONTOSAN ezt
- *  a sorrendet rögzíti, így a [n] hivatkozás később is ugyanarra mutat. */
-async function loadNumberedSources(
-  supabase: SupabaseClient,
-  projectId: string,
-): Promise<{ sources: LlmSource[]; inputIds: string[] } | { error: string }> {
-  const { data, error } = await supabase
-    .from("input_items")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
-  if (error) return { error: errMessage(error) };
-  const rows = (data ?? []) as InputItemRow[];
-  return {
-    sources: rows.map((row, i) => ({
-      index: i + 1,
-      title: row.type,
-      text: row.raw_text,
-    })),
-    inputIds: rows.map((row) => row.id),
-  };
-}
+// A loadNumberedSources a @/lib/sources közös helperben él (#7a): az
+// entitás-akciók is ugyanazt a kanonikus forrás-számozást használják.
 
 /** A típus legfrissebb verziója (bármely státusz). */
 async function loadLatestArtifact(

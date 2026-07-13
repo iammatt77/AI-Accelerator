@@ -8,13 +8,29 @@ import {
   type ArtifactTypeDef,
 } from "@/lib/artifacts/config";
 import type { PhaseId } from "@/lib/phases/config";
-import type { ArtifactRow, InputItemRow } from "@/lib/db/types";
+import type {
+  ArtifactRow,
+  InputItemRow,
+  PainPointRow,
+  UseCaseRow,
+} from "@/lib/db/types";
 import {
   ExtractForm,
   FieldCard,
   GenerateBodyForm,
   PhaseInputForm,
 } from "@/components/WorkspaceForms";
+import {
+  AddPainPointForm,
+  AddUseCaseForm,
+  DeriveUseCasesForm,
+  ExtractPainPointsForm,
+  PainPointConfirmedRow,
+  PainPointProposalCard,
+  UseCaseCard,
+  type PainPointCardData,
+  type UseCaseCardData,
+} from "@/components/EntityForms";
 import { StatusPill } from "@/components/StatusPill";
 
 // ─────────────────────────────────────────────────────────────
@@ -34,15 +50,17 @@ export async function PhaseWorkspace({
   projectId: string;
   phase: PhaseId;
 }) {
-  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty] = await Promise.all([
-    getLocale(),
-    getTranslations("workspace"),
-    getTranslations("gates"),
-    getTranslations("artifacts"),
-    getTranslations("artifactTypes"),
-    getTranslations("fields"),
-    getTranslations("empty"),
-  ]);
+  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty, tEnt] =
+    await Promise.all([
+      getLocale(),
+      getTranslations("workspace"),
+      getTranslations("gates"),
+      getTranslations("artifacts"),
+      getTranslations("artifactTypes"),
+      getTranslations("fields"),
+      getTranslations("empty"),
+      getTranslations("entities"),
+    ]);
   const typeName = (typeDef: ArtifactTypeDef) =>
     tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""));
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
@@ -74,6 +92,72 @@ export async function PhaseWorkspace({
 
   const artifactsOfType = (typeDef: ArtifactTypeDef) =>
     artifacts.filter((a) => a.type === typeDef.key);
+
+  // ── P1 entitások (#7a): fájdalompontok + use case-ek ────────
+  // A rejected sor a listákból kimarad, de a use case eredet-láncához
+  // (chip-címek) MINDEN fájdalompontot betöltünk — az elvetett hivatkozás
+  // címe is feloldódik.
+  const isP1 = phase === "P1";
+  const [{ data: painData }, { data: useCaseData }] = isP1
+    ? await Promise.all([
+        supabase
+          .from("pain_points")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true }),
+        supabase
+          .from("use_cases")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true }),
+      ])
+    : [{ data: [] as PainPointRow[] }, { data: [] as UseCaseRow[] }];
+  const allPains = (painData ?? []) as PainPointRow[];
+  const useCases = ((useCaseData ?? []) as UseCaseRow[]).filter(
+    (u) => u.state !== "rejected",
+  );
+
+  // A [n] jelölés a projekt kanonikus input-sorrendjére mutat — ugyanarra,
+  // amit az ① zóna számoz.
+  const inputPos = new Map(inputs.map((row, i) => [row.id, i + 1]));
+  const toIndices = (ids: string[]) =>
+    ids
+      .map((id) => inputPos.get(id))
+      .filter((n): n is number => typeof n === "number");
+  const painTitleById = new Map(allPains.map((p) => [p.id, p.title]));
+
+  const toPainCard = (p: PainPointRow): PainPointCardData => ({
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    quote: p.quote,
+    severity: p.severity,
+    state: p.state,
+    sourceIndices: toIndices(p.source_input_ids),
+  });
+  const painProposals = allPains.filter((p) => p.state === "ai_suggested");
+  const painConfirmed = allPains.filter(
+    (p) => p.state === "confirmed" || p.state === "manual",
+  );
+
+  const toUseCaseCard = (u: UseCaseRow): UseCaseCardData => ({
+    id: u.id,
+    title: u.title,
+    description: u.description,
+    state: u.state,
+    scoreValue: u.score_value,
+    scoreFeasibility: u.score_feasibility,
+    risk: u.risk,
+    quickWin: u.quick_win,
+    listStatus: u.list_status,
+    exclusionReason: u.exclusion_reason,
+    painChips: u.pain_point_ids
+      .map((id) => painTitleById.get(id))
+      .filter((title): title is string => typeof title === "string"),
+    sourceIndices: toIndices(u.source_input_ids),
+  });
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -119,10 +203,79 @@ export async function PhaseWorkspace({
         <h3 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
           {tGates("zoneTools")}
         </h3>
+        {/* ── P1 entitás-szekciók (#7a): Fájdalompontok · Use case-ek ── */}
+        {isP1 && (
+          <div className="mt-1 space-y-5">
+            <div className="space-y-3">
+              <h4 className="text-body font-semibold">{tEnt("painSectionTitle")}</h4>
+              <p className="text-mono-sm text-ink-tertiary">{tEnt("painLead")}</p>
+              <ExtractPainPointsForm projectId={projectId} />
+              {painProposals.length > 0 && (
+                <div className="space-y-2">
+                  <h5 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
+                    {tEnt("proposalsHeading")}
+                  </h5>
+                  {painProposals.map((p) => (
+                    <PainPointProposalCard
+                      key={p.id}
+                      projectId={projectId}
+                      painPoint={toPainCard(p)}
+                    />
+                  ))}
+                </div>
+              )}
+              {painConfirmed.length > 0 && (
+                <div className="space-y-2">
+                  <h5 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
+                    {tEnt("confirmedHeading")}
+                  </h5>
+                  <ul className="space-y-1.5">
+                    {painConfirmed.map((p) => (
+                      <PainPointConfirmedRow
+                        key={p.id}
+                        projectId={projectId}
+                        painPoint={toPainCard(p)}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {painProposals.length === 0 && painConfirmed.length === 0 && (
+                <p className="text-body text-ink-tertiary">{tEnt("noPains")}</p>
+              )}
+              <AddPainPointForm projectId={projectId} />
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="border-t border-line pt-3 text-body font-semibold">
+                {tEnt("useCaseSectionTitle")}
+              </h4>
+              <p className="text-mono-sm text-ink-tertiary">{tEnt("useCaseLead")}</p>
+              <DeriveUseCasesForm projectId={projectId} />
+              {useCases.length > 0 ? (
+                <div className="space-y-2">
+                  {useCases.map((u) => (
+                    <UseCaseCard
+                      key={u.id}
+                      projectId={projectId}
+                      useCase={toUseCaseCard(u)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-body text-ink-tertiary">{tEnt("noUseCases")}</p>
+              )}
+              <AddUseCaseForm
+                projectId={projectId}
+                painOptions={painConfirmed.map((p) => ({ id: p.id, title: p.title }))}
+              />
+            </div>
+          </div>
+        )}
         {phaseTypes.length === 0 ? (
           <p className="mt-2 text-body text-ink-tertiary">{t("noTypesForPhase")}</p>
         ) : (
-          <div className="mt-1 space-y-5">
+          <div className={isP1 ? "mt-5 space-y-5 border-t border-line pt-4" : "mt-1 space-y-5"}>
             {phaseTypes.map((typeDef) => {
               const versions = artifactsOfType(typeDef);
               const latest = versions[0] ?? null;
