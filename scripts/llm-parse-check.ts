@@ -11,7 +11,12 @@
  * Futtatás: npm run llm:parse-check   (npx tsx scripts/llm-parse-check.ts)
  */
 
-import { parseExtractResult, type LlmSource } from "../src/lib/llm/parse";
+import {
+  parseExtractResult,
+  parsePainPointsResult,
+  parseUseCasesResult,
+  type LlmSource,
+} from "../src/lib/llm/parse";
 
 // Charter-alakú típusdefiníció (a parse csak a .fields[].key-t olvassa).
 const CHARTER = {
@@ -157,6 +162,64 @@ const strRes = parseExtractResult(V('["1"]'), SOURCES, CHARTER);
 check("string-koerció: cel citációja helyreáll [1]", JSON.stringify(strRes.cel?.source_indices) === "[1]");
 const oobRes = parseExtractResult(V("[9]"), SOURCES, CHARTER);
 check("tartományon kívüli: érték marad, citáció üres", oobRes.cel?.value !== undefined && JSON.stringify(oobRes.cel?.source_indices) === "[]");
+
+// ── #7a: fájdalompont-parse — ugyanazok az elvek entitás-javaslatokra ──
+
+const PP = (indices: string) =>
+  `[
+  { "title": "Lassú panasz-átfutás", "description": "Hosszú az átfutás.", "quote": "hetekig ül a panasz", "severity": "high", "source_indices": ${indices} },
+  { "title": "Kézi duplikáció", "description": "Kétszer rögzítenek.", "quote": null, "severity": "medium", "source_indices": ${indices} },
+  { "title": "Tudás a fejekben", "description": null, "quote": null, "severity": null, "source_indices": ${indices} }
+]`;
+
+console.log("\n── parsePainPointsResult (#7a) — entitás-javaslatok ──\n");
+
+const ppValid = parsePainPointsResult(PP("[1]"), SOURCES);
+check("PP: numerikus [1] → 3 javaslat, citációval", ppValid.length === 3 && JSON.stringify(ppValid[0].source_indices) === "[1]");
+const ppStr = parsePainPointsResult(PP('["1"]'), SOURCES);
+check("PP: string [\"1\"] → citáció helyreáll", ppStr.length === 3 && JSON.stringify(ppStr[0].source_indices) === "[1]");
+const ppOob = parsePainPointsResult(PP("[9]"), SOURCES);
+check("PP: tartományon kívüli [9] → javaslat MARAD, citáció üres", ppOob.length === 3 && ppOob[0].source_indices.length === 0);
+const ppWrapped = parsePainPointsResult(`{ "pain_points": ${PP("[2]")} }`, SOURCES);
+check("PP: objektum-burok {pain_points: […]} → 3 javaslat", ppWrapped.length === 3);
+const ppFenced = parsePainPointsResult("```json\n" + PP("[1]") + "\n```", SOURCES);
+check("PP: fenced blokk → 3 javaslat", ppFenced.length === 3);
+const ppNoTitle = parsePainPointsResult(
+  `[ { "title": "", "description": "cím nélkül" }, { "description": "kulcs sincs" }, { "title": "Valódi", "source_indices": [1] } ]`,
+  SOURCES,
+);
+check("PP: cím nélküli elem kiesik (nincs identitása), a valódi marad", ppNoTitle.length === 1 && ppNoTitle[0].title === "Valódi");
+const ppSeverity = parsePainPointsResult(
+  `[ { "title": "A", "severity": "HIGH" }, { "title": "B", "severity": "extreme" } ]`,
+  SOURCES,
+);
+check("PP: severity koerció — \"HIGH\"→high, ismeretlen→null", ppSeverity[0].severity === "high" && ppSeverity[1].severity === null);
+check("PP: üres tömb → 0 javaslat (→ UX-notice)", parsePainPointsResult("[]", SOURCES).length === 0);
+check("PP: nem-tömb válasz → 0 javaslat (nem hiba)", parsePainPointsResult(`{ "foo": "bar" }`, SOURCES).length === 0);
+
+// ── #7a: use case-parse — a pain_point_refs SZEMANTIKAI kontraktus ──
+
+const UC = (refs: string, indices: string) =>
+  `[
+  { "title": "AI-triázs", "description": "Automatikus kategorizálás.", "pain_point_refs": ${refs}, "source_indices": ${indices} },
+  { "title": "Kivonatoló asszisztens", "description": null, "pain_point_refs": ${refs}, "source_indices": ${indices} }
+]`;
+
+console.log("\n── parseUseCasesResult (#7a) — lánc-hivatkozással ──\n");
+
+const ucValid = parseUseCasesResult(UC("[1, 2]", "[1]"), SOURCES, 3);
+check("UC: érvényes refs [1,2] (painCount=3) → 2 javaslat", ucValid.length === 2 && JSON.stringify(ucValid[0].pain_point_refs) === "[1,2]");
+const ucStrRef = parseUseCasesResult(UC('["1"]', "[1]"), SOURCES, 3);
+check("UC: string ref [\"1\"] → koerció, javaslat marad", ucStrRef.length === 2 && JSON.stringify(ucStrRef[0].pain_point_refs) === "[1]");
+const ucNoRef = parseUseCasesResult(UC("[9]", "[1]"), SOURCES, 3);
+check("UC: CSAK érvénytelen ref [9] → javaslat KIESIK (szemantikai kontraktus)", ucNoRef.length === 0);
+const ucMixedRef = parseUseCasesResult(UC("[1, 9]", "[1]"), SOURCES, 3);
+check("UC: vegyes refs [1,9] → marad, csak az érvényes ref [1]", ucMixedRef.length === 2 && JSON.stringify(ucMixedRef[0].pain_point_refs) === "[1]");
+const ucBadCite = parseUseCasesResult(UC("[1]", "[9]"), SOURCES, 3);
+check("UC: rossz CITÁCIÓ [9] → javaslat MARAD, citáció üres (a #6-fix elve)", ucBadCite.length === 2 && ucBadCite[0].source_indices.length === 0);
+const ucWrapped = parseUseCasesResult(`{ "use_cases": ${UC("[1]", "[1]")} }`, SOURCES, 1);
+check("UC: objektum-burok {use_cases: […]} → 2 javaslat", ucWrapped.length === 2);
+check("UC: üres tömb → 0 javaslat (→ UX-notice)", parseUseCasesResult("[]", SOURCES, 3).length === 0);
 
 console.log(failures === 0 ? "\nPARSE-CHECK: MINDEN PASS" : `\nPARSE-CHECK: ${failures} FAIL`);
 process.exit(failures === 0 ? 0 : 1);

@@ -3,14 +3,24 @@ import Anthropic from "@anthropic-ai/sdk";
 import { resolveTemplate, type ArtifactTypeDef } from "@/lib/artifacts/config";
 import {
   parseExtractResult,
+  parsePainPointsResult,
+  parseUseCasesResult,
   type ExtractResult,
   type LlmSource,
+  type PainPointProposal,
+  type UseCaseProposal,
 } from "./parse";
 
 // A parse-réteg típusait innen is re-exportáljuk (a hívók @/lib/llm-ből
 // importálnak). A tiszta válasz-feldolgozás a ./parse-ban él, hogy
 // server-only/SDK nélkül, önállóan tesztelhető legyen (a #6-fix vakfolt).
-export type { LlmSource, ExtractedField, ExtractResult } from "./parse";
+export type {
+  LlmSource,
+  ExtractedField,
+  ExtractResult,
+  PainPointProposal,
+  UseCaseProposal,
+} from "./parse";
 
 // ─────────────────────────────────────────────────────────────
 // LLM-ADAPTER — a governance magja.
@@ -128,6 +138,136 @@ export async function extract(
 
 // A tiszta válasz-feldolgozás (parseExtractResult + fabrikáció-kezelés)
 // a ./parse modulban él — l. ott a #6-fix magyarázatát.
+
+// ── extractPainPoints: P1 inputok → fájdalompont-javaslatok ──
+
+/**
+ * Fájdalompont-kivonatolás (P1, E1 első fele): a számozott forrásokból
+ * fájdalompont-JAVASLATOKAT ad (cím + leírás + szó szerinti idézet +
+ * súlyosság + forrás-indexek). Minden javaslat ai_suggested-ként landol —
+ * a megerősítés emberi lépés. Üres eredmény = a forrásokban nincs
+ * azonosítható fájdalompont (a hívó notice-t ad, nem hibát).
+ */
+export async function extractPainPoints(
+  sources: LlmSource[],
+): Promise<PainPointProposal[]> {
+  if (isMock()) {
+    return mockExtractPainPoints(sources);
+  }
+
+  const system = [
+    "Fájdalompont-azonosító vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A megadott számozott forrásokból (interjúk, jegyzetek) üzleti fájdalompontokat",
+    "azonosítasz. KIZÁRÓLAG érvényes JSON-tömböt adsz vissza, preambulum és",
+    "magyarázat nélkül.",
+    "SZIGORÚ SZABÁLY: csak olyan fájdalompontot adhatsz vissza, amely a forrásokban",
+    "ténylegesen megjelenik. TILOS kitalálni, általánosítani vagy általános tudásból",
+    "pótolni. Ha a források nem tartalmaznak fájdalompontot, üres tömböt adsz vissza",
+    "— az üres tömb a KÍVÁNT viselkedés ilyenkor, nem hiba.",
+    "A quote mező SZÓ SZERINTI idézet a forrásból — nem átfogalmazás; ha nincs",
+    "alkalmas idézet, legyen null.",
+    "A source_indices mezőben csak olyan forrás sorszáma szerepelhet, amelyből a",
+    "fájdalompont ténylegesen származik.",
+    "A kimenet magyarul készül.",
+  ].join(" ");
+
+  const userPrompt = [
+    "Azonosítsd a forrásokban megjelenő üzleti fájdalompontokat.",
+    "",
+    "── Számozott források ──",
+    renderSources(sources),
+    "",
+    "Add vissza pontosan ebben a JSON-alakban (tömb, elemenként):",
+    `[{ "title": "<rövid cím>", "description": "<1-2 mondatos leírás>", "quote": "<szó szerinti idézet vagy null>", "severity": "low" | "medium" | "high" | null, "source_indices": [1] }]`,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 4000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  return parsePainPointsResult(textFromMessage(message), sources);
+}
+
+// ── deriveUseCases: megerősített fájdalompontok → use case-javaslatok ──
+
+/** Számozott (1..n), MEGERŐSÍTETT fájdalompont a származtatás bemenetén. */
+export interface NumberedPainPoint {
+  /** 1-alapú sorszám a modellnek átadott listában. */
+  index: number;
+  title: string;
+  description: string | null;
+  quote: string | null;
+}
+
+function renderPainPoints(painPoints: NumberedPainPoint[]): string {
+  return painPoints
+    .map((p) => {
+      const parts = [`(${p.index}) ${p.title}`];
+      if (p.description) parts.push(p.description);
+      if (p.quote) parts.push(`Idézet: „${p.quote}”`);
+      return parts.join("\n");
+    })
+    .join("\n\n");
+}
+
+/**
+ * Use case-származtatás (P1, E1 első fele): a MEGERŐSÍTETT fájdalompontokból
+ * AI use case-javaslatokat ad. Minden javaslat megjelöli, mely fájdalompont(ok)ra
+ * válaszol (pain_point_refs — 1-alapú hivatkozás a megadott listára, m:n).
+ * A modell NEM találhat ki új fájdalompontot; a ref nélküli javaslatot a parse
+ * eldobja (szemantikai kontraktus, l. parseUseCasesResult).
+ */
+export async function deriveUseCases(
+  painPoints: NumberedPainPoint[],
+  sources: LlmSource[],
+): Promise<UseCaseProposal[]> {
+  if (isMock()) {
+    return mockDeriveUseCases(painPoints, sources);
+  }
+
+  const system = [
+    "AI use case-tervező vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A megadott, emberileg MEGERŐSÍTETT fájdalompontokból AI-alapú use case-",
+    "javaslatokat készítesz. KIZÁRÓLAG érvényes JSON-tömböt adsz vissza,",
+    "preambulum és magyarázat nélkül.",
+    "SZIGORÚ SZABÁLYOK: minden use case legalább egy megadott fájdalompontra",
+    "válaszol — a pain_point_refs a fájdalompont-lista zárójeles sorszámaira",
+    "hivatkozik. TILOS a listán kívüli fájdalompontot kitalálni vagy arra",
+    "hivatkozni. Egy use case több fájdalompontot is címezhet.",
+    "A source_indices mezőben csak olyan forrás sorszáma szerepelhet, amely a",
+    "use case-t ténylegesen alátámasztja; ha nincs ilyen, legyen üres tömb.",
+    "A kimenet magyarul készül.",
+  ].join(" ");
+
+  const userPrompt = [
+    "Készíts AI use case-javaslatokat a megerősített fájdalompontokból.",
+    "",
+    "── Megerősített fájdalompontok (sorszámozva) ──",
+    renderPainPoints(painPoints),
+    "",
+    "── Számozott források (source_indices csak ezekre) ──",
+    renderSources(sources),
+    "",
+    "Add vissza pontosan ebben a JSON-alakban (tömb, elemenként):",
+    `[{ "title": "<rövid cím>", "description": "<1-2 mondatos leírás>", "pain_point_refs": [1], "source_indices": [1] }]`,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 4000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  return parseUseCasesResult(textFromMessage(message), sources, painPoints.length);
+}
 
 // ── generateBody: megerősített mezők + sablon → md body ──────
 
@@ -248,6 +388,70 @@ function mockExtract(sources: LlmSource[], typeDef: ArtifactTypeDef): ExtractRes
     };
   }
   return result;
+}
+
+// Fájdalompont-fixture: 3 determinisztikus javaslat (idézettel, súlyosság-
+// szórással); a forrás-indexek a tényleges számozásra szűrve. A 3. javaslat
+// szándékosan idézet és severity nélkül jön (a null-ág is látszik).
+function mockExtractPainPoints(sources: LlmSource[]): PainPointProposal[] {
+  const validIndices = new Set(sources.map((s) => s.index));
+  const cite = (indices: number[]) => indices.filter((n) => validIndices.has(n));
+  return [
+    {
+      title: "Lassú panasz-átfutás",
+      description:
+        "A panaszok átfutási ideje hosszú, a státuszról nincs visszajelzés az ügyfél felé.",
+      quote: "hetekig ül a panasz, mire bárki ránéz",
+      severity: "high",
+      source_indices: cite([1]),
+    },
+    {
+      title: "Kézi adatrögzítés duplikációja",
+      description:
+        "Ugyanazt az adatot több rendszerbe kézzel rögzítik, ami hibaforrás.",
+      quote: "kétszer-háromszor visszük fel ugyanazt",
+      severity: "medium",
+      source_indices: cite([1, 2]),
+    },
+    {
+      title: "Tudás a fejekben",
+      description:
+        "A folyamattudás nincs dokumentálva, egy-egy kollégán múlik a működés.",
+      quote: null,
+      severity: null,
+      source_indices: cite([2]),
+    },
+  ];
+}
+
+// Use case-fixture: 2 determinisztikus javaslat lánc-hivatkozással; a
+// pain_point_refs a ténylegesen átadott lista hosszára szűrve (minden ref
+// érvényes marad 1 megerősített fájdalompont esetén is).
+function mockDeriveUseCases(
+  painPoints: NumberedPainPoint[],
+  sources: LlmSource[],
+): UseCaseProposal[] {
+  const validSource = new Set(sources.map((s) => s.index));
+  const refs = (candidates: number[]) =>
+    candidates.filter((r) => r >= 1 && r <= painPoints.length);
+  const proposals: UseCaseProposal[] = [
+    {
+      title: "AI-alapú panasz-triázs és státusz-értesítés",
+      description:
+        "A beérkező panaszok automatikus kategorizálása és priorizálása, státusz-értesítéssel.",
+      pain_point_refs: refs([1, 2]),
+      source_indices: [1].filter((n) => validSource.has(n)),
+    },
+    {
+      title: "Dokumentum-kivonatoló asszisztens a rögzítéshez",
+      description:
+        "A bejövő dokumentumokból strukturált adatok kinyerése, egyszeri rögzítéssel.",
+      pain_point_refs: refs([2]),
+      source_indices: [2].filter((n) => validSource.has(n)),
+    },
+  ];
+  // A parse-kontraktus tükrözése: ref nélkül nincs javaslat.
+  return proposals.filter((p) => p.pain_point_refs.length > 0);
 }
 
 function mockGenerateBody(

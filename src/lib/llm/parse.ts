@@ -27,6 +27,25 @@ export interface ExtractedField {
 /** Mezőnként javaslat vagy null (= a forrásokban nincs meg → missing). */
 export type ExtractResult = Record<string, ExtractedField | null>;
 
+/** AI-javasolt fájdalompont (P1 entitás-kivonatolás nyers javaslata). */
+export interface PainPointProposal {
+  title: string;
+  description: string | null;
+  /** Szó szerinti idézet a forrásból (ha a modell adott). */
+  quote: string | null;
+  severity: "low" | "medium" | "high" | null;
+  source_indices: number[];
+}
+
+/** AI-javasolt use case (megerősített fájdalompontokból származtatva). */
+export interface UseCaseProposal {
+  title: string;
+  description: string | null;
+  /** 1-alapú hivatkozások a MEGADOTT megerősített fájdalompont-listára. */
+  pain_point_refs: number[];
+  source_indices: number[];
+}
+
 /** Eltávolítja az esetleges ```json ... ``` kódkerítést. */
 export function stripCodeFences(text: string): string {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -34,6 +53,24 @@ export function stripCodeFences(text: string): string {
     return fenced[1].trim();
   }
   return text.trim();
+}
+
+/** Nyers-először JSON-parse fence-strip fallbackkal (közös védelem). */
+function parseJsonLoose(raw: string): unknown {
+  try {
+    // Előbb a nyers választ próbáljuk (a fence-nélküli érvényes JSON a
+    // megfelelő eset); a fence-eltávolítás csak fallback — így a mező-
+    // értékekben előforduló ``` nem korrumpálja az érvényes választ.
+    try {
+      return JSON.parse(raw.trim());
+    } catch {
+      return JSON.parse(stripCodeFences(raw));
+    }
+  } catch {
+    throw new Error(
+      `A modell válasza nem érvényes JSON (első 120 karakter): ${raw.slice(0, 120)}`,
+    );
+  }
 }
 
 /**
@@ -54,21 +91,7 @@ export function parseExtractResult(
   sources: LlmSource[],
   typeDef: ArtifactTypeDef,
 ): ExtractResult {
-  let parsed: unknown;
-  try {
-    // Előbb a nyers választ próbáljuk (a fence-nélküli érvényes JSON a
-    // megfelelő eset); a fence-eltávolítás csak fallback — így a mező-
-    // értékekben előforduló ``` nem korrumpálja az érvényes választ.
-    try {
-      parsed = JSON.parse(raw.trim());
-    } catch {
-      parsed = JSON.parse(stripCodeFences(raw));
-    }
-  } catch {
-    throw new Error(
-      `A modell válasza nem érvényes JSON (első 120 karakter): ${raw.slice(0, 120)}`,
-    );
-  }
+  const parsed = parseJsonLoose(raw);
   const source =
     parsed && typeof parsed === "object" && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
@@ -104,4 +127,96 @@ function normalizeIndices(raw: unknown, validIndices: Set<number>): number[] {
         .filter((n): n is number => Number.isInteger(n) && validIndices.has(n as number)),
     ),
   ];
+}
+
+/** Trimmelt string vagy null (üres / nem-string → null). */
+function optionalText(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+const SEVERITY_VALUES = new Set(["low", "medium", "high"]);
+
+/** A modell tömb-válasza — közvetlen tömb vagy {"<kulcs>": [...]}-burok
+ *  (a modellek gyakran objektumba csomagolják a listát). */
+function looseArray(parsed: unknown, wrapperKey: string): unknown[] {
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && typeof parsed === "object") {
+    const wrapped = (parsed as Record<string, unknown>)[wrapperKey];
+    if (Array.isArray(wrapped)) return wrapped;
+  }
+  return [];
+}
+
+/**
+ * Fájdalompont-javaslatok feldolgozása. Az extract-mezőkkel AZONOS elvek:
+ * a cím nélküli elem kiesik (nincs identitása — az nem „érték rossz
+ * index-szel", hanem üres javaslat), de a VALÓS javaslatot rossz/hiányzó
+ * forrás-index miatt SOSEM dobjuk el — a hamis citáció lekerül róla
+ * (source_indices üres), a döntés az emberé (E1).
+ */
+export function parsePainPointsResult(
+  raw: string,
+  sources: LlmSource[],
+): PainPointProposal[] {
+  const items = looseArray(parseJsonLoose(raw), "pain_points");
+  const validIndices = new Set(sources.map((s) => s.index));
+  const result: PainPointProposal[] = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const obj = item as Record<string, unknown>;
+    const title = optionalText(obj.title);
+    if (!title) continue;
+    const severityRaw =
+      typeof obj.severity === "string" ? obj.severity.trim().toLowerCase() : "";
+    result.push({
+      title,
+      description: optionalText(obj.description),
+      quote: optionalText(obj.quote),
+      severity: SEVERITY_VALUES.has(severityRaw)
+        ? (severityRaw as PainPointProposal["severity"])
+        : null,
+      source_indices: normalizeIndices(obj.source_indices, validIndices),
+    });
+  }
+  return result;
+}
+
+/**
+ * Use case-javaslatok feldolgozása. A pain_point_refs a MEGADOTT megerősített
+ * fájdalompont-lista 1-alapú sorszámaira mutat.
+ *
+ * FONTOS különbségtétel: a source_indices CITÁCIÓ — rossz index esetén az
+ * érték marad, a citáció esik (a #6-fix elve). A pain_point_refs viszont a
+ * javaslat SZEMANTIKAI TARTALMA (a spec: minden use case legalább egy
+ * megadott fájdalompontra válaszol; a modell nem találhat ki fájdalompontot)
+ * — a nulla érvényes ref-fel maradó javaslat kontraktus-sértő, ezért kiesik.
+ */
+export function parseUseCasesResult(
+  raw: string,
+  sources: LlmSource[],
+  painPointCount: number,
+): UseCaseProposal[] {
+  const items = looseArray(parseJsonLoose(raw), "use_cases");
+  const validSourceIndices = new Set(sources.map((s) => s.index));
+  const validPainRefs = new Set(
+    Array.from({ length: painPointCount }, (_, i) => i + 1),
+  );
+  const result: UseCaseProposal[] = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const obj = item as Record<string, unknown>;
+    const title = optionalText(obj.title);
+    if (!title) continue;
+    const pain_point_refs = normalizeIndices(obj.pain_point_refs, validPainRefs);
+    if (pain_point_refs.length === 0) continue;
+    result.push({
+      title,
+      description: optionalText(obj.description),
+      pain_point_refs,
+      source_indices: normalizeIndices(obj.source_indices, validSourceIndices),
+    });
+  }
+  return result;
 }
