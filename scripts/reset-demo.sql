@@ -1,7 +1,7 @@
 -- ─────────────────────────────────────────────────────────────
 -- reset-demo.sql — a demo-projekt visszaállítása a seed-alapállapotra
--- (Coding-csomag #4, a #5a-ban bővítve). Böngészőből (Supabase
--- SQL-editor) EGYBEN futtatható; IDEMPOTENS.
+-- (Coding-csomag #4, a #5a-ban és a #7a-ban bővítve). Böngészőből
+-- (Supabase SQL-editor) EGYBEN futtatható; IDEMPOTENS.
 --
 -- Alapállapot: P0 completed · P1 in_progress · P2–P6 locked ·
 -- cycle_count = 1; a demo-projekt MINDEN nem-seedelt sora törlődik:
@@ -9,6 +9,8 @@
 --   - artifacts: csak a seedelt charter (e0000000-…-0001) marad,
 --     approved v1 státuszban (a #5a „Új verzió"-klónjai törlődnek)
 --   - input_items: csak a 3 seedelt bemenet (d0000000-…-0001…0003) marad
+--   - pain_points / use_cases (#7a): MINDEN sor törlődik (a seed nem
+--     tartalmaz entitást — a demó a kivonatolással kezdődik)
 -- ─────────────────────────────────────────────────────────────
 
 update phase_instances set state = 'completed', cycle_count = 1
@@ -50,3 +52,11 @@ delete from input_items
       'd0000000-0000-4000-8000-000000000002',
       'd0000000-0000-4000-8000-000000000003'
     );
+
+-- #7a: a demo-projekt P1-entitásai törlődnek (a seed nem tartalmaz
+-- entitást — az alapállapot az üres Fájdalompontok/Use case-ek szekció).
+delete from use_cases
+  where project_id = 'b0000000-0000-4000-8000-000000000001';
+
+delete from pain_points
+  where project_id = 'b0000000-0000-4000-8000-000000000001';
