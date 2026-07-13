@@ -189,6 +189,18 @@
     "openEditor": "Open editor",
     "noArtifactYet": "No artifact of this type yet."
   },
+  "hub": {
+    "title": "Project documentation hub",
+    "lead": "Every deliverable of the project in one place — status, completeness, gaps and export.",
+    "notStarted": "Not started yet",
+    "missingFields": "Missing required fields: {fields}",
+    "versionsToggle": "Version history ({count})",
+    "openCta": "Open",
+    "exportCta": "Export (.md)",
+    "completenessUnknown": "completeness: —",
+    "adhocSection": "Other — no phase (types outside the config)",
+    "emptyPhase": "No deliverable type is defined for this phase yet — later packages will fill it."
+  },
   "editor": {
     "fieldPanelTitle": "Fields",
     "bodyTitle": "Body (markdown)",

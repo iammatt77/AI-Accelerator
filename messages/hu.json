@@ -189,6 +189,18 @@
     "openEditor": "Szerkesztő megnyitása",
     "noArtifactYet": "Még nincs artefaktum ebből a típusból."
   },
+  "hub": {
+    "title": "Projektdokumentáció tár",
+    "lead": "A projekt minden deliverable-je egy helyen — állapot, teljesség, hiányok és export.",
+    "notStarted": "Még nincs elkezdve",
+    "missingFields": "Hiányzó kötelező mezők: {fields}",
+    "versionsToggle": "Verzió-történet ({count})",
+    "openCta": "Megnyitás",
+    "exportCta": "Export (.md)",
+    "completenessUnknown": "teljesség: —",
+    "adhocSection": "Egyéb — fázis nélkül (konfigon kívüli típusok)",
+    "emptyPhase": "Ehhez a fázishoz még nincs deliverable-típus definiálva — későbbi csomagok töltik fel."
+  },
   "editor": {
     "fieldPanelTitle": "Mezők",
     "bodyTitle": "Body (markdown)",
