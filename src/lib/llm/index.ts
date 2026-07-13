@@ -393,7 +393,13 @@ function mockExtract(sources: LlmSource[], typeDef: ArtifactTypeDef): ExtractRes
 // Fájdalompont-fixture: 3 determinisztikus javaslat (idézettel, súlyosság-
 // szórással); a forrás-indexek a tényleges számozásra szűrve. A 3. javaslat
 // szándékosan idézet és severity nélkül jön (a null-ág is látszik).
+// A 0-találat ág (→ látható notice) is determinisztikusan tesztelhető:
+// ha MINDEN forrás triviálisan rövid (<40 karakter), a fixture üres
+// listát ad — az „irreleváns bemenet" él-esetének megfelelője.
 function mockExtractPainPoints(sources: LlmSource[]): PainPointProposal[] {
+  if (sources.every((s) => s.text.trim().length < 40)) {
+    return [];
+  }
   const validIndices = new Set(sources.map((s) => s.index));
   const cite = (indices: number[]) => indices.filter((n) => validIndices.has(n));
   return [
