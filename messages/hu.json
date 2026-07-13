@@ -59,7 +59,9 @@
     "metaIndustry": "Iparág",
     "metaPackage": "Csomag",
     "metaStart": "Kezdés",
-    "openCockpit": "Pilótafülke megnyitása"
+    "openCockpit": "Pilótafülke megnyitása",
+    "statPainPoints": "megerősített fájdalompont",
+    "statUseCases": "megerősített use case"
   },
   "phases": {
     "p0": {

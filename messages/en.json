@@ -59,7 +59,9 @@
     "metaIndustry": "Industry",
     "metaPackage": "Package",
     "metaStart": "Start",
-    "openCockpit": "Open cockpit"
+    "openCockpit": "Open cockpit",
+    "statPainPoints": "confirmed pain points",
+    "statUseCases": "confirmed use cases"
   },
   "phases": {
     "p0": {

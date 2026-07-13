@@ -38,7 +38,13 @@ async function loadWorkspace(projectId: string) {
 
   if (!project) return null;
 
-  const [{ data: inputs }, { data: artifacts }, board] = await Promise.all([
+  const [
+    { data: inputs },
+    { data: artifacts },
+    board,
+    { count: painCount },
+    { count: useCaseCount },
+  ] = await Promise.all([
     supabase
       .from("input_items")
       .select("*")
@@ -52,6 +58,18 @@ async function loadWorkspace(projectId: string) {
       // számolódik, típusok KÖZÖTT nem közelíti a frissességet.
       .order("updated_at", { ascending: false }),
     loadPhaseBoard(supabase, projectId),
+    // #7a: valós entitás-számlálók — MEGERŐSÍTETT (confirmed/manual)
+    // fájdalompontok és use case-ek (az 1d mockup chipjei élesítve).
+    supabase
+      .from("pain_points")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .in("state", ["confirmed", "manual"]),
+    supabase
+      .from("use_cases")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .in("state", ["confirmed", "manual"]),
   ]);
 
   return {
@@ -59,6 +77,8 @@ async function loadWorkspace(projectId: string) {
     inputs: (inputs ?? []) as InputItemRow[],
     artifacts: (artifacts ?? []) as ArtifactRow[],
     board,
+    painCount: painCount ?? 0,
+    useCaseCount: useCaseCount ?? 0,
   };
 }
 
@@ -71,7 +91,7 @@ export default async function ProjectCockpitPage({
   const data = await loadWorkspace(id);
   if (!data) notFound();
 
-  const { project, inputs, artifacts, board } = data;
+  const { project, inputs, artifacts, board, painCount, useCaseCount } = data;
 
   const [locale, tCockpit, tClients, tArtifacts, tTypes, tEmpty, tGates, tCriteria, tLex] =
     await Promise.all([
@@ -156,11 +176,22 @@ export default async function ProjectCockpitPage({
           {/* Következő legjobb lépés — számított */}
           <NextStepWidget projectId={id} step={nextStep} />
 
-          {/* Stat-chipek: csak létező entitásból (C melléklet) */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Stat-chipek: csak létező entitásból (C melléklet); a
+              fájdalompont/use case chip a P1 munkaterületre visz (#7a) */}
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             <StatChip value={inputs.length} label={tCockpit("statInputs")} />
             <StatChip value={artifacts.length} label={tCockpit("statArtifacts")} />
             <StatChip value={openGates} label={tCockpit("statOpenGates")} />
+            <StatChip
+              value={painCount}
+              label={tCockpit("statPainPoints")}
+              href={`/project/${id}/phase/P1`}
+            />
+            <StatChip
+              value={useCaseCount}
+              label={tCockpit("statUseCases")}
+              href={`/project/${id}/phase/P1`}
+            />
           </div>
 
           {/* Legutóbbi artefaktumok (max 3) + belépő a tárba (#5b) */}
@@ -311,13 +342,33 @@ export default async function ProjectCockpitPage({
   );
 }
 
-function StatChip({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="glass-tile p-3 text-center">
+function StatChip({
+  value,
+  label,
+  href,
+}: {
+  value: number;
+  label: string;
+  /** #7a: opcionális cél — a chip kattintható belépő (pl. P1 munkaterület). */
+  href?: string;
+}) {
+  const body = (
+    <>
       <div className="font-mono text-metric">{value}</div>
       <div className="mt-0.5 text-mono-sm text-ink-tertiary">{label}</div>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="glass-tile block p-3 text-center transition-colors duration-[var(--motion-base)] hover:bg-sunken"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return <div className="glass-tile p-3 text-center">{body}</div>;
 }
 
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
