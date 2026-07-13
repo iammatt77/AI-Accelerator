@@ -52,6 +52,7 @@
     "statArtifacts": "artefaktum",
     "statOpenGates": "nyitott kapu",
     "recentArtifacts": "Legutóbbi artefaktumok",
+    "documentsLink": "Projektdokumentáció tár →",
     "gateChecklistTitle": "Aktuális fázis — kapu-checklist",
     "projectMetaTitle": "Projekt-adatok",
     "metaClient": "Ügyfél",

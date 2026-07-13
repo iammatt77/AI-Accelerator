@@ -162,11 +162,19 @@ export default async function ProjectCockpitPage({
             <StatChip value={openGates} label={tCockpit("statOpenGates")} />
           </div>
 
-          {/* Legutóbbi artefaktumok (max 3) */}
+          {/* Legutóbbi artefaktumok (max 3) + belépő a tárba (#5b) */}
           <section className="glass-tile p-4">
-            <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
-              {tCockpit("recentArtifacts")}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
+                {tCockpit("recentArtifacts")}
+              </h2>
+              <Link
+                href={`/project/${id}/documents`}
+                className="text-mono-sm font-medium text-ink-secondary hover:text-ink hover:underline"
+              >
+                {tCockpit("documentsLink")}
+              </Link>
+            </div>
             {recentArtifacts.length === 0 ? (
               <p className="mt-2 text-body text-ink-tertiary">{tEmpty("noArtifact")}</p>
             ) : (

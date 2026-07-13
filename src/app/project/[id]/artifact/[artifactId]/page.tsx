@@ -80,12 +80,13 @@ export default async function ArtifactEditorPage({
     }));
   }
 
-  const [locale, tEditor, tArtifacts, tTypes, tFields] = await Promise.all([
+  const [locale, tEditor, tArtifacts, tTypes, tFields, tHub] = await Promise.all([
     getLocale(),
     getTranslations("editor"),
     getTranslations("artifacts"),
     getTranslations("artifactTypes"),
     getTranslations("fields"),
+    getTranslations("hub"),
   ]);
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   const typeName = typeDef
@@ -166,6 +167,15 @@ export default async function ArtifactEditorPage({
             })}
           </p>
         </div>
+        {/* Export az approved olvasó-nézetből (#5b) — az őr a szerveren él */}
+        {artifact.status === "approved" && (
+          <a
+            href={`/project/${id}/artifact/${artifact.id}/export`}
+            className="rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
+          >
+            {tHub("exportCta")}
+          </a>
+        )}
       </div>
 
       {!typeDef && (

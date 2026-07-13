@@ -52,6 +52,7 @@
     "statArtifacts": "artifacts",
     "statOpenGates": "open gates",
     "recentArtifacts": "Recent artifacts",
+    "documentsLink": "Project documentation hub →",
     "gateChecklistTitle": "Current phase — gate checklist",
     "projectMetaTitle": "Project details",
     "metaClient": "Client",
