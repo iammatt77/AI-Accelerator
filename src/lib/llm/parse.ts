@@ -149,12 +149,22 @@ function looseArray(parsed: unknown, wrapperKey: string): unknown[] {
   return [];
 }
 
+/** Szóköz-normalizált, kisbetűs alak a szó szerinti idézet ellenőrzéséhez. */
+function normalizeForQuoteCheck(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 /**
  * Fájdalompont-javaslatok feldolgozása. Az extract-mezőkkel AZONOS elvek:
  * a cím nélküli elem kiesik (nincs identitása — az nem „érték rossz
  * index-szel", hanem üres javaslat), de a VALÓS javaslatot rossz/hiányzó
  * forrás-index miatt SOSEM dobjuk el — a hamis citáció lekerül róla
  * (source_indices üres), a döntés az emberé (E1).
+ *
+ * Az idézet (quote) BIZONYÍTÉK-értékű, ezért verifikált: csak akkor marad
+ * a javaslaton, ha (szóköz-normalizálva, kisbetűsen) ténylegesen szerepel
+ * valamelyik forrás szövegében — a fabrikált „idézet" lekerül (null), a
+ * javaslat maga megmarad (ugyanaz az elv, mint a hamis citációnál).
  */
 export function parsePainPointsResult(
   raw: string,
@@ -162,6 +172,7 @@ export function parsePainPointsResult(
 ): PainPointProposal[] {
   const items = looseArray(parseJsonLoose(raw), "pain_points");
   const validIndices = new Set(sources.map((s) => s.index));
+  const normalizedSources = sources.map((s) => normalizeForQuoteCheck(s.text));
   const result: PainPointProposal[] = [];
   for (const item of items) {
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
@@ -170,10 +181,16 @@ export function parsePainPointsResult(
     if (!title) continue;
     const severityRaw =
       typeof obj.severity === "string" ? obj.severity.trim().toLowerCase() : "";
+    const rawQuote = optionalText(obj.quote);
+    const quoteVerified =
+      rawQuote !== null &&
+      normalizedSources.some((text) =>
+        text.includes(normalizeForQuoteCheck(rawQuote)),
+      );
     result.push({
       title,
       description: optionalText(obj.description),
-      quote: optionalText(obj.quote),
+      quote: quoteVerified ? rawQuote : null,
       severity: SEVERITY_VALUES.has(severityRaw)
         ? (severityRaw as PainPointProposal["severity"])
         : null,

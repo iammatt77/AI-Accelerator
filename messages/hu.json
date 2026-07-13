@@ -309,7 +309,9 @@
     "entityTitleRequired": "A cím megadása kötelező.",
     "exclusionReasonRequired": "A kizáráshoz indoklás kötelező.",
     "scoreInvalid": "A pontszám 1 és 5 közötti egész szám lehet.",
-    "noShortlistedUseCase": "Nincs megerősített use case a shortlisten — előbb erősíts meg és tegyél shortlistre legalább egyet. Üres dokumentum nem készül."
+    "noShortlistedUseCase": "Nincs megerősített use case a shortlisten — előbb erősíts meg és tegyél shortlistre legalább egyet. Üres dokumentum nem készül.",
+    "levelInvalid": "A súlyosság/kockázat értéke csak alacsony, közepes vagy magas lehet.",
+    "entitySourcedNoExtract": "Ez a dokumentum entitás-forrású — a mezőit a megerősített use case-ekből tölti a „Shortlist-dokumentum az entitásokból” akció, a szabad-szöveges kivonatolás rá nem futtatható."
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet a Projektek oldalon.",
@@ -488,7 +490,7 @@
     "noPains": "Még nincs fájdalompont — futtasd a kivonatolást, vagy vegyél fel kézzel.",
     "state": {
       "ai_suggested": "AI-javaslat",
-      "confirmed": "megerősített",
+      "confirmed": "megerősítve",
       "manual": "kézi"
     },
     "level": {
@@ -510,7 +512,7 @@
     "deriveCta": "Javaslatok a fájdalompontokból",
     "deriving": "Származtatás…",
     "deriveHint": "Csak megerősített fájdalompontból dolgozik.",
-    "addressedPains": "Címzett fájdalompontok:",
+    "addressedPains": "Érintett fájdalompontok:",
     "noUseCases": "Még nincs use case — származtass a megerősített fájdalompontokból, vagy vegyél fel kézzel.",
     "scoreValueLabel": "Érték",
     "scoreFeasibilityLabel": "Megvalósíthatóság",
@@ -538,6 +540,7 @@
     "generateShortlistCta": "Shortlist-dokumentum az entitásokból",
     "generatingShortlist": "Generálás…",
     "shortlistFieldsDone": "A mezők frissültek a megerősített entitásokból.",
-    "generateShortlistHint": "A mezőket a megerősített, shortlisten lévő use case-ekből tölti (a meglévő mezőértékeket felülírja); a body ezután a „Draft generálása” gombbal készül."
+    "generateShortlistHint": "A mezőket a megerősített, shortlisten lévő use case-ekből tölti (a meglévő mezőértékeket felülírja); a body ezután a „Draft generálása” gombbal készül.",
+    "quoteWrapped": "„{quote}”"
   }
 }

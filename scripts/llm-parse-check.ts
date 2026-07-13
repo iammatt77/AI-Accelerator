@@ -165,6 +165,17 @@ check("tartományon kívüli: érték marad, citáció üres", oobRes.cel?.value
 
 // ── #7a: fájdalompont-parse — ugyanazok az elvek entitás-javaslatokra ──
 
+// A quote-verifikációhoz valós szövegű források (a SOURCES "…" szövege
+// szándékosan nem tartalmazza az idézeteket — az a fabrikáció-eset).
+const PP_SOURCES: LlmSource[] = [
+  {
+    index: 1,
+    title: "Interjú-jegyzet",
+    text: "A panaszkezelésben hetekig ül a panasz, mire bárki ránéz. Sok a kézi munka.",
+  },
+  { index: 2, title: "Folyamatvázlat", text: "Kétszer rögzítik ugyanazt az adatot." },
+];
+
 const PP = (indices: string) =>
   `[
   { "title": "Lassú panasz-átfutás", "description": "Hosszú az átfutás.", "quote": "hetekig ül a panasz", "severity": "high", "source_indices": ${indices} },
@@ -174,15 +185,15 @@ const PP = (indices: string) =>
 
 console.log("\n── parsePainPointsResult (#7a) — entitás-javaslatok ──\n");
 
-const ppValid = parsePainPointsResult(PP("[1]"), SOURCES);
+const ppValid = parsePainPointsResult(PP("[1]"), PP_SOURCES);
 check("PP: numerikus [1] → 3 javaslat, citációval", ppValid.length === 3 && JSON.stringify(ppValid[0].source_indices) === "[1]");
-const ppStr = parsePainPointsResult(PP('["1"]'), SOURCES);
+const ppStr = parsePainPointsResult(PP('["1"]'), PP_SOURCES);
 check("PP: string [\"1\"] → citáció helyreáll", ppStr.length === 3 && JSON.stringify(ppStr[0].source_indices) === "[1]");
-const ppOob = parsePainPointsResult(PP("[9]"), SOURCES);
+const ppOob = parsePainPointsResult(PP("[9]"), PP_SOURCES);
 check("PP: tartományon kívüli [9] → javaslat MARAD, citáció üres", ppOob.length === 3 && ppOob[0].source_indices.length === 0);
-const ppWrapped = parsePainPointsResult(`{ "pain_points": ${PP("[2]")} }`, SOURCES);
+const ppWrapped = parsePainPointsResult(`{ "pain_points": ${PP("[2]")} }`, PP_SOURCES);
 check("PP: objektum-burok {pain_points: […]} → 3 javaslat", ppWrapped.length === 3);
-const ppFenced = parsePainPointsResult("```json\n" + PP("[1]") + "\n```", SOURCES);
+const ppFenced = parsePainPointsResult("```json\n" + PP("[1]") + "\n```", PP_SOURCES);
 check("PP: fenced blokk → 3 javaslat", ppFenced.length === 3);
 const ppNoTitle = parsePainPointsResult(
   `[ { "title": "", "description": "cím nélkül" }, { "description": "kulcs sincs" }, { "title": "Valódi", "source_indices": [1] } ]`,
@@ -196,6 +207,19 @@ const ppSeverity = parsePainPointsResult(
 check("PP: severity koerció — \"HIGH\"→high, ismeretlen→null", ppSeverity[0].severity === "high" && ppSeverity[1].severity === null);
 check("PP: üres tömb → 0 javaslat (→ UX-notice)", parsePainPointsResult("[]", SOURCES).length === 0);
 check("PP: nem-tömb válasz → 0 javaslat (nem hiba)", parsePainPointsResult(`{ "foo": "bar" }`, SOURCES).length === 0);
+// Quote-verifikáció: a szó szerinti idézet megmarad; a forrásban nem
+// szereplő (fabrikált) idézet lekerül, de a javaslat MARAD.
+check("PP: valós idézet megmarad (szóköz/kisbetű-normalizálva)", ppValid[0].quote === "hetekig ül a panasz");
+const ppFabricated = parsePainPointsResult(
+  `[ { "title": "Valós fájdalompont", "quote": "ez a mondat nincs a forrásban", "source_indices": [1] } ]`,
+  PP_SOURCES,
+);
+check("PP: fabrikált idézet lekerül, a javaslat MARAD", ppFabricated.length === 1 && ppFabricated[0].quote === null);
+const ppCaseWs = parsePainPointsResult(
+  `[ { "title": "A", "quote": "HETEKIG   ÜL a panasz", "source_indices": [1] } ]`,
+  PP_SOURCES,
+);
+check("PP: idézet-egyezés kisbetű+szóköz-toleráns", ppCaseWs[0].quote === "HETEKIG   ÜL a panasz");
 
 // ── #7a: use case-parse — a pain_point_refs SZEMANTIKAI kontraktus ──
 

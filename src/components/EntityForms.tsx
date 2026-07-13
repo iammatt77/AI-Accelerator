@@ -172,7 +172,7 @@ export function PainPointProposalCard({
           )}
           {painPoint.quote && (
             <p className="mt-1.5 border-l-2 border-line pl-2 text-body italic text-ink-secondary">
-              „{painPoint.quote}”
+              {t("quoteWrapped", { quote: painPoint.quote })}
             </p>
           )}
           <p className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -184,11 +184,12 @@ export function PainPointProposalCard({
 
       {editing && (
         <form action={editFormAction} className="mt-2 space-y-2">
+          {/* Hibaágon a beírt (values), egyébként az entitás értéke áll vissza */}
           <input
             key={`t${editState.nonce ?? 0}`}
             name="title"
             required
-            defaultValue={painPoint.title}
+            defaultValue={editState.values?.title ?? painPoint.title}
             placeholder={t("titlePlaceholder")}
             className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
           />
@@ -196,7 +197,7 @@ export function PainPointProposalCard({
             key={`d${editState.nonce ?? 0}`}
             name="description"
             rows={2}
-            defaultValue={painPoint.description ?? ""}
+            defaultValue={editState.values?.fieldValue ?? painPoint.description ?? ""}
             placeholder={t("descriptionPlaceholder")}
             className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
           />
@@ -327,6 +328,7 @@ export function AddPainPointForm({ projectId }: { projectId: string }) {
           key={`d${state.nonce ?? 0}`}
           name="description"
           rows={2}
+          defaultValue={state.values?.fieldValue}
           placeholder={t("descriptionPlaceholder")}
           className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
         />
@@ -469,7 +471,22 @@ export function UseCaseCard({
         <span className="min-w-0 text-body font-medium">{useCase.title}</span>
         <span className="flex shrink-0 items-center gap-2">
           {useCase.quickWin && (
-            <span className="inline-flex items-center rounded-pill border border-active/50 bg-surface px-2 py-0.5 font-mono text-mono-sm text-active">
+            // Jelvény, nem döntési pont → NEM lila (törvény 3); ikon+szöveg
+            // (törvény 4): villám = quick win.
+            <span className="inline-flex items-center gap-1 rounded-pill border border-line bg-surface px-2 py-0.5 font-mono text-mono-sm text-ink-secondary">
+              <svg
+                width={11}
+                height={11}
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M9 2L4 9.5h3.5L7 14l5-7.5H8.5L9 2z" />
+              </svg>
               {t("quickWinBadge")}
             </span>
           )}
@@ -514,11 +531,12 @@ export function UseCaseCard({
 
       {editing && (
         <form action={editFormAction} className="mt-2 space-y-2">
+          {/* Hibaágon a beírt (values), egyébként az entitás értéke áll vissza */}
           <input
             key={`t${editState.nonce ?? 0}`}
             name="title"
             required
-            defaultValue={useCase.title}
+            defaultValue={editState.values?.title ?? useCase.title}
             placeholder={t("titlePlaceholder")}
             className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
           />
@@ -526,7 +544,7 @@ export function UseCaseCard({
             key={`d${editState.nonce ?? 0}`}
             name="description"
             rows={2}
-            defaultValue={useCase.description ?? ""}
+            defaultValue={editState.values?.fieldValue ?? useCase.description ?? ""}
             placeholder={t("descriptionPlaceholder")}
             className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
           />
@@ -617,7 +635,10 @@ export function UseCaseCard({
           </form>
 
           <div className="flex flex-wrap items-start gap-2">
-            {useCase.listStatus !== "shortlist" && (
+            {/* Csak jelölt/kizárt tehető shortlistre — a „kiválasztott" (P2
+                aktusa) visszaminősítése nem innen történik. */}
+            {(useCase.listStatus === "candidate" ||
+              useCase.listStatus === "excluded") && (
               <form action={shortlistFormAction}>
                 {/* Shortlistre tétel = döntési pont → lila (törvény 3) */}
                 <SubmitButton pendingLabel={t("shortlisting")}>
@@ -740,6 +761,7 @@ export function AddUseCaseForm({
           key={`d${state.nonce ?? 0}`}
           name="description"
           rows={2}
+          defaultValue={state.values?.fieldValue}
           placeholder={t("descriptionPlaceholder")}
           className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
         />

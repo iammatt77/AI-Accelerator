@@ -309,7 +309,9 @@
     "entityTitleRequired": "A title is required.",
     "exclusionReasonRequired": "Exclusion requires a reason.",
     "scoreInvalid": "Scores must be whole numbers between 1 and 5.",
-    "noShortlistedUseCase": "There is no confirmed use case on the shortlist — confirm and shortlist at least one first. An empty document is not created."
+    "noShortlistedUseCase": "There is no confirmed use case on the shortlist — confirm and shortlist at least one first. An empty document is not created.",
+    "levelInvalid": "Severity/risk must be one of low, medium or high.",
+    "entitySourcedNoExtract": "This document is entity-sourced — its fields are filled from the confirmed use cases by the “Shortlist document from entities” action; free-text extraction cannot run on it."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",
@@ -538,6 +540,7 @@
     "generateShortlistCta": "Shortlist document from entities",
     "generatingShortlist": "Generating…",
     "shortlistFieldsDone": "Fields refreshed from the confirmed entities.",
-    "generateShortlistHint": "Fills the fields from the confirmed, shortlisted use cases (overwrites existing field values); the body is then produced with the “Generate draft” button."
+    "generateShortlistHint": "Fills the fields from the confirmed, shortlisted use cases (overwrites existing field values); the body is then produced with the “Generate draft” button.",
+    "quoteWrapped": "“{quote}”"
   }
 }

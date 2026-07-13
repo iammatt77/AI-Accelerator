@@ -52,10 +52,15 @@ async function logDecision(
 
 const SEVERITY_VALUES = new Set(["low", "medium", "high"]);
 
-/** Űrlap-érték → severity/risk vagy null (üres/ismeretlen → null). */
-function parseLevel(raw: FormDataEntryValue | null): "low" | "medium" | "high" | null {
+/** Űrlap-érték → severity/risk. Üres → null (nincs megadva); ismeretlen
+ *  érték → "invalid" (látható hiba, nem néma null-ra írás — review-lelet:
+ *  a manipulált/elavult űrlap ne törölje jelzés nélkül a meglévő adatot). */
+function parseLevel(
+  raw: FormDataEntryValue | null,
+): "low" | "medium" | "high" | null | "invalid" {
   const value = String(raw ?? "").trim();
-  return SEVERITY_VALUES.has(value) ? (value as "low" | "medium" | "high") : null;
+  if (value === "") return null;
+  return SEVERITY_VALUES.has(value) ? (value as "low" | "medium" | "high") : "invalid";
 }
 
 // ── Fájdalompont: kivonatolás ────────────────────────────────
@@ -89,17 +94,21 @@ export async function extractPainPointsAction(
 
   // Csere-szabály: a korábbi ai_suggested javaslatok lecserélődnek — a
   // confirmed/manual/rejected sorok érintetlenek (E1: emberi munka védett).
-  const { error: deleteErr } = await supabase
+  // VESZTESÉGMENTES sorrend (review-lelet): előbb a régi javaslat-snapshot
+  // felolvasása, majd az újak beszúrása, VÉGÜL a régiek törlése — ha az
+  // insert hibázik, a korábbi javaslatok megmaradnak.
+  const { data: oldRows, error: oldErr } = await supabase
     .from("pain_points")
-    .delete()
+    .select("id")
     .eq("project_id", projectId)
     .eq("state", "ai_suggested");
-  if (deleteErr) {
+  if (oldErr) {
     return {
       ok: false,
-      error: tErrors("entitySaveFailed", { message: errMessage(deleteErr) }),
+      error: tErrors("entityFetchFailed", { message: errMessage(oldErr) }),
     };
   }
+  const oldIds = ((oldRows ?? []) as { id: string }[]).map((r) => r.id);
 
   if (proposals.length > 0) {
     const rows = proposals.map((p) => ({
@@ -116,6 +125,21 @@ export async function extractPainPointsAction(
       return {
         ok: false,
         error: tErrors("entitySaveFailed", { message: errMessage(insertErr) }),
+      };
+    }
+  }
+
+  if (oldIds.length > 0) {
+    const { error: deleteErr } = await supabase
+      .from("pain_points")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("state", "ai_suggested") // guard: közben megerősített sort nem töröl
+      .in("id", oldIds);
+    if (deleteErr) {
+      return {
+        ok: false,
+        error: tErrors("entitySaveFailed", { message: errMessage(deleteErr) }),
       };
     }
   }
@@ -193,16 +217,22 @@ export async function editPainPointAction(
   const description = String(formData.get("description") ?? "").trim();
   const severity = parseLevel(formData.get("severity"));
   const nonce = Date.now();
+  // Hibaágon a beírt tartalom visszaáll (FormState-minta): a cím a title,
+  // a leírás a fieldValue kulcson utazik vissza az űrlapba.
+  const values = { title, fieldValue: description };
   if (!title) {
-    return { ok: false, error: tErrors("entityTitleRequired"), nonce };
+    return { ok: false, error: tErrors("entityTitleRequired"), values, nonce };
+  }
+  if (severity === "invalid") {
+    return { ok: false, error: tErrors("levelInvalid"), values, nonce };
   }
 
   const supabase = createServiceSupabaseClient();
   const loaded = await loadOwnedPainPoint(supabase, projectId, painPointId);
-  if ("error" in loaded) return { ok: false, error: loaded.error, nonce };
+  if ("error" in loaded) return { ok: false, error: loaded.error, values, nonce };
   const { row } = loaded;
   if (row.state === "rejected") {
-    return { ok: false, error: tErrors("entityNotEditable"), nonce };
+    return { ok: false, error: tErrors("entityNotEditable"), values, nonce };
   }
 
   // Szerkesztés = emberi aktus: az AI-javaslat confirmed-be lép; a már
@@ -212,6 +242,7 @@ export async function editPainPointAction(
     .from("pain_points")
     .update({ title, description: description || null, severity, state: nextState })
     .eq("id", painPointId)
+    .eq("project_id", projectId)
     .eq("state", row.state) // optimista guard: közben nem mozdult el
     .select("id");
   if (error || (data ?? []).length === 0) {
@@ -220,6 +251,7 @@ export async function editPainPointAction(
       error: error
         ? tErrors("entitySaveFailed", { message: errMessage(error) })
         : tErrors("entityNotEditable"),
+      values,
       nonce,
     };
   }
@@ -265,8 +297,12 @@ export async function addPainPointAction(
   const description = String(formData.get("description") ?? "").trim();
   const severity = parseLevel(formData.get("severity"));
   const nonce = Date.now();
+  const values = { title, fieldValue: description };
   if (!title) {
-    return { ok: false, error: tErrors("entityTitleRequired"), values: { title }, nonce };
+    return { ok: false, error: tErrors("entityTitleRequired"), values, nonce };
+  }
+  if (severity === "invalid") {
+    return { ok: false, error: tErrors("levelInvalid"), values, nonce };
   }
 
   const supabase = createServiceSupabaseClient();
@@ -281,7 +317,7 @@ export async function addPainPointAction(
     return {
       ok: false,
       error: tErrors("entitySaveFailed", { message: errMessage(error) }),
-      values: { title },
+      values,
       nonce,
     };
   }
@@ -340,18 +376,21 @@ export async function deriveUseCasesAction(
     return { ok: false, error: tErrors("deriveFailed", { message }) };
   }
 
-  // Csere-szabály: a korábbi ai_suggested use case-ek lecserélődnek.
-  const { error: deleteErr } = await supabase
+  // Csere-szabály: a korábbi ai_suggested use case-ek lecserélődnek —
+  // veszteségmentes sorrendben (snapshot → insert → régi törlése), mint a
+  // fájdalompont-kivonatolásnál.
+  const { data: oldRows, error: oldErr } = await supabase
     .from("use_cases")
-    .delete()
+    .select("id")
     .eq("project_id", projectId)
     .eq("state", "ai_suggested");
-  if (deleteErr) {
+  if (oldErr) {
     return {
       ok: false,
-      error: tErrors("entitySaveFailed", { message: errMessage(deleteErr) }),
+      error: tErrors("entityFetchFailed", { message: errMessage(oldErr) }),
     };
   }
+  const oldIds = ((oldRows ?? []) as { id: string }[]).map((r) => r.id);
 
   if (proposals.length > 0) {
     const rows = proposals.map((p) => ({
@@ -371,6 +410,21 @@ export async function deriveUseCasesAction(
       return {
         ok: false,
         error: tErrors("entitySaveFailed", { message: errMessage(insertErr) }),
+      };
+    }
+  }
+
+  if (oldIds.length > 0) {
+    const { error: deleteErr } = await supabase
+      .from("use_cases")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("state", "ai_suggested") // guard: közben megerősített sort nem töröl
+      .in("id", oldIds);
+    if (deleteErr) {
+      return {
+        ok: false,
+        error: tErrors("entitySaveFailed", { message: errMessage(deleteErr) }),
       };
     }
   }
@@ -448,16 +502,17 @@ export async function editUseCaseAction(
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const nonce = Date.now();
+  const values = { title, fieldValue: description };
   if (!title) {
-    return { ok: false, error: tErrors("entityTitleRequired"), nonce };
+    return { ok: false, error: tErrors("entityTitleRequired"), values, nonce };
   }
 
   const supabase = createServiceSupabaseClient();
   const loaded = await loadOwnedUseCase(supabase, projectId, useCaseId);
-  if ("error" in loaded) return { ok: false, error: loaded.error, nonce };
+  if ("error" in loaded) return { ok: false, error: loaded.error, values, nonce };
   const { row } = loaded;
   if (row.state === "rejected") {
-    return { ok: false, error: tErrors("entityNotEditable"), nonce };
+    return { ok: false, error: tErrors("entityNotEditable"), values, nonce };
   }
 
   const nextState = row.state === "ai_suggested" ? "confirmed" : row.state;
@@ -470,6 +525,7 @@ export async function editUseCaseAction(
       updated_at: nowIso(),
     })
     .eq("id", useCaseId)
+    .eq("project_id", projectId)
     .eq("state", row.state) // optimista guard
     .select("id");
   if (error || (data ?? []).length === 0) {
@@ -478,6 +534,7 @@ export async function editUseCaseAction(
       error: error
         ? tErrors("entitySaveFailed", { message: errMessage(error) })
         : tErrors("entityNotEditable"),
+      values,
       nonce,
     };
   }
@@ -519,13 +576,19 @@ export async function addUseCaseAction(
   const tErrors = await getTranslations("errors");
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  // UUID-alakra szűrés: a tamperelt form-érték ne nyers Postgres-hibát
+  // adjon (invalid input syntax for type uuid), hanem csendben kiessen —
+  // a valós kiválasztást a lenti projekt+state lekérdezés validálja.
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const selectedPainIds = formData
     .getAll("painPointIds")
     .map((v) => String(v))
-    .filter(Boolean);
+    .filter((v) => UUID_RE.test(v));
   const nonce = Date.now();
+  const values = { title, fieldValue: description };
   if (!title) {
-    return { ok: false, error: tErrors("entityTitleRequired"), values: { title }, nonce };
+    return { ok: false, error: tErrors("entityTitleRequired"), values, nonce };
   }
 
   const supabase = createServiceSupabaseClient();
@@ -544,7 +607,7 @@ export async function addUseCaseAction(
       return {
         ok: false,
         error: tErrors("entityFetchFailed", { message: errMessage(error) }),
-        values: { title },
+        values,
         nonce,
       };
     }
@@ -562,7 +625,7 @@ export async function addUseCaseAction(
     return {
       ok: false,
       error: tErrors("entitySaveFailed", { message: errMessage(error) }),
-      values: { title },
+      values,
       nonce,
     };
   }
@@ -593,6 +656,9 @@ export async function scoreUseCaseAction(
     return { ok: false, error: tErrors("scoreInvalid") };
   }
   const risk = parseLevel(formData.get("risk"));
+  if (risk === "invalid") {
+    return { ok: false, error: tErrors("levelInvalid") };
+  }
   const quickWin = formData.get("quickWin") === "on";
 
   const supabase = createServiceSupabaseClient();
@@ -640,6 +706,7 @@ export async function shortlistUseCaseAction(
     .from("use_cases")
     .update({ list_status: "shortlist", exclusion_reason: null, updated_at: nowIso() })
     .eq("id", useCaseId)
+    .eq("project_id", projectId)
     .in("state", ["confirmed", "manual"]) // csak megerősített kerülhet listára
     .select("id");
   if (error) {
@@ -675,24 +742,28 @@ export async function excludeUseCaseAction(
 
   const supabase = createServiceSupabaseClient();
   const loaded = await loadOwnedUseCase(supabase, projectId, useCaseId);
-  if ("error" in loaded) return { ok: false, error: loaded.error, nonce };
+  if ("error" in loaded) {
+    return { ok: false, error: loaded.error, values: { reason }, nonce };
+  }
   const { row } = loaded;
 
   const { data, error } = await supabase
     .from("use_cases")
     .update({ list_status: "excluded", exclusion_reason: reason, updated_at: nowIso() })
     .eq("id", useCaseId)
+    .eq("project_id", projectId)
     .in("state", ["confirmed", "manual"])
     .select("id");
   if (error) {
     return {
       ok: false,
       error: tErrors("entitySaveFailed", { message: errMessage(error) }),
+      values: { reason },
       nonce,
     };
   }
   if ((data ?? []).length === 0) {
-    return { ok: false, error: tErrors("entityNotConfirmed"), nonce };
+    return { ok: false, error: tErrors("entityNotConfirmed"), values: { reason }, nonce };
   }
 
   await logDecision(

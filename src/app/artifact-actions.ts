@@ -129,6 +129,13 @@ export async function extractAction(
   if (!typeDef) {
     return { ok: false, error: tErrors("typeNotFound", { type: typeKey }) };
   }
+  // Review-lelet (#7a): az entitás-forrású típus SZERVEROLDALON is tiltott a
+  // generikus kivonatolásra — a UI-elrejtés önmagában megkerülhető, és a
+  // szabad-szöveges extract a mezőket + a source_input_ids-t (unió →
+  // teljes lista) is elrontaná.
+  if (typeDef.entitySourced) {
+    return { ok: false, error: tErrors("entitySourcedNoExtract") };
+  }
 
   const supabase = createServiceSupabaseClient();
 
@@ -610,7 +617,11 @@ export async function generateShortlistFromEntitiesAction(
     return { ok: true, error: null, notice: tErrors("noShortlistedUseCase") };
   }
   const excluded = useCases.filter((u) => u.list_status === "excluded");
-  const quickWins = useCases.filter((u) => u.quick_win);
+  // Review-lelet (#7a): a quick win a dokumentumban UGYANAZZAL a
+  // predikátummal, mint a kapu-kritérium (list_status ∈ shortlist/selected)
+  // — különben a doksi kizárt/jelölt elemet hirdetne quick winként,
+  // miközben a kapu jogosan blokkol (dokumentum–kapu divergencia).
+  const quickWins = shortlisted.filter((u) => u.quick_win);
 
   // Rangsor: az érték + megvalósíthatóság összege szerint csökkenő; a nem
   // pontozott elem a sor végére kerül (0-ként számít).
@@ -821,6 +832,7 @@ export async function generateBodyAction(
 
   // A forrás-számozás az artefaktumon rögzített input-sorrendből jön; ha
   // (kivonatolás nélkül, csak kézi mezőkkel) még üres, most rögzítjük.
+  const hadSourceIds = artifact.source_input_ids.length > 0;
   let sourceIds = artifact.source_input_ids;
   let sources: LlmSource[];
   if (sourceIds.length === 0) {
@@ -857,13 +869,21 @@ export async function generateBodyAction(
     return { ok: false, error: tErrors("generateFailed", { message }) };
   }
 
+  // Review-lelet (#7a): a source_input_ids-t csak akkor írjuk vissza, ha a
+  // hívás elején még ÜRES volt (fallback-rögzítés). Ha már volt lista, a
+  // lassú LLM-hívás alatti párhuzamos mező-újragenerálás (új unió + új
+  // számozású source_indices) elveszett frissítést szenvedne — a régi lista
+  // visszaírása a mező-citációkat rossz inputra tolná.
+  const bodyUpdate: Record<string, unknown> = {
+    body,
+    updated_at: new Date().toISOString(),
+  };
+  if (!hadSourceIds) {
+    bodyUpdate.source_input_ids = sourceIds;
+  }
   const { data: updated, error } = await supabase
     .from("artifacts")
-    .update({
-      body,
-      source_input_ids: sourceIds,
-      updated_at: new Date().toISOString(),
-    })
+    .update(bodyUpdate)
     .eq("id", artifactId)
     .eq("status", "draft") // optimista guard
     .select("id");
