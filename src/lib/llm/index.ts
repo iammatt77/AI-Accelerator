@@ -1,6 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import type { ArtifactTypeDef } from "@/lib/artifacts/config";
+import { resolveTemplate, type ArtifactTypeDef } from "@/lib/artifacts/config";
 
 // ─────────────────────────────────────────────────────────────
 // LLM-ADAPTER — a governance magja.
@@ -242,13 +242,14 @@ export async function generateBody(
   const fieldLines = confirmedFields
     .map((f) => `- ${f.label} (${f.key}): ${f.value}`)
     .join("\n");
-  const sectionLines = typeDef.template.sections
+  const template = resolveTemplate(typeDef);
+  const sectionLines = template.sections
     .map((s) => `## ${s.title}\n(instrukció: ${s.instruction})`)
     .join("\n\n");
 
   const userPrompt = [
     `Artefaktum-típus: ${typeDef.key}`,
-    typeDef.template.instruction,
+    template.instruction,
     "",
     "── Megerősített mezőértékek (tényként kezelendők) ──",
     fieldLines || "(nincs megerősített mező)",
@@ -328,7 +329,7 @@ function mockGenerateBody(
 ): string {
   const byKey = new Map(confirmedFields.map((f) => [f.key, f]));
   const cite = (n: number) => (sources.some((s) => s.index === n) ? ` [${n}]` : "");
-  const sections = typeDef.template.sections.map((section, i) => {
+  const sections = resolveTemplate(typeDef).sections.map((section, i) => {
     // A szekcióhoz tartozó mezőértékek determinisztikus beemelése.
     const matching = confirmedFields.filter((f) =>
       section.instruction.includes(`\`${f.key}\``),

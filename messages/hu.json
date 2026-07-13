@@ -304,7 +304,24 @@
     "english": "angol"
   },
   "artifactTypes": {
-    "projektCharter": "Projekt-charter"
+    "projektCharter": "Projekt-charter",
+    "engagementTerv": "Engagement-terv",
+    "kickoffAgenda": "Kickoff-agenda",
+    "useCaseShortlist": "Priorizált use case-shortlist",
+    "felmeresiRiport": "Felmérési riport",
+    "businessCase": "Business case",
+    "pilotTerv": "Pilot-terv",
+    "megoldasiJavaslat": "Megoldási javaslat",
+    "toBeTerv": "TO-BE terv",
+    "megoldasDokumentacio": "Megoldás-dokumentáció",
+    "tesztriport": "Tesztriport",
+    "pilotRiport": "Pilot-riport",
+    "dontesiBrief": "Döntési brief",
+    "rolloutTerv": "Rollout-terv",
+    "impactRiport": "Impact-riport",
+    "kepzesiTerv": "Képzési terv",
+    "haviStatuszriport": "Havi státuszriport",
+    "javaslatDokumentum": "Javaslat-dokumentum"
   },
   "fields": {
     "charter": {
@@ -314,6 +331,115 @@
       "idokeret": "Időkeret",
       "sikerkriterium": "Sikerkritérium",
       "stakeholderek": "Stakeholderek"
+    },
+    "engagement": {
+      "stakeholder_kor": "Stakeholder-kör",
+      "merfoldkovek": "Mérföldkövek",
+      "kommunikacios_ritmus": "Kommunikációs ritmus",
+      "munkamodszer": "Munkamódszer",
+      "kockazatok": "Kockázatok"
+    },
+    "kickoff": {
+      "resztvevok": "Résztvevők",
+      "napirend": "Napirend",
+      "celok": "Célok",
+      "elokeszuletek": "Előkészületek"
+    },
+    "shortlist": {
+      "shortlist": "Shortlist",
+      "ertekelesi_szempontok": "Értékelési szempontok",
+      "quick_win": "Quick win",
+      "kizart_jeloltek": "Kizárt jelöltek",
+      "kockazati_jegyzet": "Kockázati jegyzet"
+    },
+    "assessment": {
+      "vezetoi_osszefoglalo": "Vezetői összefoglaló",
+      "as_is_attekintes": "AS-IS áttekintés",
+      "fajdalompontok": "Fájdalompontok",
+      "adat_es_ai_erettse": "Adat- és AI-érettség",
+      "megallapitasok": "Megállapítások"
+    },
+    "businesscase": {
+      "problema_es_hatas": "Probléma és hatás",
+      "megoldas_osszefoglalo": "Megoldás-összefoglaló",
+      "haszon_szamitas": "Haszon-számítás",
+      "koltsegek": "Költségek",
+      "outcome_metrika": "Outcome-metrika",
+      "kockazatok": "Kockázatok"
+    },
+    "pilotplan": {
+      "hipotezis": "Hipotézis",
+      "resztvevok_idotartam": "Résztvevők és időtartam",
+      "baseline": "Baseline",
+      "szamszeru_kuszob": "Számszerű küszöb",
+      "dontesi_szabaly": "Döntési szabály",
+      "meresi_mod": "Mérési mód"
+    },
+    "solution": {
+      "valasztott_use_case": "Választott use case",
+      "megoldas_leiras": "Megoldás-leírás",
+      "opcio_osszevetes": "Opció-összevetés",
+      "dontesi_kriterium": "Döntési kritérium"
+    },
+    "tobe": {
+      "to_be_lepesek": "TO-BE lépések",
+      "beavatkozasi_pontok": "Beavatkozási pontok",
+      "hitl_kontrollok": "HITL-kontrollok",
+      "valtozas_hatasa": "Változás hatása"
+    },
+    "solutiondoc": {
+      "architektura": "Architektúra",
+      "komponensek": "Komponensek",
+      "prompt_konyvtar": "Prompt-könyvtár",
+      "guardrail_hitl": "Guardrail és HITL",
+      "uzemeltetesi_jegyzet": "Üzemeltetési jegyzet"
+    },
+    "testreport": {
+      "golden_set_eredmeny": "Golden set eredmény",
+      "atmenesi_arany": "Átmenési arány",
+      "hibak_javitasok": "Hibák és javítások",
+      "maradek_kockazat": "Maradék kockázat"
+    },
+    "pilotreport": {
+      "mert_eredmenyek": "Mért eredmények",
+      "delta_vs_baseline": "Delta vs. baseline",
+      "kuszob_ertekeles": "Küszöb-értékelés",
+      "visszajelzesek": "Visszajelzések",
+      "tanulsagok": "Tanulságok"
+    },
+    "decisionbrief": {
+      "evidencia_osszefoglalo": "Evidencia-összefoglaló",
+      "javasolt_dontes": "Javasolt döntés",
+      "indoklas": "Indoklás"
+    },
+    "rollout": {
+      "utemezes": "Ütemezés",
+      "erintett_csoportok": "Érintett csoportok",
+      "change_beavatkozasok": "Change-beavatkozások",
+      "champion_halozat": "Champion-hálózat"
+    },
+    "impact": {
+      "baseline_osszefoglalo": "Baseline-összefoglaló",
+      "beavatkozas": "Beavatkozás",
+      "mert_delta": "Mért delta",
+      "emberi_sztori": "Emberi sztori",
+      "kovetkezo_lepesek": "Következő lépések"
+    },
+    "training": {
+      "celcsoportok": "Célcsoportok",
+      "alkalmak_utem": "Alkalmak és ütem",
+      "anyagok": "Anyagok"
+    },
+    "status": {
+      "idoszak": "Időszak",
+      "uzemeltetesi_osszefoglalo": "Üzemeltetési összefoglaló",
+      "incidensek": "Incidensek",
+      "backlog_kiemelesek": "Backlog-kiemelések"
+    },
+    "proposal": {
+      "javaslat": "Javaslat",
+      "varhato_ertek": "Várható érték",
+      "kovetkezo_use_case": "Következő use case"
     }
   },
   "criteria": {

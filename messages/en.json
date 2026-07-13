@@ -304,7 +304,24 @@
     "english": "English"
   },
   "artifactTypes": {
-    "projektCharter": "Project charter"
+    "projektCharter": "Project charter",
+    "engagementTerv": "Engagement plan",
+    "kickoffAgenda": "Kickoff agenda",
+    "useCaseShortlist": "Prioritized use case shortlist",
+    "felmeresiRiport": "Assessment report",
+    "businessCase": "Business case",
+    "pilotTerv": "Pilot plan",
+    "megoldasiJavaslat": "Solution proposal",
+    "toBeTerv": "TO-BE plan",
+    "megoldasDokumentacio": "Solution documentation",
+    "tesztriport": "Test report",
+    "pilotRiport": "Pilot report",
+    "dontesiBrief": "Decision brief",
+    "rolloutTerv": "Rollout plan",
+    "impactRiport": "Impact report",
+    "kepzesiTerv": "Training plan",
+    "haviStatuszriport": "Monthly status report",
+    "javaslatDokumentum": "Proposal document"
   },
   "fields": {
     "charter": {
@@ -314,6 +331,115 @@
       "idokeret": "Timeframe",
       "sikerkriterium": "Success criteria",
       "stakeholderek": "Stakeholders"
+    },
+    "engagement": {
+      "stakeholder_kor": "Stakeholder circle",
+      "merfoldkovek": "Milestones",
+      "kommunikacios_ritmus": "Communication cadence",
+      "munkamodszer": "Way of working",
+      "kockazatok": "Risks"
+    },
+    "kickoff": {
+      "resztvevok": "Participants",
+      "napirend": "Agenda",
+      "celok": "Goals",
+      "elokeszuletek": "Preparations"
+    },
+    "shortlist": {
+      "shortlist": "Shortlist",
+      "ertekelesi_szempontok": "Evaluation criteria",
+      "quick_win": "Quick win",
+      "kizart_jeloltek": "Excluded candidates",
+      "kockazati_jegyzet": "Risk notes"
+    },
+    "assessment": {
+      "vezetoi_osszefoglalo": "Executive summary",
+      "as_is_attekintes": "AS-IS overview",
+      "fajdalompontok": "Pain points",
+      "adat_es_ai_erettse": "Data & AI readiness",
+      "megallapitasok": "Findings"
+    },
+    "businesscase": {
+      "problema_es_hatas": "Problem and impact",
+      "megoldas_osszefoglalo": "Solution summary",
+      "haszon_szamitas": "Benefit calculation",
+      "koltsegek": "Costs",
+      "outcome_metrika": "Outcome metric",
+      "kockazatok": "Risks"
+    },
+    "pilotplan": {
+      "hipotezis": "Hypothesis",
+      "resztvevok_idotartam": "Participants and duration",
+      "baseline": "Baseline",
+      "szamszeru_kuszob": "Quantitative threshold",
+      "dontesi_szabaly": "Decision rule",
+      "meresi_mod": "Measurement method"
+    },
+    "solution": {
+      "valasztott_use_case": "Chosen use case",
+      "megoldas_leiras": "Solution description",
+      "opcio_osszevetes": "Option comparison",
+      "dontesi_kriterium": "Decision criteria"
+    },
+    "tobe": {
+      "to_be_lepesek": "TO-BE steps",
+      "beavatkozasi_pontok": "Intervention points",
+      "hitl_kontrollok": "HITL controls",
+      "valtozas_hatasa": "Impact of change"
+    },
+    "solutiondoc": {
+      "architektura": "Architecture",
+      "komponensek": "Components",
+      "prompt_konyvtar": "Prompt library",
+      "guardrail_hitl": "Guardrails and HITL",
+      "uzemeltetesi_jegyzet": "Operations notes"
+    },
+    "testreport": {
+      "golden_set_eredmeny": "Golden set results",
+      "atmenesi_arany": "Pass rate",
+      "hibak_javitasok": "Defects and fixes",
+      "maradek_kockazat": "Residual risk"
+    },
+    "pilotreport": {
+      "mert_eredmenyek": "Measured results",
+      "delta_vs_baseline": "Delta vs. baseline",
+      "kuszob_ertekeles": "Threshold evaluation",
+      "visszajelzesek": "Feedback",
+      "tanulsagok": "Lessons learned"
+    },
+    "decisionbrief": {
+      "evidencia_osszefoglalo": "Evidence summary",
+      "javasolt_dontes": "Recommended decision",
+      "indoklas": "Rationale"
+    },
+    "rollout": {
+      "utemezes": "Schedule",
+      "erintett_csoportok": "Affected groups",
+      "change_beavatkozasok": "Change interventions",
+      "champion_halozat": "Champion network"
+    },
+    "impact": {
+      "baseline_osszefoglalo": "Baseline summary",
+      "beavatkozas": "Intervention",
+      "mert_delta": "Measured delta",
+      "emberi_sztori": "Human story",
+      "kovetkezo_lepesek": "Next steps"
+    },
+    "training": {
+      "celcsoportok": "Target groups",
+      "alkalmak_utem": "Sessions and schedule",
+      "anyagok": "Materials"
+    },
+    "status": {
+      "idoszak": "Period",
+      "uzemeltetesi_osszefoglalo": "Operations summary",
+      "incidensek": "Incidents",
+      "backlog_kiemelesek": "Backlog highlights"
+    },
+    "proposal": {
+      "javaslat": "Proposal",
+      "varhato_ertek": "Expected value",
+      "kovetkezo_use_case": "Next use case"
     }
   },
   "criteria": {
