@@ -75,65 +75,6 @@ function renderSources(sources: LlmSource[]): string {
     .join("\n\n---\n\n");
 }
 
-// ── generateDraft (#1 örökség — a 4. lépés kivezeti) ─────────
-// A cockpit régi „Input & generation" blokkja használja; a fázis-
-// munkaterület (extract + generateBody) átvételekor törlendő.
-
-export interface GenerateDraftParams {
-  phase: string;
-  structuredInputs?: Record<string, unknown>;
-  rawMaterial: string;
-  templateKey?: string;
-}
-
-export interface GenerateDraftResult {
-  body: string;
-}
-
-export async function generateDraft(
-  params: GenerateDraftParams,
-): Promise<GenerateDraftResult> {
-  const { phase, structuredInputs, rawMaterial, templateKey } = params;
-
-  const system = [
-    "Te egy AI-implementációs tanácsadói rendszer generálási motorja vagy.",
-    "Feladatod: nyers ügyfélanyagból strukturált, tömör, magyar nyelvű draftot készíteni,",
-    "amelyet egy ember tanácsadó ezután áttekint és jóváhagy.",
-    "A draft legyen világos, jól tagolt (címsorok, felsorolások), és kizárólag a",
-    "megadott forrásanyagra támaszkodjon — ne találj ki tényeket.",
-  ].join(" ");
-
-  const contextLines: string[] = [`Fázis: ${phase}`];
-  if (templateKey) {
-    contextLines.push(`Sablon: ${templateKey}`);
-  }
-  if (structuredInputs && Object.keys(structuredInputs).length > 0) {
-    contextLines.push(
-      `Strukturált bemenetek:\n${JSON.stringify(structuredInputs, null, 2)}`,
-    );
-  }
-
-  const userPrompt = [
-    contextLines.join("\n"),
-    "",
-    "── Nyers forrásanyag ──",
-    rawMaterial,
-    "",
-    "Készíts ebből egy strukturált draftot a fázis céljának megfelelően.",
-  ].join("\n");
-
-  const client = getClient();
-  const message = await client.messages.create({
-    model: getModel(),
-    max_tokens: 8000,
-    system,
-    messages: [{ role: "user", content: userPrompt }],
-  });
-
-  const body = textFromMessage(message);
-  return { body };
-}
-
 // ── extract: nyers források → mezőjavaslatok ─────────────────
 
 export interface ExtractedField {

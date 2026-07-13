@@ -11,6 +11,7 @@ import {
   type PhaseId,
 } from "@/lib/phases/config";
 import { PhaseStepperV2 } from "@/components/PhaseStepper";
+import { PhaseWorkspace } from "@/components/PhaseWorkspace";
 import { StartPhaseForm, GateCloseForm } from "@/components/PhaseGateForms";
 import { PhaseStateIcon, PHASE_STATE_TEXT, IconLock } from "@/components/icons";
 import type { DecisionRow, ProjectRow } from "@/lib/db/types";
@@ -181,22 +182,9 @@ export default async function PhasePage({
             </section>
           )}
 
-          {/* ①–③ zóna: címkézett placeholder — a következő csomagok építik */}
-          <div className="grid gap-4 lg:grid-cols-3">
-            {(["zoneInput", "zoneTools", "zoneOutput"] as const).map((zone) => (
-              <section
-                key={zone}
-                className="rounded-tile border border-dashed border-line p-4"
-              >
-                <h3 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
-                  {tGates(zone)}
-                </h3>
-                <p className="mt-1 text-body text-ink-tertiary">
-                  {tGates("zonesPlaceholder")}
-                </p>
-              </section>
-            ))}
-          </div>
+          {/* ①–③ zóna: élő munkaterület (#5a) — bemenet → kivonatolás →
+              mező-megerősítés (E1) → generálás */}
+          <PhaseWorkspace supabase={supabase} projectId={id} phase={phase} />
 
           {/* ④ Kapu */}
           {!hasGate(phase) ? (

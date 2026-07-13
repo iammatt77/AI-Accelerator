@@ -1,0 +1,507 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createServiceSupabaseClient } from "@/lib/supabase/server";
+import { extract, generateBody, type LlmSource } from "@/lib/llm";
+import {
+  EMPTY_FIELD,
+  getTypeDef,
+  parseArtifactFields,
+  type ArtifactFields,
+  type ArtifactTypeDef,
+} from "@/lib/artifacts/config";
+import { isPhaseId } from "@/lib/phases/config";
+import type { ArtifactRow, InputItemRow } from "@/lib/db/types";
+import type { FormState } from "./actions";
+
+// ─────────────────────────────────────────────────────────────
+// Artefaktum-akciók (Coding-csomag #5a): kivonatolás → mező-megerősítés
+// (E1: az AI javasol, az ember erősít meg) → sablon-vezérelt generálás.
+// Minden action FormState-mintás — hiba a felületen látható, nem 500.
+// ─────────────────────────────────────────────────────────────
+
+interface SupabaseErrorLike {
+  message?: string;
+  code?: string;
+}
+
+function errMessage(error: SupabaseErrorLike | null): string {
+  return error?.message ?? "?";
+}
+
+/** A projekt bemenetei stabil sorrendben (created_at, majd id) — ez adja a
+ *  forrás-SZÁMOZÁST (1..n). A source_input_ids az artefaktumon PONTOSAN ezt
+ *  a sorrendet rögzíti, így a [n] hivatkozás később is ugyanarra mutat. */
+async function loadNumberedSources(
+  supabase: SupabaseClient,
+  projectId: string,
+): Promise<{ sources: LlmSource[]; inputIds: string[] } | { error: string }> {
+  const { data, error } = await supabase
+    .from("input_items")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) return { error: errMessage(error) };
+  const rows = (data ?? []) as InputItemRow[];
+  return {
+    sources: rows.map((row, i) => ({
+      index: i + 1,
+      title: row.type,
+      text: row.raw_text,
+    })),
+    inputIds: rows.map((row) => row.id),
+  };
+}
+
+/** A típus legfrissebb verziója (bármely státusz). */
+async function loadLatestArtifact(
+  supabase: SupabaseClient,
+  projectId: string,
+  typeKey: string,
+): Promise<ArtifactRow | null> {
+  const { data } = await supabase
+    .from("artifacts")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("type", typeKey)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as ArtifactRow | null) ?? null;
+}
+
+async function logDecision(
+  supabase: SupabaseClient,
+  projectId: string,
+  kind: string,
+  note: string,
+): Promise<void> {
+  await supabase.from("decisions").insert({ project_id: projectId, kind, note });
+}
+
+function revalidateWorkspace(projectId: string): void {
+  // A pilótafülke, a fázis-oldalak és a szerkesztő is a projekt-fa alatt él.
+  revalidatePath(`/project/${projectId}`, "layout");
+}
+
+// ── ① Bemenet: hozzáadás fázis-címkével ──────────────────────
+// (az addInput a #1-ből él tovább az actions.ts-ben; itt a fázis-címkés
+// változat, a munkaterület ① zónája ezt használja)
+
+export async function addPhaseInput(
+  projectId: string,
+  phase: string,
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const rawText = String(formData.get("rawText") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const nonce = Date.now();
+  if (!rawText) {
+    return { ok: false, error: tErrors("emptyInput"), nonce };
+  }
+  if (!isPhaseId(phase)) {
+    return { ok: false, error: tErrors("phaseActionFailed", { message: phase }), nonce };
+  }
+
+  const supabase = createServiceSupabaseClient();
+  const { error } = await supabase.from("input_items").insert({
+    project_id: projectId,
+    type: title || "raw",
+    raw_text: rawText,
+    phase,
+  });
+  if (error) {
+    return {
+      ok: false,
+      error: tErrors("inputSaveFailed") + `: ${errMessage(error)}`,
+      values: { rawText, title },
+      nonce,
+    };
+  }
+
+  await logDecision(
+    supabase,
+    projectId,
+    "add_input",
+    `Nyers bemenet hozzáadva a(z) ${phase} fázishoz (${rawText.length} karakter).`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null, nonce };
+}
+
+// ── ② Kivonatolás: extract → ai_filled mezőjavaslatok ────────
+// Draft artefaktum jön létre, ha még nincs; a megerősített/kézi mezőket
+// az újrafuttatás NEM írja felül (E1: az emberi munka védett).
+
+export async function extractAction(
+  projectId: string,
+  typeKey: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const typeDef = getTypeDef(typeKey);
+  if (!typeDef) {
+    return { ok: false, error: tErrors("typeNotFound", { type: typeKey }) };
+  }
+
+  const supabase = createServiceSupabaseClient();
+
+  const loaded = await loadNumberedSources(supabase, projectId);
+  if ("error" in loaded) {
+    return {
+      ok: false,
+      error: tErrors("inputsFetchFailed") + `: ${loaded.error}`,
+    };
+  }
+  const { sources, inputIds } = loaded;
+  if (sources.length === 0) {
+    return { ok: false, error: tErrors("noInputForDraft") };
+  }
+
+  const latest = await loadLatestArtifact(supabase, projectId, typeKey);
+  if (latest && latest.status !== "draft") {
+    return { ok: false, error: tErrors("artifactNotDraft") };
+  }
+
+  // ÉLŐ LLM-hívás az adapteren át (MOCK_LLM=1: determinisztikus fixture).
+  let extracted;
+  try {
+    extracted = await extract(sources, typeDef);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`Kivonatolás sikertelen: ${message}`);
+    return { ok: false, error: tErrors("extractFailed", { message }) };
+  }
+
+  // Merge: confirmed/manual mező NEM íródik felül; ai_filled/missing frissül.
+  const current: ArtifactFields = parseArtifactFields(typeDef, latest?.fields ?? {});
+  const merged: ArtifactFields = {};
+  for (const fieldDef of typeDef.fields) {
+    const existing = current[fieldDef.key] ?? { ...EMPTY_FIELD };
+    if (existing.state === "confirmed" || existing.state === "manual") {
+      merged[fieldDef.key] = existing;
+      continue;
+    }
+    const proposal = extracted[fieldDef.key];
+    merged[fieldDef.key] = proposal
+      ? {
+          value: proposal.value,
+          source_indices: proposal.source_indices,
+          state: "ai_filled",
+        }
+      : { ...EMPTY_FIELD };
+  }
+
+  if (latest) {
+    const { data, error } = await supabase
+      .from("artifacts")
+      .update({
+        fields: merged,
+        source_input_ids: inputIds,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", latest.id)
+      .eq("status", "draft") // optimista guard: közben nem mozdult el
+      .select("id");
+    if (error || (data ?? []).length === 0) {
+      return {
+        ok: false,
+        error: error
+          ? tErrors("artifactSaveFailed", { message: errMessage(error) })
+          : tErrors("artifactNotDraft"),
+      };
+    }
+  } else {
+    const created = await insertNewArtifact(supabase, projectId, typeDef, {
+      fields: merged,
+      source_input_ids: inputIds,
+    });
+    if (created.error) return { ok: false, error: created.error };
+  }
+
+  const proposals = Object.values(extracted).filter(Boolean).length;
+  await logDecision(
+    supabase,
+    projectId,
+    "extract",
+    `${typeKey} kivonatolás: ${proposals} mezőjavaslat ${sources.length} forrásból.`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null };
+}
+
+/** Új (első) draft-verzió beszúrása. A verziószámot kliens-oldalon számítjuk
+ *  (max+1), de az uq_artifacts_project_type_version unique index véd: ütköző
+ *  párhuzamos insert graceful hibát kap, nem duplikál. */
+async function insertNewArtifact(
+  supabase: SupabaseClient,
+  projectId: string,
+  typeDef: ArtifactTypeDef,
+  extra: { fields: ArtifactFields; source_input_ids: string[] },
+): Promise<{ error: string | null }> {
+  const tErrors = await getTranslations("errors");
+  const { data } = await supabase
+    .from("artifacts")
+    .select("version")
+    .eq("project_id", projectId)
+    .eq("type", typeDef.key)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextVersion = ((data as { version?: number } | null)?.version ?? 0) + 1;
+
+  const { error } = await supabase.from("artifacts").insert({
+    project_id: projectId,
+    type: typeDef.key,
+    version: nextVersion,
+    status: "draft",
+    body: "",
+    fields: extra.fields,
+    source_input_ids: extra.source_input_ids,
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { error: tErrors("versionConflict") };
+    }
+    return { error: tErrors("artifactSaveFailed", { message: errMessage(error) }) };
+  }
+  return { error: null };
+}
+
+// ── ② Mező-megerősítés / szerkesztés / elvetés (E1) ──────────
+
+type FieldOp = "confirm" | "edit" | "dismiss";
+
+async function updateField(
+  projectId: string,
+  artifactId: string,
+  fieldKey: string,
+  op: FieldOp,
+  newValue?: string,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const supabase = createServiceSupabaseClient();
+
+  const { data, error: fetchErr } = await supabase
+    .from("artifacts")
+    .select("*")
+    .eq("id", artifactId)
+    .maybeSingle();
+  if (fetchErr || !data) {
+    return {
+      ok: false,
+      error: tErrors("artifactFetchFailed", { message: errMessage(fetchErr) }),
+    };
+  }
+  const artifact = data as ArtifactRow;
+  if (artifact.project_id !== projectId) {
+    return { ok: false, error: tErrors("artifactFetchFailed", { message: "project" }) };
+  }
+  if (artifact.status !== "draft") {
+    return { ok: false, error: tErrors("artifactNotDraft") };
+  }
+  const typeDef = getTypeDef(artifact.type);
+  if (!typeDef || !typeDef.fields.some((f) => f.key === fieldKey)) {
+    return { ok: false, error: tErrors("typeNotFound", { type: artifact.type }) };
+  }
+
+  const fields = parseArtifactFields(typeDef, artifact.fields);
+  const field = fields[fieldKey] ?? { ...EMPTY_FIELD };
+
+  if (op === "confirm") {
+    // E1: megerősíteni csak AI-javaslatot lehet (értékkel).
+    if (field.state !== "ai_filled" || !field.value) {
+      return { ok: false, error: tErrors("fieldNotConfirmable") };
+    }
+    fields[fieldKey] = { ...field, state: "confirmed" };
+  } else if (op === "edit") {
+    const value = (newValue ?? "").trim();
+    if (!value) {
+      return { ok: false, error: tErrors("fieldValueRequired") };
+    }
+    // Kézi érték: a forrás-jelölés megmarad eredet-információnak, ha volt.
+    fields[fieldKey] = { ...field, value, state: "manual" };
+  } else {
+    fields[fieldKey] = { ...EMPTY_FIELD };
+  }
+
+  const { data: updated, error } = await supabase
+    .from("artifacts")
+    .update({ fields, updated_at: new Date().toISOString() })
+    .eq("id", artifactId)
+    .eq("status", "draft") // optimista guard
+    .select("id");
+  if (error || (updated ?? []).length === 0) {
+    return {
+      ok: false,
+      error: error
+        ? tErrors("artifactSaveFailed", { message: errMessage(error) })
+        : tErrors("artifactNotDraft"),
+    };
+  }
+
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null, nonce: Date.now() };
+}
+
+export async function confirmFieldAction(
+  projectId: string,
+  artifactId: string,
+  fieldKey: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  return updateField(projectId, artifactId, fieldKey, "confirm");
+}
+
+export async function editFieldAction(
+  projectId: string,
+  artifactId: string,
+  fieldKey: string,
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const value = String(formData.get("value") ?? "");
+  const result = await updateField(projectId, artifactId, fieldKey, "edit", value);
+  if (!result.ok) {
+    return { ...result, values: { fieldValue: value }, nonce: Date.now() };
+  }
+  return result;
+}
+
+export async function dismissFieldAction(
+  projectId: string,
+  artifactId: string,
+  fieldKey: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  return updateField(projectId, artifactId, fieldKey, "dismiss");
+}
+
+// ── ③ Draft-generálás: megerősített mezők + sablon → body ────
+
+export async function generateBodyAction(
+  projectId: string,
+  artifactId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const tFields = await getTranslations("fields");
+  const supabase = createServiceSupabaseClient();
+
+  const { data, error: fetchErr } = await supabase
+    .from("artifacts")
+    .select("*")
+    .eq("id", artifactId)
+    .maybeSingle();
+  if (fetchErr || !data) {
+    return {
+      ok: false,
+      error: tErrors("artifactFetchFailed", { message: errMessage(fetchErr) }),
+    };
+  }
+  const artifact = data as ArtifactRow;
+  if (artifact.project_id !== projectId) {
+    return { ok: false, error: tErrors("artifactFetchFailed", { message: "project" }) };
+  }
+  if (artifact.status !== "draft") {
+    return { ok: false, error: tErrors("artifactNotDraft") };
+  }
+  const typeDef = getTypeDef(artifact.type);
+  if (!typeDef) {
+    return { ok: false, error: tErrors("typeNotFound", { type: artifact.type }) };
+  }
+
+  const fields = parseArtifactFields(typeDef, artifact.fields);
+  // Tényként kezelt mezők: ember által megerősített VAGY kézzel írt.
+  const confirmedFields = typeDef.fields
+    .filter((f) => {
+      const value = fields[f.key];
+      return (
+        (value.state === "confirmed" || value.state === "manual") &&
+        Boolean(value.value)
+      );
+    })
+    .map((f) => ({
+      key: f.key,
+      label: tFields(f.labelKey.replace(/^fields\./, "")),
+      value: fields[f.key].value as string,
+    }));
+  if (confirmedFields.length === 0) {
+    return { ok: false, error: tErrors("generateNeedsConfirmed") };
+  }
+
+  // A forrás-számozás az artefaktumon rögzített input-sorrendből jön; ha
+  // (kivonatolás nélkül, csak kézi mezőkkel) még üres, most rögzítjük.
+  let sourceIds = artifact.source_input_ids;
+  let sources: LlmSource[];
+  if (sourceIds.length === 0) {
+    const loaded = await loadNumberedSources(supabase, projectId);
+    if ("error" in loaded) {
+      return { ok: false, error: tErrors("inputsFetchFailed") + `: ${loaded.error}` };
+    }
+    sources = loaded.sources;
+    sourceIds = loaded.inputIds;
+  } else {
+    const { data: inputData, error } = await supabase
+      .from("input_items")
+      .select("*")
+      .in("id", sourceIds);
+    if (error) {
+      return { ok: false, error: tErrors("inputsFetchFailed") + `: ${errMessage(error)}` };
+    }
+    const byId = new Map(((inputData ?? []) as InputItemRow[]).map((r) => [r.id, r]));
+    sources = sourceIds
+      .map((sid, i) => {
+        const row = byId.get(sid);
+        return row ? { index: i + 1, title: row.type, text: row.raw_text } : null;
+      })
+      .filter((s): s is LlmSource => s !== null);
+  }
+
+  // ÉLŐ LLM-hívás az adapteren át (MOCK_LLM=1: determinisztikus fixture).
+  let body: string;
+  try {
+    body = await generateBody(confirmedFields, sources, typeDef);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`Draft-generálás sikertelen: ${message}`);
+    return { ok: false, error: tErrors("generateFailed", { message }) };
+  }
+
+  const { data: updated, error } = await supabase
+    .from("artifacts")
+    .update({
+      body,
+      source_input_ids: sourceIds,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", artifactId)
+    .eq("status", "draft") // optimista guard
+    .select("id");
+  if (error || (updated ?? []).length === 0) {
+    return {
+      ok: false,
+      error: error
+        ? tErrors("artifactSaveFailed", { message: errMessage(error) })
+        : tErrors("artifactNotDraft"),
+    };
+  }
+
+  await logDecision(
+    supabase,
+    projectId,
+    "generate_draft",
+    `${artifact.type} v${artifact.version} body generálva (${confirmedFields.length} megerősített mező, ${sources.length} forrás).`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null };
+}

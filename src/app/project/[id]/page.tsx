@@ -2,16 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
-import { saveDraftBody, approveArtifact } from "@/app/actions";
 import {
   computeNextStep,
   countCompleted,
   countOpenGates,
   loadPhaseBoard,
 } from "@/lib/phases/service";
-import { SubmitButton } from "@/components/SubmitButton";
-import { InputForm } from "@/components/InputForm";
-import { GenerateForm } from "@/components/GenerateForm";
 import { StatusPill } from "@/components/StatusPill";
 import { PhaseStepperV1 } from "@/components/PhaseStepper";
 import { NextStepWidget } from "@/components/NextStep";
@@ -73,13 +69,11 @@ export default async function ProjectCockpitPage({
 
   const { project, inputs, artifacts, board } = data;
 
-  const [locale, tCockpit, tCommon, tClients, tInputs, tArtifacts, tEmpty, tGates, tCriteria, tLex] =
+  const [locale, tCockpit, tClients, tArtifacts, tEmpty, tGates, tCriteria, tLex] =
     await Promise.all([
       getLocale(),
       getTranslations("cockpit"),
-      getTranslations("common"),
       getTranslations("clients"),
-      getTranslations("inputs"),
       getTranslations("artifacts"),
       getTranslations("empty"),
       getTranslations("gates"),
@@ -106,18 +100,6 @@ export default async function ProjectCockpitPage({
     ) + 1,
   );
 
-  // Generálási vertikum (#1) — a fázis-munkaterületek (#5+) átvételéig itt él
-  const current = artifacts[0] ?? null;
-  const inputsById = new Map(inputs.map((i) => [i.id, i]));
-  const hasRealSources = Boolean(current && current.source_input_ids.length > 0);
-  const sourceInputs = hasRealSources
-    ? current!.source_input_ids
-        .map((sid) => inputsById.get(sid))
-        .filter((i): i is InputItemRow => Boolean(i))
-    : inputs;
-  const sourcesHeading = hasRealSources
-    ? tInputs("sourcesTitle")
-    : tInputs("listTitle");
   const recentArtifacts = artifacts.slice(0, 3);
 
   return (
@@ -181,17 +163,19 @@ export default async function ProjectCockpitPage({
             ) : (
               <ul className="mt-2 space-y-2">
                 {recentArtifacts.map((artifact) => (
-                  <li
-                    key={artifact.id}
-                    className="flex items-center justify-between gap-3 rounded-tile border border-line bg-surface px-3 py-2 text-body"
-                  >
-                    <span className="min-w-0 truncate">
-                      v{artifact.version} · {artifact.type}
-                    </span>
-                    <StatusPill
-                      variant={artifact.status}
-                      label={statusLabel(artifact.status)}
-                    />
+                  <li key={artifact.id}>
+                    <Link
+                      href={`/project/${id}/artifact/${artifact.id}`}
+                      className="flex items-center justify-between gap-3 rounded-tile border border-line bg-surface px-3 py-2 text-body transition-colors duration-[var(--motion-base)] hover:bg-sunken"
+                    >
+                      <span className="min-w-0 truncate">
+                        v{artifact.version} · {artifact.type}
+                      </span>
+                      <StatusPill
+                        variant={artifact.status}
+                        label={statusLabel(artifact.status)}
+                      />
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -293,121 +277,20 @@ export default async function ProjectCockpitPage({
         </div>
       </div>
 
-      {/* Generálási vertikum (#1) — a fázis-munkaterületek (#5+) átvételéig */}
-      <section className="glass-tile p-5">
-        <h2 className="text-body font-semibold">{tCockpit("inputAndGenerate")}</h2>
-        <InputForm projectId={id} />
-        <GenerateForm
-          projectId={id}
-          inputsCount={inputs.length}
-          artifactsCount={artifacts.length}
-        />
-      </section>
-
-      {/* SPLIT-VIEW: bal = draft body (szerkeszthető), jobb = forrás */}
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="glass-tile p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-body font-semibold">{tArtifacts("draftHeading")}</h2>
-            {current && (
-              <StatusPill
-                variant={current.status}
-                label={`${statusLabel(current.status)} · v${current.version}`}
-              />
-            )}
-          </div>
-
-          {!current && (
-            <p className="text-body text-ink-tertiary">{tEmpty("noArtifact")}</p>
-          )}
-
-          {current && current.status === "draft" && (
-            <div className="space-y-3">
-              <form
-                action={saveDraftBody.bind(null, id, current.id)}
-                className="space-y-3"
-              >
-                <textarea
-                  name="body"
-                  rows={16}
-                  defaultValue={current.body}
-                  className="w-full rounded-control border border-line bg-surface px-3 py-2 font-mono text-mono-sm"
-                />
-                <div className="flex flex-wrap gap-3">
-                  <SubmitButton variant="secondary" pendingLabel={tCommon("saving")}>
-                    {tArtifacts("saveDraft")}
-                  </SubmitButton>
-                </div>
-              </form>
-
-              <form
-                action={approveArtifact.bind(null, id, current.id)}
-                className="border-t border-line pt-3"
-              >
-                <input type="hidden" name="body" value={current.body} />
-                <SubmitButton pendingLabel={tArtifacts("approving")}>
-                  {tArtifacts("approveCta")}
-                </SubmitButton>
-                <p className="mt-2 text-mono-sm text-ink-tertiary">
-                  {tArtifacts("approveHint")}
-                </p>
-              </form>
-            </div>
-          )}
-
-          {current && current.status !== "draft" && (
-            <pre className="card-sunken whitespace-pre-wrap p-3 font-sans text-body">
-              {current.body}
-            </pre>
-          )}
-        </div>
-
-        <div className="glass-tile p-5">
-          <h2 className="mb-3 text-body font-semibold">{sourcesHeading}</h2>
-          {sourceInputs.length === 0 && (
-            <p className="text-body text-ink-tertiary">{tEmpty("noSources")}</p>
-          )}
-          <ul className="space-y-3">
-            {sourceInputs.map((input) => (
-              <li key={input.id} className="card-sunken p-3">
-                <div className="mb-1 text-mono-sm text-ink-tertiary">
-                  {input.type} ·{" "}
-                  {new Date(input.created_at).toLocaleString(dateLocale, dateOptions)}
-                </div>
-                <pre className="whitespace-pre-wrap font-sans text-body">
-                  {input.raw_text}
-                </pre>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* Verziótörténet */}
-      {artifacts.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-body font-semibold">
-            {tArtifacts("historyTitle")}
-          </h2>
-          <ul className="space-y-2">
-            {artifacts.map((artifact) => (
-              <li
-                key={artifact.id}
-                className="flex items-center justify-between rounded-tile border border-line bg-surface px-4 py-2 text-body shadow-tile-sm"
-              >
-                <span>
-                  v{artifact.version} · {artifact.type}
-                </span>
-                <span className="flex items-center gap-3 text-ink-tertiary">
-                  <StatusPill
-                    variant={artifact.status}
-                    label={statusLabel(artifact.status)}
-                  />
-                  {new Date(artifact.created_at).toLocaleString(dateLocale, dateOptions)}
-                </span>
-              </li>
-            ))}
-          </ul>
+      {/* A régi „Bemenet & generálás" blokk (#1) kivezetve (#5a) — a munka
+          az aktuális fázis munkaterületén folyik; innen CTA vezet oda. */}
+      {currentPhase && (
+        <section className="glass-tile border-l-2 border-l-active p-5">
+          <h2 className="text-body font-semibold">{tCockpit("workspaceCtaTitle")}</h2>
+          <p className="mt-1 text-body text-ink-secondary">
+            {tCockpit("workspaceCtaBody")}
+          </p>
+          <Link
+            href={`/project/${id}/phase/${currentPhase.phase}`}
+            className="mt-3 inline-flex items-center justify-center rounded-control border border-line bg-surface px-4 py-2 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
+          >
+            {tCockpit("workspaceCta", { phase: currentPhase.phase })}
+          </Link>
         </section>
       )}
     </div>
