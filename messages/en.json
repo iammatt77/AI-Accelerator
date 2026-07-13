@@ -192,7 +192,8 @@
   },
   "export": {
     "notFound": "Artifact not found.",
-    "notApproved": "Only an approved artifact can be exported."
+    "notApproved": "Only an approved artifact can be exported.",
+    "sourcesFailed": "Failed to load the sources — try again."
   },
   "hub": {
     "title": "Project documentation hub",

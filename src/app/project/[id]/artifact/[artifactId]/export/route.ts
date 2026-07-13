@@ -45,18 +45,21 @@ function asciiSlug(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+const REJECT_FALLBACK = {
+  notFound: "Az artefaktum nem található.",
+  notApproved: "Csak jóváhagyott (Approved) artefaktum exportálható.",
+  sourcesFailed: "A források lekérése sikertelen — próbáld újra.",
+} as const;
+
 /** Graceful, lokalizált szöveges elutasítás (nem 500). */
-async function reject(status: number, key: "notFound" | "notApproved") {
+async function reject(status: number, key: keyof typeof REJECT_FALLBACK) {
   let message: string;
   try {
     const t = await getTranslations("export");
     message = t(key);
   } catch {
     // A lokalizáció hibája nem akadályozhatja a graceful elutasítást.
-    message =
-      key === "notFound"
-        ? "Az artefaktum nem található."
-        : "Csak jóváhagyott (Approved) artefaktum exportálható.";
+    message = REJECT_FALLBACK[key];
   }
   return new Response(message, {
     status,
@@ -106,10 +109,16 @@ export async function GET(
   // szerint oldódnak fel (ugyanaz a számozás, mint a szerkesztőben).
   let sourceLines: string[] = [];
   if (artifact.source_input_ids.length > 0) {
-    const { data: inputData } = await supabase
+    const { data: inputData, error: inputErr } = await supabase
       .from("input_items")
       .select("*")
       .in("id", artifact.source_input_ids);
+    if (inputErr) {
+      // A forrás-lekérés hibája NEM adhat csonka (függelék nélküli, de [n]
+      // jelölős) deliverable-t 200-zal — graceful hibával állunk le.
+      console.error(`Export: források lekérése sikertelen: ${inputErr.message}`);
+      return reject(503, "sourcesFailed");
+    }
     const byId = new Map(((inputData ?? []) as InputItemRow[]).map((r) => [r.id, r]));
     sourceLines = artifact.source_input_ids
       .map((sid, i) => {

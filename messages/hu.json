@@ -192,7 +192,8 @@
   },
   "export": {
     "notFound": "Az artefaktum nem található.",
-    "notApproved": "Csak jóváhagyott (Approved) artefaktum exportálható."
+    "notApproved": "Csak jóváhagyott (Approved) artefaktum exportálható.",
+    "sourcesFailed": "A források lekérése sikertelen — próbáld újra."
   },
   "hub": {
     "title": "Projektdokumentáció tár",
