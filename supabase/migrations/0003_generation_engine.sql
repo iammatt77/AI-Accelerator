@@ -93,5 +93,42 @@ set fields = jsonb_build_object(
 where id = 'e0000000-0000-4000-8000-000000000001'
   and (fields is null or fields = '{}'::jsonb);
 
--- 6) PostgREST séma-cache ------------------------------------------------
+-- 6) „Új verzió" — verseny-biztos verziószám DB-oldalon ------------------
+-- version+1 draft-klón EGY utasításban számított max+1-gyel; párhuzamos
+-- hívásnál az uq_artifacts_project_type_version unique index véd: a
+-- második insert 23505-tel hibázik (a hívó graceful FormState-hibát ad),
+-- duplikált verziószám nem jöhet létre.
+create or replace function new_artifact_version(p_artifact_id uuid)
+returns setof artifacts
+language plpgsql
+as $$
+declare
+  src artifacts%rowtype;
+begin
+  select * into src from artifacts where id = p_artifact_id;
+  if not found then
+    raise exception 'artifact_not_found: %', p_artifact_id;
+  end if;
+  -- Új verzió csak jóváhagyott (immutábilis) verzióból indul.
+  if src.status <> 'approved' then
+    raise exception 'not_approved: % (status: %)', p_artifact_id, src.status;
+  end if;
+
+  return query
+  insert into artifacts (project_id, type, version, status, body, source_input_ids, fields)
+  select
+    src.project_id,
+    src.type,
+    (select coalesce(max(a.version), 0) + 1
+       from artifacts a
+      where a.project_id = src.project_id and a.type = src.type),
+    'draft',
+    src.body,
+    src.source_input_ids,
+    src.fields
+  returning *;
+end
+$$;
+
+-- 7) PostgREST séma-cache ------------------------------------------------
 notify pgrst, 'reload schema';

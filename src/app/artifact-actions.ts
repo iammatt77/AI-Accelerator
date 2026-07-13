@@ -8,6 +8,7 @@ import { extract, generateBody, type LlmSource } from "@/lib/llm";
 import {
   EMPTY_FIELD,
   getTypeDef,
+  missingRequiredFields,
   parseArtifactFields,
   type ArtifactFields,
   type ArtifactTypeDef,
@@ -383,6 +384,191 @@ export async function dismissFieldAction(
   _formData: FormData,
 ): Promise<FormState> {
   return updateField(projectId, artifactId, fieldKey, "dismiss");
+}
+
+// ── Státusz-lánc: Draft → In review → Approved (#5a, 6. lépés) ─
+// A lánc NEM átugorható (HITL-fegyelem): Approve csak In review-ból.
+// Approved immutábilis; folytatás „Új verzió"-val (verseny-biztos klón).
+
+async function loadOwnedArtifact(
+  supabase: SupabaseClient,
+  projectId: string,
+  artifactId: string,
+): Promise<{ artifact: ArtifactRow } | { error: string }> {
+  const tErrors = await getTranslations("errors");
+  const { data, error } = await supabase
+    .from("artifacts")
+    .select("*")
+    .eq("id", artifactId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (error || !data) {
+    return { error: tErrors("artifactFetchFailed", { message: errMessage(error) }) };
+  }
+  return { artifact: data as ArtifactRow };
+}
+
+/** Optimista guard-os státusz-váltás: csak a várt állapotból mozdul. */
+async function setArtifactStatus(
+  projectId: string,
+  artifactId: string,
+  from: "draft" | "in_review",
+  to: "draft" | "in_review" | "approved",
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const supabase = createServiceSupabaseClient();
+
+  const loaded = await loadOwnedArtifact(supabase, projectId, artifactId);
+  if ("error" in loaded) return { ok: false, error: loaded.error };
+  const { artifact } = loaded;
+
+  const { data, error } = await supabase
+    .from("artifacts")
+    .update({ status: to, updated_at: new Date().toISOString() })
+    .eq("id", artifactId)
+    .eq("status", from) // a lánc nem átugorható + verseny-védelem
+    .select("id");
+  if (error) {
+    return {
+      ok: false,
+      error: tErrors("statusChangeFailed", { message: errMessage(error) }),
+    };
+  }
+  if ((data ?? []).length === 0) {
+    return { ok: false, error: tErrors("invalidStatusTransition") };
+  }
+
+  await logDecision(
+    supabase,
+    projectId,
+    "status_change",
+    `${artifact.type} v${artifact.version}: ${from} → ${to}.`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null };
+}
+
+export async function sendToReviewAction(
+  projectId: string,
+  artifactId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  return setArtifactStatus(projectId, artifactId, "draft", "in_review");
+}
+
+export async function backToDraftAction(
+  projectId: string,
+  artifactId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  return setArtifactStatus(projectId, artifactId, "in_review", "draft");
+}
+
+/** Approve — CSAK In review-ból; kemény blokk, ha kötelező mező hiányzik.
+ *  A nem megerősített (ai_filled) mező NEM blokkol (a felület figyelmeztet). */
+export async function approveArtifactAction(
+  projectId: string,
+  artifactId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const supabase = createServiceSupabaseClient();
+
+  const loaded = await loadOwnedArtifact(supabase, projectId, artifactId);
+  if ("error" in loaded) return { ok: false, error: loaded.error };
+  const { artifact } = loaded;
+
+  if (artifact.status !== "in_review") {
+    return { ok: false, error: tErrors("approveOnlyFromReview") };
+  }
+
+  // Artefaktum-szintű poka-yoke: hiányzó kötelező mező → kemény blokk,
+  // a hiányzók i18n-elt felsorolásával.
+  const typeDef = getTypeDef(artifact.type);
+  if (typeDef) {
+    const fields = parseArtifactFields(typeDef, artifact.fields);
+    const missing = missingRequiredFields(typeDef, fields);
+    if (missing.length > 0) {
+      const tFields = await getTranslations("fields");
+      const labels = missing
+        .map((f) => tFields(f.labelKey.replace(/^fields\./, "")))
+        .join(", ");
+      return { ok: false, error: tErrors("approveBlocked", { fields: labels }) };
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("artifacts")
+    .update({ status: "approved", updated_at: new Date().toISOString() })
+    .eq("id", artifactId)
+    .eq("status", "in_review") // optimista guard
+    .select("id");
+  if (error) {
+    return {
+      ok: false,
+      error: tErrors("statusChangeFailed", { message: errMessage(error) }),
+    };
+  }
+  if ((data ?? []).length === 0) {
+    return { ok: false, error: tErrors("invalidStatusTransition") };
+  }
+
+  await logDecision(
+    supabase,
+    projectId,
+    "approve_artifact",
+    `${artifact.type} v${artifact.version} jóváhagyva (In review → Approved).`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null };
+}
+
+/** „Új verzió": version+1 draft-klón. A verziószám DB-oldalon, verseny-
+ *  biztosan képződik (new_artifact_version RPC + unique constraint);
+ *  ütközésnél graceful FormState-hiba. */
+export async function newVersionAction(
+  projectId: string,
+  artifactId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState & { newArtifactId?: string }> {
+  const tErrors = await getTranslations("errors");
+  const supabase = createServiceSupabaseClient();
+
+  const loaded = await loadOwnedArtifact(supabase, projectId, artifactId);
+  if ("error" in loaded) return { ok: false, error: loaded.error };
+  const { artifact } = loaded;
+  if (artifact.status !== "approved") {
+    return { ok: false, error: tErrors("newVersionOnlyApproved") };
+  }
+
+  const { data, error } = await supabase.rpc("new_artifact_version", {
+    p_artifact_id: artifactId,
+  });
+  if (error) {
+    const message = errMessage(error);
+    if (error.code === "23505" || message.includes("duplicate key")) {
+      return { ok: false, error: tErrors("versionConflict") };
+    }
+    if (message.includes("not_approved")) {
+      return { ok: false, error: tErrors("newVersionOnlyApproved") };
+    }
+    return { ok: false, error: tErrors("statusChangeFailed", { message }) };
+  }
+  const rows = (Array.isArray(data) ? data : data ? [data] : []) as ArtifactRow[];
+  const created = rows[0] ?? null;
+
+  await logDecision(
+    supabase,
+    projectId,
+    "new_version",
+    `${artifact.type}: új draft-verzió v${created?.version ?? "?"} (v${artifact.version} klónja).`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null, newArtifactId: created?.id };
 }
 
 // ── Szerkesztő: body mentése (csak draft; updated_at frissül) ─

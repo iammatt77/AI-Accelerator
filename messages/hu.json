@@ -206,17 +206,28 @@
     "noTypeDef": "Ehhez a típushoz ({type}) nincs típusdefiníció — a mező-panel nem elérhető, a body olvasható/szerkeszthető."
   },
   "artifacts": {
-    "draftHeading": "Draft",
-    "saveDraft": "Draft mentése",
-    "approveCta": "Jóváhagyás (Draft → Approved)",
-    "approving": "Jóváhagyás…",
-    "approveHint": "A jóváhagyás új verziót ment; a draft megmarad az audithoz. (Előbb mentsd a szerkesztést, ha módosítottál.)",
-    "historyTitle": "Verziótörténet",
     "status": {
       "draft": "Draft",
       "in_review": "In review",
       "approved": "Approved"
     }
+  },
+  "chain": {
+    "title": "Státusz-lánc",
+    "chainHint": "Draft → In review → Approved — a lánc nem átugorható.",
+    "sendToReview": "Review-ra küldés",
+    "sending": "Küldés…",
+    "backToDraft": "Vissza draftba",
+    "reverting": "Visszaállítás…",
+    "approveCta": "Approve",
+    "approving": "Jóváhagyás…",
+    "confirmLabel": "Megerősítem a jóváhagyást",
+    "confirmHint": "A jóváhagyott verzió immutábilis; módosítás csak új verzióban lehetséges.",
+    "missingBlockTitle": "Az Approve blokkolva — hiányzó kötelező mezők:",
+    "unconfirmedWarnTitle": "Nem megerősített (AI-javaslat) mezők — figyelmeztetés, nem blokkol:",
+    "newVersionCta": "Új verzió",
+    "creatingVersion": "Új verzió létrehozása…",
+    "newVersionHint": "Az „Új verzió” version+1 draft-klónt hoz létre (mezők + body átvéve)."
   },
   "errors": {
     "emptyInput": "A nyers szöveg nem lehet üres.",
@@ -250,7 +261,12 @@
     "versionConflict": "Verzió-ütközés — időközben másik verzió jött létre. Frissítsd az oldalt.",
     "fieldValueRequired": "A mező értéke nem lehet üres.",
     "fieldNotConfirmable": "Csak értékkel bíró AI-javaslat erősíthető meg.",
-    "generateNeedsConfirmed": "A generáláshoz legalább egy megerősített vagy kézi mező kell."
+    "generateNeedsConfirmed": "A generáláshoz legalább egy megerősített vagy kézi mező kell.",
+    "approveOnlyFromReview": "Approve csak In review státuszból lehetséges — a lánc nem átugorható.",
+    "approveBlocked": "Az Approve blokkolva — hiányzó kötelező mezők: {fields}",
+    "statusChangeFailed": "Státusz-váltás sikertelen: {message}",
+    "invalidStatusTransition": "Érvénytelen státusz-átmenet — az állapot időközben változhatott. Frissítsd az oldalt.",
+    "newVersionOnlyApproved": "Új verzió csak jóváhagyott (Approved) artefaktumból hozható létre."
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet a Projektek oldalon.",

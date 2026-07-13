@@ -206,17 +206,28 @@
     "noTypeDef": "No type definition for this type ({type}) — the field panel is unavailable; the body stays readable/editable."
   },
   "artifacts": {
-    "draftHeading": "Draft",
-    "saveDraft": "Save draft",
-    "approveCta": "Approve (Draft → Approved)",
-    "approving": "Approving…",
-    "approveHint": "Approval saves a new version; the draft is kept for the audit trail. (Save your edits first if you changed anything.)",
-    "historyTitle": "Version history",
     "status": {
       "draft": "Draft",
       "in_review": "In review",
       "approved": "Approved"
     }
+  },
+  "chain": {
+    "title": "Status chain",
+    "chainHint": "Draft → In review → Approved — the chain cannot be skipped.",
+    "sendToReview": "Send to review",
+    "sending": "Sending…",
+    "backToDraft": "Back to draft",
+    "reverting": "Reverting…",
+    "approveCta": "Approve",
+    "approving": "Approving…",
+    "confirmLabel": "I confirm the approval",
+    "confirmHint": "The approved version is immutable; changes require a new version.",
+    "missingBlockTitle": "Approve is blocked — missing required fields:",
+    "unconfirmedWarnTitle": "Unconfirmed (AI proposal) fields — a warning, does not block:",
+    "newVersionCta": "New version",
+    "creatingVersion": "Creating new version…",
+    "newVersionHint": "\"New version\" creates a version+1 draft clone (fields + body carried over)."
   },
   "errors": {
     "emptyInput": "The raw text cannot be empty.",
@@ -250,7 +261,12 @@
     "versionConflict": "Version conflict — another version was created in the meantime. Refresh the page.",
     "fieldValueRequired": "The field value cannot be empty.",
     "fieldNotConfirmable": "Only an AI proposal with a value can be confirmed.",
-    "generateNeedsConfirmed": "Generation needs at least one confirmed or manual field."
+    "generateNeedsConfirmed": "Generation needs at least one confirmed or manual field.",
+    "approveOnlyFromReview": "Approve is only possible from In review — the chain cannot be skipped.",
+    "approveBlocked": "Approve is blocked — missing required fields: {fields}",
+    "statusChangeFailed": "Status change failed: {message}",
+    "invalidStatusTransition": "Invalid status transition — the state may have changed. Refresh the page.",
+    "newVersionOnlyApproved": "A new version can only be created from an approved artifact."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",

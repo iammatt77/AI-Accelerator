@@ -5,8 +5,11 @@ import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import {
   completeness,
   getTypeDef,
+  missingRequiredFields,
   parseArtifactFields,
+  unconfirmedFields,
 } from "@/lib/artifacts/config";
+import { StatusChain } from "@/components/StatusChain";
 import {
   ArtifactEditor,
   type EditorField,
@@ -101,6 +104,15 @@ export default async function ArtifactEditorPage({
     typeDef && parsedFields
       ? completeness(typeDef, parsedFields)
       : { filled: 0, required: 0 };
+  const fieldLabel = (labelKey: string) => tFields(labelKey.replace(/^fields\./, ""));
+  const missingRequiredLabels =
+    typeDef && parsedFields
+      ? missingRequiredFields(typeDef, parsedFields).map((f) => fieldLabel(f.labelKey))
+      : [];
+  const unconfirmedLabels =
+    typeDef && parsedFields
+      ? unconfirmedFields(typeDef, parsedFields).map((f) => fieldLabel(f.labelKey))
+      : [];
 
   const backHref = typeDef
     ? `/project/${id}/phase/${typeDef.phase}`
@@ -144,6 +156,15 @@ export default async function ArtifactEditorPage({
           {tEditor("noTypeDef", { type: artifact.type })}
         </p>
       )}
+
+      {/* Státusz-lánc: Draft → In review → Approved (+ Új verzió) */}
+      <StatusChain
+        projectId={id}
+        artifactId={artifact.id}
+        status={artifact.status}
+        missingRequiredLabels={missingRequiredLabels}
+        unconfirmedLabels={unconfirmedLabels}
+      />
 
       {/* Split-view (1f) */}
       <ArtifactEditor

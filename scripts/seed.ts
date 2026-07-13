@@ -108,6 +108,37 @@ P0–P2, Felmérés-csomag.
 Priorizált use case-shortlist + business case.
 `;
 
+// A charter strukturált mezői (#5a) — a 0003 backfill-lel AZONOS értékek,
+// mind confirmed állapottal (a seed-charter nem extractből született →
+// source_indices üres).
+const CHARTER_FIELDS = {
+  cel: {
+    value: "a panaszkezelési folyamat AI-alkalmasságának felmérése",
+    source_indices: [] as number[],
+    state: "confirmed",
+  },
+  scope: {
+    value: "P0–P2, Felmérés-csomag",
+    source_indices: [] as number[],
+    state: "confirmed",
+  },
+  szponzor: {
+    value: "ügyvezető",
+    source_indices: [] as number[],
+    state: "confirmed",
+  },
+  idokeret: {
+    value: "6 hét",
+    source_indices: [] as number[],
+    state: "confirmed",
+  },
+  sikerkriterium: {
+    value: "priorizált use case-shortlist + business case",
+    source_indices: [] as number[],
+    state: "confirmed",
+  },
+};
+
 // P0 lezárt · P1 folyamatban · P2–P6 zárt (lineáris kapu-értelmezés,
 // állapotgép hiányában — lásd audit 6.2/6.4).
 const PHASE_STATES: Record<string, string> = {
@@ -219,6 +250,7 @@ async function main(): Promise<void> {
     status: "approved",
     body: CHARTER_BODY,
     source_input_ids: [],
+    fields: CHARTER_FIELDS, // #5a: strukturált mezők (0003 backfill-értékek)
     created_at: "2026-06-19T09:00:00Z",
   });
 
