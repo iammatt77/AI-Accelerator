@@ -291,7 +291,8 @@
     "invalidStatusTransition": "Invalid status transition — the state may have changed. Refresh the page.",
     "newVersionOnlyApproved": "A new version can only be created from an approved artifact.",
     "newVersionOnlyLatest": "A new version can only be created from the latest version.",
-    "gateBlocked": "The gate cannot be closed — unmet exit criteria: {criteria}"
+    "gateBlocked": "The gate cannot be closed — unmet exit criteria: {criteria}",
+    "criteriaEvaluationFailed": "Evaluating the exit criteria failed — the gate stays closed as a safeguard. Try again."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",

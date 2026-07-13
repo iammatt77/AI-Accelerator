@@ -97,7 +97,30 @@ Kétszer futtatva zöld; a demo-projekt a seed-alapállapotra áll vissza
 
 ### Review (többlencsés, adverszáriális ellenőrzéssel)
 
-<!-- REVIEW_SECTION -->
+A 4 független review-lencse (kapu-kritérium-származtatás/állapotgép ·
+típus-konfig hűség a Melléklet A-hoz · UI/i18n · regresszió #1–#5b ellen)
+párhuzamos al-ügynökökként futott a `723d1f4..HEAD` tartomány felett.
+(Az első kört a havi költségkeret elérése szakította meg; a feloldás után
+a teljes kör lefutott.)
+
+**Eredmény: EGYETLEN lelet — mind a négy lencse függetlenül ugyanazt
+erősítette meg** (a négyszeres konvergencia kiváltotta a külön
+adverszáriális kört):
+
+| Súly | Lelet | Javítás |
+| --- | --- | --- |
+| alacsony | A degradált zárási ág (a kritérium-kiértékelés lekérdezési hibája) nyers „criteria" tokent interpolált a felhasználói hibaüzenetbe | Dedikált lokalizált kulcs (`errors.criteriaEvaluationFailed`): „A kilépő kritériumok kiértékelése sikertelen — a kapu biztonságból nem zárható. Próbáld újra." — a fail-safe viselkedés változatlan |
+
+A lencsék pozitív verifikációi: a konfig mezőre pontosan egyezik a
+Melléklet A-val (17 típus, gate-flagek, mező-sorrendek, required-jelölések);
+runtime import-kör NINCS (a visszahivatkozás type-only); a degradált
+fail-safe működik (null approved-halmaz = minden kemény kritérium
+teljesületlen); stale gate_pending nem kerülheti meg az app-őrt (a
+closeGate minden híváskor újra kiértékel, és ő az egyetlen RPC-hívó);
+a kiértékelés projekt-szűkített; a checklist mindhárom megjelenítési
+helye a közös címke-feloldót használja; a `manual_close` maradéktalanul
+kivezetve; supabase/, machine.ts, token-értékek, seed, package.json
+érintetlen.
 
 ## 4. Kezelt eltérések
 

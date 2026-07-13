@@ -134,8 +134,9 @@ export async function closeGate(
   );
   const unmetHard = criteria.filter((c) => c.weight === "hard" && !c.satisfied);
   if (degraded && unmetHard.length > 0) {
-    // Kiértékelési hiba: nem tudjuk bizonyítani a teljesülést → fail-safe.
-    return fail(tErrors("phaseActionFailed", { message: "criteria" }));
+    // Kiértékelési hiba: nem tudjuk bizonyítani a teljesülést → fail-safe,
+    // lokalizált okkal (nem nyers tokennel).
+    return fail(tErrors("criteriaEvaluationFailed"));
   }
   if (unmetHard.length > 0) {
     const [tCriteria, tTypes] = await Promise.all([
