@@ -25,6 +25,7 @@ import {
   AddUseCaseForm,
   DeriveUseCasesForm,
   ExtractPainPointsForm,
+  GenerateShortlistFieldsForm,
   PainPointConfirmedRow,
   PainPointProposalCard,
   UseCaseCard,
@@ -296,8 +297,16 @@ export async function PhaseWorkspace({
                       {t("notDraftNotice")}
                     </p>
                   )}
-                  {(!latest || editable) && (
-                    <ExtractForm projectId={projectId} typeKey={typeDef.key} />
+                  {/* Entitás-forrású típus (#7a): a generikus kivonatolás nem
+                      fut — a mezőket a ③ zóna entitás-akciója tölti. */}
+                  {typeDef.entitySourced ? (
+                    <p className="rounded-tile border border-dashed border-line px-3 py-2 text-body text-ink-tertiary">
+                      {t("entitySourcedHint")}
+                    </p>
+                  ) : (
+                    (!latest || editable) && (
+                      <ExtractForm projectId={projectId} typeKey={typeDef.key} />
+                    )
                   )}
                   {latest && fields && (
                     <div className="space-y-2">
@@ -381,6 +390,14 @@ export async function PhaseWorkspace({
                         {t("versionsCount", { count: versions.length })}
                       </p>
                     )}
+                    {/* Entitás-forrású mező-generálás (#7a): első draftot is
+                        ez hoz létre; approved fej mellé új verziót tesz. */}
+                    {typeDef.entitySourced &&
+                      (!latest || latest.status !== "in_review") && (
+                        <div className="mt-3">
+                          <GenerateShortlistFieldsForm projectId={projectId} />
+                        </div>
+                      )}
                     {latest && (
                       <div className="mt-3 space-y-3">
                         {latest.status === "draft" &&

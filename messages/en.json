@@ -190,7 +190,8 @@
     "generateConfirmLabel": "I confirm overwriting the body",
     "generateOverwriteWarn": "Generating fully overwrites the existing body — manual edits are lost.",
     "openEditor": "Open editor",
-    "noArtifactYet": "No artifact of this type yet."
+    "noArtifactYet": "No artifact of this type yet.",
+    "entitySourcedHint": "This document's fields derive from the P1 entities (confirmed use cases) — extraction does not run here; start generation in zone ③ Output."
   },
   "export": {
     "notFound": "Artifact not found.",
@@ -305,7 +306,8 @@
     "entityNotConfirmed": "This action is only available on a confirmed (or manual) item.",
     "entityTitleRequired": "A title is required.",
     "exclusionReasonRequired": "Exclusion requires a reason.",
-    "scoreInvalid": "Scores must be whole numbers between 1 and 5."
+    "scoreInvalid": "Scores must be whole numbers between 1 and 5.",
+    "noShortlistedUseCase": "There is no confirmed use case on the shortlist — confirm and shortlist at least one first. An empty document is not created."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",
@@ -529,6 +531,10 @@
     "excludeReasonPlaceholder": "Reason for exclusion (required)",
     "excludeConfirmCta": "Save exclusion",
     "exclusionReasonLabel": "Excluded:",
-    "selectPainsLabel": "Which pain points does it address? (optional)"
+    "selectPainsLabel": "Which pain points does it address? (optional)",
+    "generateShortlistCta": "Shortlist document from entities",
+    "generatingShortlist": "Generating…",
+    "shortlistFieldsDone": "Fields refreshed from the confirmed entities.",
+    "generateShortlistHint": "Fills the fields from the confirmed, shortlisted use cases (overwrites existing field values); the body is then produced with the “Generate draft” button."
   }
 }

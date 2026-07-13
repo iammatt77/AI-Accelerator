@@ -68,6 +68,11 @@ export interface ArtifactTypeDef {
    *  Ha NINCS egyedi sablon, a generikus szabály él (resolveTemplate):
    *  rövid bevezető + a mezők sorrendben mint szekciók. */
   template?: ArtifactTemplate;
+  /** #7a: a mezők forrása ENTITÁS (megerősített use case-ek), nem szabad-
+   *  szöveges kivonatolás — a ② generikus extract e típusra nem fut, a
+   *  mezőket a „…az entitásokból" akció tölti (confirmed állapottal).
+   *  A mezőséma változatlan, csak a mezők FORRÁSA más. */
+  entitySourced?: boolean;
 }
 
 /** Generikus body-sablon szabály (#6): egyedi sablon híján a szekciók =
@@ -223,14 +228,18 @@ const KICKOFF_AGENDA = deliverable("Kickoff-agenda", "kickoffAgenda", "P0", fals
 ]);
 
 // P1 — Felderítés & felmérés (kapu: KEMÉNY = shortlist Approved)
-const USE_CASE_SHORTLIST = deliverable(
-  "Priorizált use case-shortlist", "useCaseShortlist", "P1", true, [
-  f("shortlist", "shortlist", "Shortlist", true, "Rangsorolt use case-lista, elemenként rövid indoklással."),
-  f("shortlist", "ertekelesi_szempontok", "Értékelési szempontok", true, "A rangsorolás szempontjai és súlyaik."),
-  f("shortlist", "quick_win", "Quick win", true, "A quick win jelölt megnevezése és rövid indoklása."),
-  f("shortlist", "kizart_jeloltek", "Kizárt jelöltek", false, "A kizárt use case-ek és a kizárás oka."),
-  f("shortlist", "kockazati_jegyzet", "Kockázati jegyzet", false, "A shortlist elemeihez tartozó fő kockázatok."),
-]);
+// #7a: entitás-forrású — a mezőket a megerősített use case-entitásokból
+// tölti a generálás (F4); a mezőséma a #6-ból VÁLTOZATLAN.
+const USE_CASE_SHORTLIST: ArtifactTypeDef = {
+  ...deliverable("Priorizált use case-shortlist", "useCaseShortlist", "P1", true, [
+    f("shortlist", "shortlist", "Shortlist", true, "Rangsorolt use case-lista, elemenként rövid indoklással."),
+    f("shortlist", "ertekelesi_szempontok", "Értékelési szempontok", true, "A rangsorolás szempontjai és súlyaik."),
+    f("shortlist", "quick_win", "Quick win", true, "A quick win jelölt megnevezése és rövid indoklása."),
+    f("shortlist", "kizart_jeloltek", "Kizárt jelöltek", false, "A kizárt use case-ek és a kizárás oka."),
+    f("shortlist", "kockazati_jegyzet", "Kockázati jegyzet", false, "A shortlist elemeihez tartozó fő kockázatok."),
+  ]),
+  entitySourced: true,
+};
 
 const FELMERESI_RIPORT = deliverable("Felmérési riport", "felmeresiRiport", "P1", false, [
   f("assessment", "vezetoi_osszefoglalo", "Vezetői összefoglaló", true, "A felmérés fő üzenetei döntéshozói tömörséggel."),

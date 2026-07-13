@@ -15,7 +15,7 @@ import {
 } from "@/lib/artifacts/config";
 import { isPhaseId } from "@/lib/phases/config";
 import { loadNumberedSources } from "@/lib/sources";
-import type { ArtifactRow, InputItemRow } from "@/lib/db/types";
+import type { ArtifactRow, InputItemRow, UseCaseRow } from "@/lib/db/types";
 import type { FormState } from "./actions";
 
 // ─────────────────────────────────────────────────────────────
@@ -557,6 +557,175 @@ export async function newVersionAction(
   );
   revalidateWorkspace(projectId);
   return { ok: true, error: null, newArtifactId: created?.id };
+}
+
+// ── ③ Shortlist-mezők az ENTITÁSOKBÓL (#7a, F4) ──────────────
+// A „Priorizált use case-shortlist" mezői nem szabad-szöveges kivonatolásból,
+// hanem a MEGERŐSÍTETT use case-entitásokból származnak. A mezők állapota
+// confirmed — a forrásuk az emberi megerősítésen átment entitás. A body
+// ezután a szokott láncon készül (generateBodyAction), a [n] citációk az
+// érintett entitások forrás-inputjainak UNIÓJÁBÓL oldódnak fel.
+
+const SHORTLIST_TYPE_KEY = "Priorizált use case-shortlist";
+
+const RISK_HU: Record<string, string> = {
+  low: "alacsony",
+  medium: "közepes",
+  high: "magas",
+};
+
+export async function generateShortlistFromEntitiesAction(
+  projectId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const typeDef = getTypeDef(SHORTLIST_TYPE_KEY);
+  if (!typeDef) {
+    return { ok: false, error: tErrors("typeNotFound", { type: SHORTLIST_TYPE_KEY }) };
+  }
+
+  const supabase = createServiceSupabaseClient();
+
+  // KIZÁRÓLAG emberi kontrollon átment (confirmed/manual) use case-ek — az
+  // ai_suggested javaslat nem kerülhet dokumentumba (E1, negatív teszt b).
+  const { data: ucData, error: ucErr } = await supabase
+    .from("use_cases")
+    .select("*")
+    .eq("project_id", projectId)
+    .in("state", ["confirmed", "manual"])
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (ucErr) {
+    return { ok: false, error: tErrors("entityFetchFailed", { message: errMessage(ucErr) }) };
+  }
+  const useCases = (ucData ?? []) as UseCaseRow[];
+
+  const shortlisted = useCases.filter(
+    (u) => u.list_status === "shortlist" || u.list_status === "selected",
+  );
+  // Nincs megerősített, shortlisten lévő use case → LÁTHATÓ jelzés, üres
+  // dokumentum NEM készül (F4).
+  if (shortlisted.length === 0) {
+    return { ok: true, error: null, notice: tErrors("noShortlistedUseCase") };
+  }
+  const excluded = useCases.filter((u) => u.list_status === "excluded");
+  const quickWins = useCases.filter((u) => u.quick_win);
+
+  // Rangsor: az érték + megvalósíthatóság összege szerint csökkenő; a nem
+  // pontozott elem a sor végére kerül (0-ként számít).
+  const scoreOf = (u: UseCaseRow) => (u.score_value ?? 0) + (u.score_feasibility ?? 0);
+  const ranked = [...shortlisted].sort((a, b) => scoreOf(b) - scoreOf(a));
+
+  // A dokumentum forrás-listája: az érintett entitások forrás-inputjainak
+  // UNIÓJA, a projekt kanonikus input-sorrendjében — a [n] erre a listára
+  // (pozicionálisan) mutat, ahogy a szerkesztő és az export is számoz.
+  const loaded = await loadNumberedSources(supabase, projectId);
+  if ("error" in loaded) {
+    return { ok: false, error: tErrors("inputsFetchFailed") + `: ${loaded.error}` };
+  }
+  const involved = [...shortlisted, ...excluded, ...quickWins];
+  const involvedIds = new Set(involved.flatMap((u) => u.source_input_ids));
+  const unionIds = loaded.inputIds.filter((id) => involvedIds.has(id));
+  const posInUnion = new Map(unionIds.map((id, i) => [id, i + 1]));
+  const indicesOf = (items: UseCaseRow[]): number[] =>
+    [
+      ...new Set(
+        items
+          .flatMap((u) => u.source_input_ids)
+          .map((id) => posInUnion.get(id))
+          .filter((n): n is number => typeof n === "number"),
+      ),
+    ].sort((a, b) => a - b);
+
+  // Mezőértékek determinisztikusan az entitásokból (magyar — a dokumentum
+  // nyelve a UI-nyelvtől független).
+  const scoreMark = (n: number | null) => (n == null ? "–" : String(n));
+  const riskMark = (r: string | null) => (r ? RISK_HU[r] ?? r : "–");
+  const shortlistValue = ranked
+    .map((u, i) => {
+      const head =
+        `${i + 1}. ${u.title} — érték: ${scoreMark(u.score_value)}/5 · ` +
+        `megvalósíthatóság: ${scoreMark(u.score_feasibility)}/5 · ` +
+        `kockázat: ${riskMark(u.risk)}${u.quick_win ? " · quick win" : ""}`;
+      return u.description ? `${head}\n   Indoklás: ${u.description}` : head;
+    })
+    .join("\n");
+  const quickWinValue = quickWins
+    .map((u) => (u.description ? `${u.title} — ${u.description}` : u.title))
+    .join("\n");
+  const excludedValue = excluded
+    .map((u) => `${u.title} — ${u.exclusion_reason ?? "(indoklás nélkül)"}`)
+    .join("\n");
+  const riskNoted = ranked.filter((u) => u.risk !== null);
+  const riskValue = riskNoted
+    .map((u) => `${u.title}: ${riskMark(u.risk)} kockázat`)
+    .join("\n");
+  const criteriaValue =
+    "Érték (1–5): a várt üzleti haszon mértéke. " +
+    "Megvalósíthatóság (1–5): a bevezetés realitása az adott adat- és folyamatérettség mellett. " +
+    "Kockázat (alacsony/közepes/magas): bevezetési és működési kockázat. " +
+    "A rangsor az érték és a megvalósíthatóság pontszámának összegén alapul; a quick win jelölés emberi döntés.";
+
+  // Minden kitöltött mező confirmed — a forrása az emberi megerősítésen
+  // átment entitás. Ami nem áll elő entitásból (pl. nincs quick win),
+  // az missing marad — az approve-blokk / kapu jelez (poka-yoke).
+  const confirmedField = (value: string, indices: number[]): ArtifactFields[string] =>
+    value !== ""
+      ? { value, source_indices: indices, state: "confirmed" }
+      : { ...EMPTY_FIELD };
+  const fields: ArtifactFields = {
+    shortlist: confirmedField(shortlistValue, indicesOf(ranked)),
+    ertekelesi_szempontok: confirmedField(criteriaValue, []),
+    quick_win: confirmedField(quickWinValue, indicesOf(quickWins)),
+    kizart_jeloltek: confirmedField(excludedValue, indicesOf(excluded)),
+    kockazati_jegyzet: confirmedField(riskValue, indicesOf(riskNoted)),
+  };
+
+  // Mentés: draft fej → frissítés (a mezőket az entitás-forrás felülírja —
+  // ez az akció explicit szándéka); approved fej → ÚJ draft-verzió MELLÉ
+  // (a régi, szabad-szöveges verzió érintetlen a történetben, F4);
+  // in_review → nem módosítható (előbb vissza draftba vagy jóváhagyás).
+  const latest = await loadLatestArtifact(supabase, projectId, SHORTLIST_TYPE_KEY);
+  if (latest && latest.status === "in_review") {
+    return { ok: false, error: tErrors("artifactNotDraft") };
+  }
+  if (latest && latest.status === "draft") {
+    const { data, error } = await supabase
+      .from("artifacts")
+      .update({
+        fields,
+        source_input_ids: unionIds,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", latest.id)
+      .eq("status", "draft") // optimista guard
+      .select("id");
+    if (error || (data ?? []).length === 0) {
+      return {
+        ok: false,
+        error: error
+          ? tErrors("artifactSaveFailed", { message: errMessage(error) })
+          : tErrors("artifactNotDraft"),
+      };
+    }
+  } else {
+    const created = await insertNewArtifact(supabase, projectId, typeDef, {
+      fields,
+      source_input_ids: unionIds,
+    });
+    if (created.error) return { ok: false, error: created.error };
+  }
+
+  await logDecision(
+    supabase,
+    projectId,
+    "generate_shortlist_fields",
+    `Shortlist-mezők entitásokból: ${ranked.length} shortlist-elem, ` +
+      `${quickWins.length} quick win, ${excluded.length} kizárt, ${unionIds.length} forrás.`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null };
 }
 
 // ── Szerkesztő: body mentése (csak draft; updated_at frissül) ─

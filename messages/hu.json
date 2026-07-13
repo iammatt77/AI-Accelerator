@@ -190,7 +190,8 @@
     "generateConfirmLabel": "Megerősítem a body felülírását",
     "generateOverwriteWarn": "A generálás a meglévő body-t teljesen felülírja — a kézi szerkesztés elvész.",
     "openEditor": "Szerkesztő megnyitása",
-    "noArtifactYet": "Még nincs artefaktum ebből a típusból."
+    "noArtifactYet": "Még nincs artefaktum ebből a típusból.",
+    "entitySourcedHint": "E dokumentum mezői a P1 entitásokból (megerősített use case-ekből) származnak — a kivonatolás itt nem fut; a generálást a ③ Kimenet zónában indítod."
   },
   "export": {
     "notFound": "Az artefaktum nem található.",
@@ -305,7 +306,8 @@
     "entityNotConfirmed": "Ez a művelet csak megerősített (vagy kézi) elemen végezhető.",
     "entityTitleRequired": "A cím megadása kötelező.",
     "exclusionReasonRequired": "A kizáráshoz indoklás kötelező.",
-    "scoreInvalid": "A pontszám 1 és 5 közötti egész szám lehet."
+    "scoreInvalid": "A pontszám 1 és 5 közötti egész szám lehet.",
+    "noShortlistedUseCase": "Nincs megerősített use case a shortlisten — előbb erősíts meg és tegyél shortlistre legalább egyet. Üres dokumentum nem készül."
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet a Projektek oldalon.",
@@ -529,6 +531,10 @@
     "excludeReasonPlaceholder": "Kizárás indoklása (kötelező)",
     "excludeConfirmCta": "Kizárás mentése",
     "exclusionReasonLabel": "Kizárva:",
-    "selectPainsLabel": "Mely fájdalompontokra válaszol? (opcionális)"
+    "selectPainsLabel": "Mely fájdalompontokra válaszol? (opcionális)",
+    "generateShortlistCta": "Shortlist-dokumentum az entitásokból",
+    "generatingShortlist": "Generálás…",
+    "shortlistFieldsDone": "A mezők frissültek a megerősített entitásokból.",
+    "generateShortlistHint": "A mezőket a megerősített, shortlisten lévő use case-ekből tölti (a meglévő mezőértékeket felülírja); a body ezután a „Draft generálása” gombbal készül."
   }
 }

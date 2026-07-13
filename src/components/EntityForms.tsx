@@ -19,6 +19,7 @@ import {
   scoreUseCaseAction,
   shortlistUseCaseAction,
 } from "@/app/entity-actions";
+import { generateShortlistFromEntitiesAction } from "@/app/artifact-actions";
 import type { EntityState } from "@/lib/db/types";
 import { FieldStateBadge } from "@/components/FieldStateBadge";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -677,6 +678,31 @@ export function UseCaseCard({
         </div>
       )}
     </div>
+  );
+}
+
+// ── ③ Shortlist-mezők generálása az entitásokból (#7a F4) ────
+
+export function GenerateShortlistFieldsForm({ projectId }: { projectId: string }) {
+  const t = useTranslations("entities");
+  const [state, formAction] = useActionState(
+    generateShortlistFromEntitiesAction.bind(null, projectId),
+    initialState,
+  );
+
+  return (
+    <form action={formAction} className="space-y-2">
+      <ErrorAlert error={state.error} />
+      <NoticeAlert notice={state.notice} />
+      {state.ok && !state.notice && (
+        <p className="text-body text-done">{t("shortlistFieldsDone")}</p>
+      )}
+      {/* Mezők entitásból = döntés-előkészítő generálás → lila (törvény 3) */}
+      <SubmitButton pendingLabel={t("generatingShortlist")}>
+        {t("generateShortlistCta")}
+      </SubmitButton>
+      <p className="text-mono-sm text-ink-tertiary">{t("generateShortlistHint")}</p>
+    </form>
   );
 }
 
