@@ -13,6 +13,9 @@ import { createServiceSupabaseClient } from "@/lib/supabase/server";
 export type FormState = {
   ok: boolean;
   error: string | null;
+  /** Nem-hiba, de LÁTHATÓ jelzés (amber): pl. „a feldolgozás sikeres volt,
+   *  de nem adott használható eredményt" — ne nézzen ki néma üres sikernek. */
+  notice?: string | null;
   values?: {
     rawText?: string;
     reason?: string;

@@ -30,6 +30,20 @@ function ErrorAlert({ error }: { error: string | null }) {
   );
 }
 
+// Nem-hiba, de LÁTHATÓ jelzés (amber, role=status) — pl. sikeres
+// feldolgozás, amely nem adott használható eredményt.
+function NoticeAlert({ notice }: { notice?: string | null }) {
+  if (!notice) return null;
+  return (
+    <p
+      role="status"
+      className="rounded-tile border border-gate/50 bg-surface px-3 py-2 text-body text-gate"
+    >
+      {notice}
+    </p>
+  );
+}
+
 // ── ① Bemenet hozzáadása fázis-címkével ──────────────────────
 
 export function PhaseInputForm({
@@ -98,6 +112,7 @@ export function ExtractForm({
   return (
     <form action={formAction} className="space-y-2">
       <ErrorAlert error={state.error} />
+      <NoticeAlert notice={state.notice} />
       <div className="flex flex-wrap items-center gap-3">
         <SubmitButton variant="secondary" pendingLabel={t("extracting")}>
           {t("extractCta")}

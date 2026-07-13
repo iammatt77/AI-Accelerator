@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "i18n:check": "node scripts/i18n-check.mjs",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "llm:parse-check": "tsx scripts/llm-parse-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

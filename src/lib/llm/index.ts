@@ -1,6 +1,16 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { resolveTemplate, type ArtifactTypeDef } from "@/lib/artifacts/config";
+import {
+  parseExtractResult,
+  type ExtractResult,
+  type LlmSource,
+} from "./parse";
+
+// A parse-réteg típusait innen is re-exportáljuk (a hívók @/lib/llm-ből
+// importálnak). A tiszta válasz-feldolgozás a ./parse-ban él, hogy
+// server-only/SDK nélkül, önállóan tesztelhető legyen (a #6-fix vakfolt).
+export type { LlmSource, ExtractedField, ExtractResult } from "./parse";
 
 // ─────────────────────────────────────────────────────────────
 // LLM-ADAPTER — a governance magja.
@@ -49,25 +59,7 @@ function textFromMessage(message: Anthropic.Message): string {
     .trim();
 }
 
-/** Eltávolítja az esetleges ```json ... ``` kódkerítést. */
-function stripCodeFences(text: string): string {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) {
-    return fenced[1].trim();
-  }
-  return text.trim();
-}
-
 // ── Közös bemenet-típusok ────────────────────────────────────
-
-/** Számozott forrás (1..n) — a [n] hivatkozások és a source_indices erre
- *  a számozásra mutatnak. */
-export interface LlmSource {
-  /** 1-alapú sorszám a forrás-listában. */
-  index: number;
-  title: string;
-  text: string;
-}
 
 function renderSources(sources: LlmSource[]): string {
   return sources
@@ -76,15 +68,6 @@ function renderSources(sources: LlmSource[]): string {
 }
 
 // ── extract: nyers források → mezőjavaslatok ─────────────────
-
-export interface ExtractedField {
-  value: string;
-  /** Csak olyan forrásszám, amelyből az érték ténylegesen származik. */
-  source_indices: number[];
-}
-
-/** Mezőnként javaslat vagy null (= a forrásokban nincs meg → missing). */
-export type ExtractResult = Record<string, ExtractedField | null>;
 
 /**
  * Mező-kivonatolás (E1 első fele): a számozott forrásokból a típusdefiníció
@@ -143,65 +126,8 @@ export async function extract(
   return parseExtractResult(textFromMessage(message), sources, typeDef);
 }
 
-/**
- * Parse-védelem: fence-eltávolítás + JSON.parse + mezőnkénti validálás.
- * Érvénytelen JSON → beszédes Error (a hívó action FormState-hibává alakítja).
- */
-function parseExtractResult(
-  raw: string,
-  sources: LlmSource[],
-  typeDef: ArtifactTypeDef,
-): ExtractResult {
-  let parsed: unknown;
-  try {
-    // Előbb a nyers választ próbáljuk (a fence-nélküli érvényes JSON a
-    // megfelelő eset); a fence-eltávolítás csak fallback — így a mező-
-    // értékekben előforduló ``` nem korrumpálja az érvényes választ.
-    try {
-      parsed = JSON.parse(raw.trim());
-    } catch {
-      parsed = JSON.parse(stripCodeFences(raw));
-    }
-  } catch {
-    throw new Error(
-      `A modell válasza nem érvényes JSON (első 120 karakter): ${raw.slice(0, 120)}`,
-    );
-  }
-  const source =
-    parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
-  const validIndices = new Set(sources.map((s) => s.index));
-  const result: ExtractResult = {};
-  for (const fieldDef of typeDef.fields) {
-    const candidate = source[fieldDef.key];
-    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
-      const obj = candidate as Record<string, unknown>;
-      const value = typeof obj.value === "string" ? obj.value.trim() : "";
-      if (value !== "") {
-        const rawIndices = Array.isArray(obj.source_indices) ? obj.source_indices : [];
-        const source_indices = [
-          ...new Set(
-            rawIndices.filter(
-              (n): n is number => Number.isInteger(n) && validIndices.has(n as number),
-            ),
-          ),
-        ];
-        // Fabrikáció-jel: a modell hivatkozott forrásokra, de EGYIK sem
-        // létezik → az érték nem fogadható el javaslatként (missing).
-        if (rawIndices.length > 0 && source_indices.length === 0) {
-          result[fieldDef.key] = null;
-          continue;
-        }
-        result[fieldDef.key] = { value, source_indices };
-        continue;
-      }
-    }
-    // null, hiányzó kulcs vagy rontott alak → missing (nem hiba)
-    result[fieldDef.key] = null;
-  }
-  return result;
-}
+// A tiszta válasz-feldolgozás (parseExtractResult + fabrikáció-kezelés)
+// a ./parse modulban él — l. ott a #6-fix magyarázatát.
 
 // ── generateBody: megerősített mezők + sablon → md body ──────
 
@@ -277,9 +203,10 @@ export async function generateBody(
 
 // ── MOCK_LLM fixture (determinisztikus, hálózat nélkül) ──────
 
-// Charter-mezők fixture-értékei. A `szponzor` és a `stakeholderek`
-// SZÁNDÉKOSAN hiányzik (null): a self-check ezzel bizonyítja, hogy a
-// hiányzó adat missing marad, és hogy az approve-blokk működik.
+// Charter-mezők fixture-értékei. A `szponzor`, `sikerkriterium` és
+// `stakeholderek` SZÁNDÉKOSAN hiányzik (null): a self-check ezzel
+// bizonyítja, hogy a hiányzó adat missing marad, és hogy az approve-blokk
+// működik (2 hiányzó kötelező → 3/5 teljesség).
 const MOCK_FIELD_VALUES: Record<string, { value: string; source_indices: number[] }> = {
   cel: {
     value: "A panaszkezelési folyamat AI-alkalmasságának felmérése",
@@ -293,35 +220,24 @@ const MOCK_FIELD_VALUES: Record<string, { value: string; source_indices: number[
     value: "6 hét",
     source_indices: [2],
   },
-  sikerkriterium: {
-    value: "Priorizált use case-shortlist + business case",
-    source_indices: [3],
-  },
 };
 
 function mockExtract(sources: LlmSource[], typeDef: ArtifactTypeDef): ExtractResult {
   const validIndices = new Set(sources.map((s) => s.index));
   const result: ExtractResult = {};
   for (const fieldDef of typeDef.fields) {
-    // A charter-fixture SPECIÁLIS: a missing- és az all-invalid-citáció
-    // viselkedést demonstrálja (szponzor/stakeholderek üres; sikerkritérium
-    // [3] — 2 forrásnál fabrikáció-jel → missing).
+    // A charter-fixture SPECIÁLIS: a missing-viselkedést demonstrálja
+    // (szponzor/sikerkritérium/stakeholderek nincs → missing).
     if (typeDef.key === "Projekt-charter") {
       const fixture = MOCK_FIELD_VALUES[fieldDef.key];
       if (!fixture) {
         result[fieldDef.key] = null;
         continue;
       }
-      // Azonos szabály, mint az éles parse-ban: csak-érvénytelen hivatkozás →
-      // fabrikáció-jel → missing (a fixture ezt is demonstrálja).
-      const source_indices = [
-        ...new Set(fixture.source_indices.filter((n) => validIndices.has(n))),
-      ];
-      if (fixture.source_indices.length > 0 && source_indices.length === 0) {
-        result[fieldDef.key] = null;
-        continue;
-      }
-      result[fieldDef.key] = { value: fixture.value, source_indices };
+      result[fieldDef.key] = {
+        value: fixture.value,
+        source_indices: [...new Set(fixture.source_indices.filter((n) => validIndices.has(n)))],
+      };
       continue;
     }
     // Generikus fixture (#6): BÁRMELY típusdefiníció mezője determinisztikus

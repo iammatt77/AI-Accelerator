@@ -281,6 +281,7 @@
     "artifactNotDraft": "The artifact is not a draft — this operation only works on drafts.",
     "artifactSaveFailed": "Failed to save artifact: {message}",
     "extractFailed": "Extraction failed: {message}",
+    "extractNoResult": "Processing ran, but found no usable value for any field in the sources. Check that the inputs contain the information you're looking for, or try again.",
     "versionConflict": "Version conflict — another version was created in the meantime. Refresh the page.",
     "fieldValueRequired": "The field value cannot be empty.",
     "fieldNotConfirmable": "Only an AI proposal with a value can be confirmed.",

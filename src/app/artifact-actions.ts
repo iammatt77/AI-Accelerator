@@ -234,6 +234,12 @@ export async function extractAction(
     `${typeKey} kivonatolás: ${proposals} mezőjavaslat ${sources.length} forrásból.`,
   );
   revalidateWorkspace(projectId);
+  // UX-megkülönböztetés: a „feldolgozva, de EGYETLEN mezőhöz sem született
+  // használható javaslat" eset LÁTHATÓ jelzést kap — nem néma üres siker.
+  // (A „részben talált" a normál eset: néhány mező jogosan missing.)
+  if (proposals === 0) {
+    return { ok: true, error: null, notice: tErrors("extractNoResult") };
+  }
   return { ok: true, error: null };
 }
 

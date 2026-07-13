@@ -281,6 +281,7 @@
     "artifactNotDraft": "Az artefaktum nem draft állapotú — ez a művelet csak drafton végezhető.",
     "artifactSaveFailed": "Artefaktum mentése sikertelen: {message}",
     "extractFailed": "Kivonatolás sikertelen: {message}",
+    "extractNoResult": "A feldolgozás lefutott, de egyetlen mezőhöz sem talált használható értéket a forrásokban. Ellenőrizd, hogy a bemenetek tartalmazzák-e a keresett információt, vagy próbáld újra.",
     "versionConflict": "Verzió-ütközés — időközben másik verzió jött létre. Frissítsd az oldalt.",
     "fieldValueRequired": "A mező értéke nem lehet üres.",
     "fieldNotConfirmable": "Csak értékkel bíró AI-javaslat erősíthető meg.",
