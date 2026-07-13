@@ -202,6 +202,19 @@
     "hungarian": "Hungarian",
     "english": "English"
   },
+  "artifactTypes": {
+    "projektCharter": "Project charter"
+  },
+  "fields": {
+    "charter": {
+      "cel": "Goal",
+      "scope": "Scope",
+      "szponzor": "Sponsor",
+      "idokeret": "Timeframe",
+      "sikerkriterium": "Success criteria",
+      "stakeholderek": "Stakeholders"
+    }
+  },
   "criteria": {
     "charter_approved": "An approved Project charter exists",
     "manual_close": "Manual close (temporary)"

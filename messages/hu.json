@@ -202,6 +202,19 @@
     "hungarian": "magyar",
     "english": "angol"
   },
+  "artifactTypes": {
+    "projektCharter": "Projekt-charter"
+  },
+  "fields": {
+    "charter": {
+      "cel": "Cél",
+      "scope": "Scope",
+      "szponzor": "Szponzor",
+      "idokeret": "Időkeret",
+      "sikerkriterium": "Sikerkritérium",
+      "stakeholderek": "Stakeholderek"
+    }
+  },
   "criteria": {
     "charter_approved": "Jóváhagyott Projekt-charter létezik",
     "manual_close": "Kézi lezárás (ideiglenes)"

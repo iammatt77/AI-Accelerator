@@ -34,6 +34,8 @@ export interface InputItemRow {
   project_id: string;
   type: string;
   raw_text: string;
+  /** A munkaterület fázisa, ahol a bemenet érkezett (0003; régi sorok: null). */
+  phase: string | null;
   created_at: string;
 }
 
@@ -45,6 +47,9 @@ export interface ArtifactRow {
   status: ArtifactStatus;
   body: string;
   source_input_ids: string[];
+  /** Strukturált mezők jsonb (0003) — defenzív parse: parseArtifactFields. */
+  fields: unknown;
+  updated_at: string;
   created_at: string;
 }
 
