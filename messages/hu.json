@@ -189,6 +189,10 @@
     "openEditor": "Szerkesztő megnyitása",
     "noArtifactYet": "Még nincs artefaktum ebből a típusból."
   },
+  "export": {
+    "notFound": "Az artefaktum nem található.",
+    "notApproved": "Csak jóváhagyott (Approved) artefaktum exportálható."
+  },
   "hub": {
     "title": "Projektdokumentáció tár",
     "lead": "A projekt minden deliverable-je egy helyen — állapot, teljesség, hiányok és export.",

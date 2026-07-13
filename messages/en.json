@@ -189,6 +189,10 @@
     "openEditor": "Open editor",
     "noArtifactYet": "No artifact of this type yet."
   },
+  "export": {
+    "notFound": "Artifact not found.",
+    "notApproved": "Only an approved artifact can be exported."
+  },
   "hub": {
     "title": "Project documentation hub",
     "lead": "Every deliverable of the project in one place — status, completeness, gaps and export.",
