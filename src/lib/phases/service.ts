@@ -61,16 +61,63 @@ export async function fetchApprovedTypes(
   return new Set(((data ?? []) as { type: string }[]).map((row) => row.type));
 }
 
+/** #7a: létezik-e megerősített quick win a shortlisten — a P1 entitás-
+ *  szintű kemény kritériuma. A manual a confirmed-del azonos erősségű
+ *  (kézi felvétel = emberi eredet). `null` = a lekérdezés hibázott. */
+async function fetchQuickWinOnShortlist(
+  supabase: SupabaseClient,
+  projectId: string,
+): Promise<boolean | null> {
+  const { data, error } = await supabase
+    .from("use_cases")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("quick_win", true)
+    .in("list_status", ["shortlist", "selected"])
+    .in("state", ["confirmed", "manual"])
+    .limit(1);
+  if (error) {
+    console.error(`Quick win-kritérium lekérése sikertelen: ${error.message}`);
+    return null;
+  }
+  return (data ?? []).length > 0;
+}
+
+/** A kritérium-kiértékelés bemenete — board-betöltésenként EGYSZER
+ *  gyűjtve (nem fázisonként/kritériumonként). */
+interface CriterionContext {
+  approvedTypes: Set<string> | null;
+  quickWinOnShortlist: boolean | null;
+}
+
+async function fetchCriterionContext(
+  supabase: SupabaseClient,
+  projectId: string,
+): Promise<CriterionContext> {
+  const [approvedTypes, quickWinOnShortlist] = await Promise.all([
+    fetchApprovedTypes(supabase, projectId),
+    fetchQuickWinOnShortlist(supabase, projectId),
+  ]);
+  return { approvedTypes, quickWinOnShortlist };
+}
+
 function evaluateCriteria(
   phase: PhaseId,
-  approvedTypes: Set<string> | null,
+  ctx: CriterionContext,
 ): { criteria: EvaluatedCriterion[]; degraded: boolean } {
   const result: EvaluatedCriterion[] = [];
   let degraded = false;
   for (const criterion of PHASE_CRITERIA[phase]) {
     let satisfied = false;
     if (criterion.mode === "auto") {
-      if (approvedTypes === null) {
+      if (criterion.id === "quick_win_on_shortlist") {
+        // #7a: entitás-szintű kritérium — a use_cases-ből értékelődik.
+        if (ctx.quickWinOnShortlist === null) {
+          degraded = true;
+        } else {
+          satisfied = ctx.quickWinOnShortlist;
+        }
+      } else if (ctx.approvedTypes === null) {
         // Kiértékelési hiba nem törheti el a felületet — de nem is azonos a
         // „nem teljesül"-lel: degradált kör (kijelzés: nem teljesül;
         // állapot-átmenet: NEM írunk vissza hibás kiértékelésből).
@@ -79,11 +126,12 @@ function evaluateCriteria(
         // Az élő adat 'Projekt-charter' típussal seedelt; a korábbi #3-seed
         // 'project_charter'-t írt — mindkettőt elfogadjuk (defenzív).
         satisfied =
-          approvedTypes.has("Projekt-charter") || approvedTypes.has("project_charter");
+          ctx.approvedTypes.has("Projekt-charter") ||
+          ctx.approvedTypes.has("project_charter");
       } else if (criterion.typeKey) {
         // Deliverable-alapú kritérium (#6): bármely approved verzió számít
         // (a #5a v1-döntése szerint).
-        satisfied = approvedTypes.has(criterion.typeKey);
+        satisfied = ctx.approvedTypes.has(criterion.typeKey);
       }
     }
     result.push({ ...criterion, satisfied });
@@ -98,8 +146,8 @@ export async function evaluatePhaseCriteria(
   projectId: string,
   phase: PhaseId,
 ): Promise<{ criteria: EvaluatedCriterion[]; degraded: boolean }> {
-  const approvedTypes = await fetchApprovedTypes(supabase, projectId);
-  return evaluateCriteria(phase, approvedTypes);
+  const ctx = await fetchCriterionContext(supabase, projectId);
+  return evaluateCriteria(phase, ctx);
 }
 
 /** gate_pending-készség: minden kemény auto-kritérium teljesül; ha nincs
@@ -187,15 +235,16 @@ export async function loadPhaseBoard(
   const byPhase = new Map(rows.map((r) => [r.phase, r]));
   const board: PhaseBoardEntry[] = [];
 
-  // Egyetlen lekérdezés a projekt approved típusairól — minden fázis
-  // kritériumai ebből értékelődnek ki.
-  const approvedTypes = await fetchApprovedTypes(supabase, projectId);
+  // Board-betöltésenként EGYSZER gyűjtött kiértékelési kontextus
+  // (approved típusok + quick win-kritérium) — minden fázis ebből
+  // értékelődik ki.
+  const ctx = await fetchCriterionContext(supabase, projectId);
 
   for (const phase of PHASE_IDS) {
     const row = byPhase.get(phase) ?? null;
     // Defenzív degradáció: hiányzó sor vagy ismeretlen state → locked.
     let state = parsePhaseState(row?.state);
-    const { criteria, degraded } = evaluateCriteria(phase, approvedTypes);
+    const { criteria, degraded } = evaluateCriteria(phase, ctx);
     const gateReady = computeGateReady(criteria);
 
     if (row) {

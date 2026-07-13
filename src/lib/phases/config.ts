@@ -64,14 +64,27 @@ function deliverableCriteria(phase: PhaseId): PhaseCriterion[] {
   }));
 }
 
-// Fázisonkénti KILÉPŐ kritériumok (#6, Melléklet A):
+// #7a: a P1 kanonikus, ENTITÁS-szintű kemény kritériuma (v0.2 §6):
+// létezik use case, amelynél quick_win=true ÉS list_status ∈ (shortlist,
+// selected) ÉS state megerősített (confirmed/manual — a kézi felvétel
+// emberi eredetű, megerősített-erősségű a kódbázis konvenciója szerint).
+// Ez váltja ki a #6 csak-dokumentum interim megoldását — a shortlist
+// Approved deliverable-kritérium MELLETT él, nem helyette.
+export const QUICK_WIN_CRITERION: PhaseCriterion = {
+  id: "quick_win_on_shortlist",
+  mode: "auto",
+  weight: "hard",
+};
+
+// Fázisonkénti KILÉPŐ kritériumok (#6, Melléklet A; #7a: P1 kanonikus):
 //  P0: charter_approved — auto, PUHA (változatlan)
-//  P1–P5: a fázis [K] deliverable-jei Approved — auto, KEMÉNY
+//  P1: shortlist Approved + megerősített quick win a shortlisten (KEMÉNY)
+//  P2–P5: a fázis [K] deliverable-jei Approved — auto, KEMÉNY
 //         (P3–P5: interim jelöléssel)
 //  P6: nincs kapu (ciklikus fázis — változatlan)
 export const PHASE_CRITERIA: Record<PhaseId, PhaseCriterion[]> = {
   P0: [{ id: "charter_approved", mode: "auto", weight: "soft" }],
-  P1: deliverableCriteria("P1"),
+  P1: [...deliverableCriteria("P1"), QUICK_WIN_CRITERION],
   P2: deliverableCriteria("P2"),
   P3: deliverableCriteria("P3"),
   P4: deliverableCriteria("P4"),

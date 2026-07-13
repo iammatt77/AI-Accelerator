@@ -463,7 +463,8 @@
   },
   "criteria": {
     "charter_approved": "An approved Project charter exists",
-    "deliverable_approved": "{type} approved"
+    "deliverable_approved": "{type} approved",
+    "quick_win_on_shortlist": "A confirmed quick win on the shortlist"
   },
   "nextstep": {
     "start": "Start phase {phase}",

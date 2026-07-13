@@ -463,7 +463,8 @@
   },
   "criteria": {
     "charter_approved": "Jóváhagyott Projekt-charter létezik",
-    "deliverable_approved": "{type} jóváhagyva (Approved)"
+    "deliverable_approved": "{type} jóváhagyva (Approved)",
+    "quick_win_on_shortlist": "Megerősített quick win a shortlisten"
   },
   "nextstep": {
     "start": "Indítsd el a(z) {phase} fázist",
