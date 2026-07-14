@@ -16,7 +16,17 @@
     "clients": "Clients",
     "inbox": "Inbox",
     "library": "Library",
-    "settings": "Settings"
+    "settings": "Settings",
+    "globalLevel": "Global level",
+    "inProject": "In project",
+    "cockpit": "Cockpit",
+    "phaseWorkspace": "Phase workspace",
+    "workbench": "Workbench",
+    "heatmap": "Heatmap",
+    "documents": "Documents",
+    "sources": "Sources",
+    "lockedPhasesSuffix": "phases",
+    "lockedTooltip": "The phase unlocks when the previous gate is closed."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -717,5 +727,10 @@
     },
     "aiSuggestionLabel": "AI SUGGESTION — NEEDS YOUR CONFIRM",
     "painLinkedLabel": "Linked:"
+  },
+  "sourcesPage": {
+    "title": "Sources",
+    "lead": "The project's raw materials in a reading view — new inputs are added in the phase workspace Input zone.",
+    "empty": "No raw materials yet — add the first input on the phase workspace."
   }
 }

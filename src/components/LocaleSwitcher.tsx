@@ -12,9 +12,7 @@ const LOCALE_LABEL: Record<Locale, string> = {
 
 // Kompakt HU | EN pill az oldalsáv alján. Server action állítja a cookie-t,
 // a fa újrarenderel; a választás reload után is él.
-// Stílus: süllyesztett sáv + tömör aktív szegmens — lila NINCS (törvény 3:
-// a nyelvváltás nem döntési pont); a feliratok ink/secondary szintűek
-// (törvény 1: tertiary csak meta-szövegre).
+// Stílus (Master ◆ SIDEBAR): aktív = tömör lila, inaktív = keretezett halk.
 export function LocaleSwitcher() {
   const locale = useLocale();
   const t = useTranslations("settings");
@@ -26,11 +24,7 @@ export function LocaleSwitcher() {
   };
 
   return (
-    <div
-      role="group"
-      aria-label={t("language")}
-      className="inline-flex items-center rounded-pill border border-line bg-sunken p-0.5"
-    >
+    <div role="group" aria-label={t("language")} className="inline-flex items-center gap-1.5">
       {locales.map((value) => {
         const active = value === locale;
         return (
@@ -45,10 +39,10 @@ export function LocaleSwitcher() {
                 await setLocale(value);
               })
             }
-            className={`rounded-pill px-2.5 py-1 text-mono-sm font-medium transition-colors duration-[var(--motion-fast)] disabled:cursor-default ${
+            className={`rounded-3 px-1.5 py-px font-mono text-[10.5px] transition-colors duration-[var(--motion-fast)] disabled:cursor-default ${
               active
-                ? "bg-surface text-ink shadow-tile-sm"
-                : "text-ink-secondary hover:text-ink"
+                ? "bg-action text-white"
+                : "border border-neutral-350 bg-surface text-ink-tertiary hover:text-ink-secondary"
             } ${isPending ? "opacity-50" : ""}`}
           >
             {LOCALE_LABEL[value]}

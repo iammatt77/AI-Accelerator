@@ -41,28 +41,45 @@ export default async function RootLayout({
       <body className="bg-app text-ink antialiased">
         <NextIntlClientProvider>
           <div className="flex min-h-dvh">
-            {/* Navigációs váz (#4): 3 valós + 3 placeholder szakasz.
-                A nyelvváltó a #3 helyén, az oldalsáv alján marad. */}
-            <aside className="flex w-56 shrink-0 flex-col border-r border-line">
-              <div className="px-5 py-6">
-                <Link href="/" className="block">
-                  <span className="block text-body font-semibold tracking-tight">
-                    {t("brandTitle")}
+            {/* ── Globális sidebar (Master ◆ SIDEBAR) ──
+                ≥1100px: kifejtett oszlop (220px, feliratokkal);
+                <1100px: 60px-es ikon-rail (a kifejtett forma kollapszáltja). */}
+            <aside className="flex w-[60px] shrink-0 flex-col items-center gap-1.5 border-r border-line-soft bg-rail py-4 min-[1100px]:hidden">
+              <Link
+                href="/"
+                title={t("brandTitle")}
+                className="mb-3 flex h-[30px] w-[30px] items-center justify-center rounded-tile bg-action font-mono text-[14px] font-bold text-white"
+              >
+                A
+              </Link>
+              <SidebarNav variant="rail" />
+            </aside>
+            <aside className="hidden w-[220px] shrink-0 flex-col border-r border-line-soft bg-surface min-[1100px]:flex">
+              <div className="px-5 pb-3 pt-5">
+                <Link href="/" className="flex items-center gap-2.5">
+                  <span className="flex h-[30px] w-[30px] items-center justify-center rounded-tile bg-action font-mono text-[14px] font-bold text-white">
+                    A
                   </span>
-                  <span className="mt-0.5 block font-mono text-mono-sm text-ink-tertiary">
-                    {t("brandSubtitle")}
+                  <span className="min-w-0">
+                    <span className="block truncate text-body font-bold tracking-tight">
+                      {t("brandTitle")}
+                    </span>
+                    <span className="block font-mono text-[10px] text-ink-tertiary">
+                      {t("brandSubtitle")}
+                    </span>
                   </span>
                 </Link>
               </div>
-              <SidebarNav />
-              <div className="mt-auto px-5 py-4">
+              <div className="px-3.5 pb-2.5 pt-2 font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-ink-tertiary">
+                {t("globalLevel")}
+              </div>
+              <SidebarNav variant="expanded" />
+              <div className="mt-auto px-4 py-4">
                 <LocaleSwitcher />
               </div>
             </aside>
 
-            <main className="min-w-0 flex-1">
-              <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
-            </main>
+            {children}
           </div>
         </NextIntlClientProvider>
       </body>

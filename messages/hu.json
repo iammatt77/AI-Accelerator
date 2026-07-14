@@ -16,7 +16,17 @@
     "clients": "Ügyfelek",
     "inbox": "Beérkező",
     "library": "Könyvtár",
-    "settings": "Beállítások"
+    "settings": "Beállítások",
+    "globalLevel": "Globális szint",
+    "inProject": "Projektben",
+    "cockpit": "Cockpit",
+    "phaseWorkspace": "Fázis-munkafelület",
+    "workbench": "Workbench",
+    "heatmap": "Heatmap",
+    "documents": "Dokumentumok",
+    "sources": "Források",
+    "lockedPhasesSuffix": "fázisok",
+    "lockedTooltip": "A fázis a megelőző kapu lezárásával nyílik meg."
   },
   "dashboard": {
     "title": "Vezérlőpult",
@@ -717,5 +727,10 @@
     },
     "aiSuggestionLabel": "AI-JAVASLAT — MEGERŐSÍTÉSRE VÁR",
     "painLinkedLabel": "Kapcsolt:"
+  },
+  "sourcesPage": {
+    "title": "Források",
+    "lead": "A projekt nyersanyagai olvasó nézetben — az új bemenet felvétele a fázis-munkafelület Input zónájában történik.",
+    "empty": "Még nincs nyersanyag — az első bemenetet a fázis-munkafelületen add meg."
   }
 }
