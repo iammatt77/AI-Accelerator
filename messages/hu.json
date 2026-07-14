@@ -250,7 +250,9 @@
     "fieldMapTitle": "MEZŐTÉRKÉP",
     "optionalShort": "opc.",
     "fieldsSectionTitle": "Mezők",
-    "versionsTitle": "Verziók"
+    "versionsTitle": "Verziók",
+    "sourcesCountLabel": "{sources} forrás · {citations} citáció a draftban",
+    "compareVersions": "Bármely két verzió összevethető · a diff overlayben nyílik."
   },
   "artifacts": {
     "status": {

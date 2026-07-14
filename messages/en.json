@@ -250,7 +250,9 @@
     "fieldMapTitle": "FIELD MAP",
     "optionalShort": "opt.",
     "fieldsSectionTitle": "Fields",
-    "versionsTitle": "Versions"
+    "versionsTitle": "Versions",
+    "sourcesCountLabel": "{sources} sources · {citations} citations in draft",
+    "compareVersions": "Compare any two versions · diff opens in overlay."
   },
   "artifacts": {
     "status": {

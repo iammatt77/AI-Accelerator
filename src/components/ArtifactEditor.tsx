@@ -38,6 +38,8 @@ export interface EditorSource {
   index: number;
   title: string;
   text: string;
+  /** Rövid dátumbélyeg a források-panelhez (v2: „Jul 9 · 12:41"). */
+  date?: string;
 }
 
 export interface EditorVersion {
@@ -106,6 +108,11 @@ export function ArtifactEditor({
   );
 
   const validIndices = new Set(sources.map((s) => s.index));
+  // v2 források-panel fejléce: „N forrás · M citáció a draftban" — az érvényes
+  // [n] jelölők száma a body-ban.
+  const citationCount = (body.match(/\[(\d+)\]/g) ?? []).filter((m) =>
+    validIndices.has(parseInt(m.slice(1, -1), 10)),
+  ).length;
 
   const jumpToSource = (n: number) => {
     setActiveSource(n);
@@ -154,10 +161,10 @@ export function ArtifactEditor({
             {t("historyLabel", { count: versions.length })}
           </span>
           {status === "approved" && (
-            // Export = segédművelet (nem döntési pont) → semleges gomb (törvény 3).
+            // v2 (locked spec): tömör lila elsődleges CTA.
             <a
               href={exportHref}
-              className="rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
+              className="rounded-control bg-action px-3.5 py-1.5 text-body font-semibold text-white shadow-action transition-colors duration-[var(--motion-base)] hover:bg-action-hover"
             >
               {t("exportPdf")}
             </a>
@@ -194,11 +201,10 @@ export function ArtifactEditor({
             <span aria-hidden>✓</span>{" "}
             {approvedDate ? t("approvedOn", { date: approvedDate }) : t("approvedTitle")}
           </span>
-          {/* Kapuhoz-navigáció (a döntés maga a kapu-fülön dől el) → semleges
-              gomb; a lila a valódi döntés-gomboknak marad (törvény 3). */}
+          {/* v2 (locked spec): tömör lila „a kapuhoz" CTA a jóváhagyott banneren. */}
           <Link
             href={phaseHref}
-            className="rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
+            className="rounded-control bg-action px-3.5 py-1.5 text-body font-semibold text-white shadow-action transition-colors duration-[var(--motion-base)] hover:bg-action-hover"
           >
             {t("goToGate")} →
           </Link>
@@ -232,10 +238,10 @@ export function ArtifactEditor({
         </div>
       )}
 
-      {/* ── Három panel ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[200px_minmax(0,1fr)_250px]">
+      {/* ── Három panel (v2: TÖMÖR lapok, nem üveg) ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[200px_minmax(0,1fr)_340px]">
         {/* FIELD MAP */}
-        <aside className="glass-tile h-fit p-3 lg:sticky lg:top-4">
+        <aside className="h-fit rounded-tile border border-line bg-neutral-50 p-3 lg:sticky lg:top-4">
           <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
             {t("fieldMapTitle")} · {filled}/{requiredCount}
           </h2>
@@ -266,28 +272,40 @@ export function ArtifactEditor({
           </ul>
         </aside>
 
-        {/* DOCUMENT: mező-szekciók + body */}
+        {/* DOCUMENT: mező-szekciók + body (v2: külön tömör lapok mezőnként) */}
         <div className="space-y-4">
           {fields.length > 0 && (
-            <section className="glass-tile space-y-2 p-4">
-              <h2 className="text-body font-semibold">{t("fieldsSectionTitle")}</h2>
-              {fields.map((f) => (
-                <div key={f.key} id={`fld-${f.key}`} className="rounded-tile">
-                  <FieldCard
-                    projectId={projectId}
-                    artifactId={artifactId}
-                    fieldKey={f.key}
-                    label={f.label}
-                    required={f.required}
-                    field={f.field}
-                    editable={editable}
-                  />
-                </div>
-              ))}
-            </section>
+            <div className="space-y-3">
+              {fields.map((f) => {
+                const emptyRequired = f.required && !f.field.value;
+                // v2: az üres kötelező mező szaggatott borostyán dobozt kap
+                // (a hiányzó feltétel a döntési ponton él).
+                return (
+                  <div
+                    key={f.key}
+                    id={`fld-${f.key}`}
+                    className={
+                      emptyRequired
+                        ? "rounded-tile border-[1.5px] border-dashed border-gate/70 bg-tint-gate/50 p-1.5"
+                        : "rounded-tile"
+                    }
+                  >
+                    <FieldCard
+                      projectId={projectId}
+                      artifactId={artifactId}
+                      fieldKey={f.key}
+                      label={f.label}
+                      required={f.required}
+                      field={f.field}
+                      editable={editable}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           )}
 
-          <section className="glass-tile p-4">
+          <section className="rounded-tile border border-line bg-surface p-4 shadow-tile-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-body font-semibold">{t("bodyTitle")}</h2>
               {editable ? (
@@ -352,12 +370,12 @@ export function ArtifactEditor({
           />
         </div>
 
-        {/* SOURCES / VERSIONS */}
-        <aside className="glass-tile h-fit p-4 lg:sticky lg:top-4">
+        {/* SOURCES / VERSIONS (v2: tömör lap, precíz fejléc) */}
+        <aside className="h-fit rounded-tile border border-line bg-neutral-50 p-4 lg:sticky lg:top-4">
           {status === "approved" ? (
             <>
               <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
-                {t("versionsTitle")}
+                {t("versionsTitle")} · {versions.length}
               </h2>
               <ul className="mt-3 space-y-1.5">
                 {versions.map((v) => (
@@ -366,12 +384,16 @@ export function ArtifactEditor({
                       href={`/project/${projectId}/artifact/${v.id}`}
                       className={`flex items-center justify-between gap-2 rounded-tile border px-3 py-2 text-body transition-colors duration-[var(--motion-base)] ${
                         v.current
-                          ? "border-done/40 bg-tint-done"
+                          ? "border-done/50 bg-tint-done"
                           : "border-line bg-surface hover:bg-sunken"
                       }`}
                     >
                       <span className="min-w-0">
-                        <span className="font-mono text-mono-sm text-ink-secondary">
+                        <span
+                          className={`font-mono text-mono-sm ${
+                            v.current ? "font-bold text-done" : "text-ink-secondary"
+                          }`}
+                        >
                           v{v.version}
                         </span>{" "}
                         {v.label}
@@ -381,38 +403,57 @@ export function ArtifactEditor({
                   </li>
                 ))}
               </ul>
+              <p className="mt-3 text-mono-sm leading-snug text-ink-tertiary">
+                {t("compareVersions")}
+              </p>
             </>
           ) : (
             <>
               <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
-                {t("sourcesTitle")} · {sources.length}
+                {t("sourcesCountLabel", { sources: sources.length, citations: citationCount })}
               </h2>
               {sources.length === 0 ? (
                 <p className="mt-2 text-body text-ink-tertiary">{t("noSources")}</p>
               ) : (
-                <ul className="mt-3 space-y-3">
-                  {sources.map((source) => (
-                    <li
-                      key={source.index}
-                      ref={(el) => {
-                        if (el) sourceRefs.current.set(source.index, el);
-                        else sourceRefs.current.delete(source.index);
-                      }}
-                      className={`card-sunken p-3 transition-shadow duration-[var(--motion-base)] ${
-                        activeSource === source.index ? "ring-2 ring-active" : ""
-                      }`}
-                    >
-                      <div className="mb-1 flex items-center gap-2 text-mono-sm text-ink-tertiary">
-                        <span className="rounded-pill border border-line bg-surface px-1.5 font-mono text-pivot">
-                          [{source.index}]
-                        </span>
-                        {source.title}
-                      </div>
-                      <pre className="whitespace-pre-wrap font-sans text-body">
-                        {source.text}
-                      </pre>
-                    </li>
-                  ))}
+                <ul className="mt-3 space-y-2.5">
+                  {sources.map((source) => {
+                    const cited = activeSource === source.index;
+                    return (
+                      <li
+                        key={source.index}
+                        ref={(el) => {
+                          if (el) sourceRefs.current.set(source.index, el);
+                          else sourceRefs.current.delete(source.index);
+                        }}
+                        className={`rounded-tile bg-surface p-3 transition-shadow duration-[var(--motion-base)] ${
+                          cited ? "border-[1.5px] border-pivot shadow-tile-sm" : "border border-line"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="shrink-0 font-mono text-mono-sm font-bold text-pivot">
+                            [{source.index}]
+                          </span>
+                          <span className="min-w-0 flex-1 text-body font-semibold leading-snug">
+                            {source.title}
+                          </span>
+                          {source.date && (
+                            <span className="shrink-0 font-mono text-mono-sm text-ink-tertiary">
+                              {source.date}
+                            </span>
+                          )}
+                        </div>
+                        {cited ? (
+                          <p className="mt-1.5 whitespace-pre-wrap text-body italic text-ink-secondary">
+                            {`„${source.text}”`}
+                          </p>
+                        ) : (
+                          <p className="mt-1 line-clamp-2 text-mono-sm text-ink-secondary">
+                            {source.text}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </>

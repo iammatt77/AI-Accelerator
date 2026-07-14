@@ -50,6 +50,14 @@ export default async function ArtifactEditorPage({
   // mező-panel nélkül, olvasó/szerkesztő body-val renderel.
   const typeDef = getTypeDef(artifact.type);
 
+  // Rövid dátumbélyeg a v2 források-panelhez („9 Jul" stílus, tz-biztos).
+  const srcDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-GB", {
+      timeZone: "Europe/Budapest",
+      day: "numeric",
+      month: "short",
+    });
+
   // Számozott források: az artefaktumon rögzített sorrend (source_input_ids);
   // ha üres, a projekt összes bemenete a stabil (created_at, id) sorrendben.
   let sources: EditorSource[] = [];
@@ -60,9 +68,11 @@ export default async function ArtifactEditorPage({
       .in("id", artifact.source_input_ids);
     const byId = new Map(((data ?? []) as InputItemRow[]).map((r) => [r.id, r]));
     sources = artifact.source_input_ids
-      .map((sid, i) => {
+      .map((sid, i): EditorSource | null => {
         const row = byId.get(sid);
-        return row ? { index: i + 1, title: row.type, text: row.raw_text } : null;
+        return row
+          ? { index: i + 1, title: row.type, text: row.raw_text, date: srcDate(row.created_at) }
+          : null;
       })
       .filter((s): s is EditorSource => s !== null);
   } else {
@@ -76,6 +86,7 @@ export default async function ArtifactEditorPage({
       index: i + 1,
       title: row.type,
       text: row.raw_text,
+      date: srcDate(row.created_at),
     }));
   }
 
