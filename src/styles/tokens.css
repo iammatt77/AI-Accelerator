@@ -25,7 +25,7 @@
   --surface-sunken: #f4f5f9;
 
   --ink-primary: #23262f;
-  --ink-secondary: #5a5f70; /* származtatott */
+  --ink-secondary: #55596b; /* származtatott (redesign #1: finomítva) */
   --ink-tertiary: #8b90a3; /* csak meta-szöveg */
 
   --border-subtle: #e2e4ec;
@@ -33,6 +33,7 @@
 
   --action-primary: #8458b3; /* lila — csak döntési pontokon */
   --action-hover: #9b6bce;
+  --action-deep: #7a4fb0; /* a lila mélyebb tónusa (aktív/gradiens-alsó, gombok) */
   --action-light: #d0bdf4;
   --info-sky: #a0d2eb;
 
@@ -42,6 +43,27 @@
   --status-pivot: #2e77a8;
   --status-error: #c0455a;
   --status-locked: #8b90a3;
+
+  /* ── SEMLEGES-LÉPCSŐ (redesign #1) ──
+   * A rétegződéshez — ez adja a „nem fapados" mélységet: kilenc árnyalat
+   * a legvilágosabb csempe-fátyoltól a közepes szürkéig. */
+  --neutral-50: #fbfbfd;
+  --neutral-100: #eef0f5;
+  --neutral-150: #edeef3;
+  --neutral-200: #e7e9f0;
+  --neutral-300: #dadce5;
+  --neutral-350: #d3d6e0;
+  --neutral-400: #c7cad6;
+  --neutral-450: #b4b8c6;
+  --neutral-500: #a9aebd;
+
+  /* ── STÁTUSZ-SZÍNEZETT FÁTYOL-RECEPTEK (redesign #1) ──
+   * Halvány háttér jelvényekhez/csempékhez — a státusz-szín ~12%-a. */
+  --tint-action: rgba(132, 88, 179, 0.12);
+  --tint-gate: rgba(180, 128, 30, 0.12);
+  --tint-pivot: rgba(46, 119, 168, 0.12);
+  --tint-sky: rgba(160, 210, 235, 0.24);
+  --tint-done: rgba(62, 158, 110, 0.12);
 
   /* ── TIPÓ ──
    * display: Hanken Grotesk 34/800 · title: 18/600 · body: 14/400 lh 1.55
@@ -75,9 +97,12 @@
 
   /* ── RADIUS („angular": szögletes alap) ── */
   --radius-control: 2px;
+  --radius-3: 3px;
   --radius-tile: 4px;
+  --radius-5: 5px;
   --radius-shell: 6px;
   --radius-pill: 999px;
+  --radius-tab-top: 4px 4px 0 0; /* zone-tabs fül-tetők (redesign #1) */
 
   /* ── MOZGÁS ── */
   --motion-fast: 120ms;
@@ -97,4 +122,7 @@
   --shadow-action: 0 3px 8px rgba(132, 88, 179, 0.4);
   --shadow-action-hover: 0 6px 16px rgba(132, 88, 179, 0.32);
   --edge-top: inset 0 1px 0 var(--edge-highlight);
+  /* Emelt árnyék a fókusz-módhoz / modalhoz (redesign #1) */
+  --shadow-focus-lift: 0 24px 70px rgba(73, 77, 95, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }

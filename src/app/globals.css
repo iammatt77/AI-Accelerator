@@ -29,6 +29,25 @@
   --color-danger: var(--status-error);
   --color-locked: var(--status-locked);
   --color-white: #ffffff;
+  --color-action-deep: var(--action-deep);
+
+  /* semleges-lépcső (redesign #1) — pl. bg-neutral-100, border-neutral-300 */
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-150: var(--neutral-150);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-350: var(--neutral-350);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-450: var(--neutral-450);
+  --color-neutral-500: var(--neutral-500);
+
+  /* státusz-fátyol tintek (redesign #1) — pl. bg-tint-action */
+  --color-tint-action: var(--tint-action);
+  --color-tint-gate: var(--tint-gate);
+  --color-tint-pivot: var(--tint-pivot);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-done: var(--tint-done);
 
   /* fontok */
   --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
@@ -55,16 +74,20 @@
   /* radius → rounded-control / rounded-tile / rounded-shell / rounded-pill */
   --radius-*: initial;
   --radius-control: var(--radius-control);
+  --radius-3: var(--radius-3);
   --radius-tile: var(--radius-tile);
+  --radius-5: var(--radius-5);
   --radius-shell: var(--radius-shell);
   --radius-pill: var(--radius-pill);
+  --radius-tab-top: var(--radius-tab-top);
 
-  /* árnyék → shadow-tile / shadow-tile-sm / shadow-action */
+  /* árnyék → shadow-tile / shadow-tile-sm / shadow-action / shadow-focus-lift */
   --shadow-*: initial;
   --shadow-tile: var(--shadow-tile);
   --shadow-tile-sm: var(--shadow-tile-sm);
   --shadow-action: var(--shadow-action);
   --shadow-action-hover: var(--shadow-action-hover);
+  --shadow-focus-lift: var(--shadow-focus-lift);
 }
 
 /* ── Alap ── */
