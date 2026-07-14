@@ -43,6 +43,7 @@ export function StatusChain({
   isHead,
   missingRequiredLabels,
   unconfirmedLabels,
+  hideWarnings,
 }: {
   projectId: string;
   artifactId: string;
@@ -51,6 +52,9 @@ export function StatusChain({
   isHead: boolean;
   missingRequiredLabels: string[];
   unconfirmedLabels: string[];
+  /** Redesign #1: az editor a blokkoló-sávban mutatja a hiányzókat, így itt
+   *  a figyelmeztető-blokkok elrejthetők (a gomb + megerősítés marad). */
+  hideWarnings?: boolean;
 }) {
   const t = useTranslations("chain");
   const router = useRouter();
@@ -100,7 +104,7 @@ export function StatusChain({
       {status === "in_review" && (
         <div className="mt-3 space-y-3">
           {/* Poka-yoke előjelzés: hiányzó kötelezők (a szerver keményen blokkol) */}
-          {missingRequiredLabels.length > 0 && (
+          {!hideWarnings && missingRequiredLabels.length > 0 && (
             <div
               role="alert"
               className="rounded-tile border border-danger/40 bg-danger/10 px-3 py-2 text-body text-danger"
@@ -110,7 +114,7 @@ export function StatusChain({
             </div>
           )}
           {/* Borostyán figyelmeztetés: nem megerősített mezők (NEM blokkol) */}
-          {unconfirmedLabels.length > 0 && (
+          {!hideWarnings && unconfirmedLabels.length > 0 && (
             <div className="rounded-tile border border-gate/50 bg-surface px-3 py-2 text-body text-gate">
               <p className="font-medium">{t("unconfirmedWarnTitle")}</p>
               <p className="mt-0.5">{unconfirmedLabels.join(", ")}</p>

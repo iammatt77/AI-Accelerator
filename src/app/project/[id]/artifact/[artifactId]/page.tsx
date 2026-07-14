@@ -9,13 +9,12 @@ import {
   parseArtifactFields,
   unconfirmedFields,
 } from "@/lib/artifacts/config";
-import { StatusChain } from "@/components/StatusChain";
 import {
   ArtifactEditor,
   type EditorField,
   type EditorSource,
+  type EditorVersion,
 } from "@/components/ArtifactEditor";
-import { StatusPill } from "@/components/StatusPill";
 import type { ArtifactRow, InputItemRow, ProjectRow } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
@@ -93,18 +92,31 @@ export default async function ArtifactEditorPage({
     ? tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""))
     : artifact.type;
 
-  // Fej-verzió-e: „Új verzió" csak a legfrissebbből indulhat (elágazás-tilalom).
-  const { data: headData } = await supabase
+  // Minden verzió (a jobb-oldali VERSIONS-sávhoz + a fej-verzió eldöntéséhez).
+  const { data: versionData } = await supabase
     .from("artifacts")
-    .select("version")
+    .select("id, version, status, updated_at")
     .eq("project_id", id)
     .eq("type", artifact.type)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const isHead =
-    ((headData as { version?: number } | null)?.version ?? artifact.version) ===
-    artifact.version;
+    .order("version", { ascending: false });
+  const versionRows = (versionData ?? []) as Pick<
+    ArtifactRow,
+    "id" | "version" | "status" | "updated_at"
+  >[];
+  const headVersion = versionRows[0]?.version ?? artifact.version;
+  const isHead = headVersion === artifact.version;
+  const editorVersions: EditorVersion[] = versionRows.map((v) => ({
+    id: v.id,
+    version: v.version,
+    status: v.status,
+    statusLabel: tArtifacts(`status.${v.status}`),
+    label: new Date(v.updated_at).toLocaleDateString(dateLocale, {
+      timeZone: "Europe/Budapest",
+      month: "short",
+      day: "numeric",
+    }),
+    current: v.id === artifact.id,
+  }));
 
   const parsedFields = typeDef ? parseArtifactFields(typeDef, artifact.fields) : null;
   const editorFields: EditorField[] =
@@ -113,9 +125,7 @@ export default async function ArtifactEditorPage({
           key: fieldDef.key,
           label: tFields(fieldDef.labelKey.replace(/^fields\./, "")),
           required: fieldDef.required,
-          value: parsedFields[fieldDef.key].value,
-          state: parsedFields[fieldDef.key].state,
-          sourceIndices: parsedFields[fieldDef.key].source_indices,
+          field: parsedFields[fieldDef.key],
         }))
       : [];
   const done =
@@ -137,45 +147,28 @@ export default async function ArtifactEditorPage({
     : `/project/${id}`;
 
   return (
-    <div className="space-y-6">
-      {/* Fejléc */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link
-            href={backHref}
-            className="text-mono-sm text-ink-tertiary hover:text-ink-secondary hover:underline"
-          >
-            ← {project.name}
-            {typeDef ? ` · ${typeDef.phase}` : ""}
-          </Link>
-          <h1 className="mt-1 flex flex-wrap items-center gap-2 text-title">
-            {typeName}
-            <span className="font-mono text-body text-ink-tertiary">
-              v{artifact.version}
-            </span>
-            <StatusPill
-              variant={artifact.status}
-              label={tArtifacts(`status.${artifact.status}`)}
-            />
-          </h1>
-          <p className="mt-0.5 text-mono-sm text-ink-tertiary">
-            {tEditor("updatedAt", {
-              date: new Date(artifact.updated_at ?? artifact.created_at).toLocaleString(
-                dateLocale,
-                { timeZone: "Europe/Budapest" },
-              ),
-            })}
-          </p>
-        </div>
-        {/* Export az approved olvasó-nézetből (#5b) — az őr a szerveren él */}
-        {artifact.status === "approved" && (
-          <a
-            href={`/project/${id}/artifact/${artifact.id}/export`}
-            className="rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
-          >
-            {tHub("exportCta")}
-          </a>
-        )}
+    <div className="space-y-4">
+      {/* Fejléc — dokumentum-identitás (a státusz-folyam a szerkesztőben) */}
+      <div>
+        <Link
+          href={backHref}
+          className="text-mono-sm text-ink-tertiary hover:text-ink-secondary hover:underline"
+        >
+          ← {project.name}
+          {typeDef ? ` · ${typeDef.phase} · ${tHub("documentsShort")}` : ""}
+        </Link>
+        <h1 className="mt-1 flex flex-wrap items-baseline gap-2 text-title">
+          {typeName}
+          <span className="font-mono text-body text-ink-tertiary">v{artifact.version}</span>
+        </h1>
+        <p className="mt-0.5 text-mono-sm text-ink-tertiary">
+          {tEditor("updatedAt", {
+            date: new Date(artifact.updated_at ?? artifact.created_at).toLocaleString(
+              dateLocale,
+              { timeZone: "Europe/Budapest" },
+            ),
+          })}
+        </p>
       </div>
 
       {!typeDef && (
@@ -184,26 +177,32 @@ export default async function ArtifactEditorPage({
         </p>
       )}
 
-      {/* Státusz-lánc: Draft → In review → Approved (+ Új verzió) */}
-      <StatusChain
+      {/* Redesign #1: három-panel szerkesztő (FIELD MAP · dokumentum · SOURCES/
+          VERSIONS) + státusz-folyam + blokkoló-sáv. A funkció változatlan. */}
+      <ArtifactEditor
         projectId={id}
         artifactId={artifact.id}
         status={artifact.status}
         isHead={isHead}
-        missingRequiredLabels={missingRequiredLabels}
-        unconfirmedLabels={unconfirmedLabels}
-      />
-
-      {/* Split-view (1f) */}
-      <ArtifactEditor
-        projectId={id}
-        artifactId={artifact.id}
         fields={editorFields}
         filled={done.filled}
         requiredCount={done.required}
         body={artifact.body}
         editable={artifact.status === "draft"}
         sources={sources}
+        missingRequiredLabels={missingRequiredLabels}
+        unconfirmedLabels={unconfirmedLabels}
+        versions={editorVersions}
+        approvedDate={
+          artifact.status === "approved"
+            ? new Date(artifact.updated_at ?? artifact.created_at).toLocaleDateString(
+                dateLocale,
+                { timeZone: "Europe/Budapest" },
+              )
+            : null
+        }
+        phaseHref={backHref}
+        exportHref={`/project/${id}/artifact/${artifact.id}/export`}
       />
     </div>
   );

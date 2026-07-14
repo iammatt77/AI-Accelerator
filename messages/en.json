@@ -220,7 +220,8 @@
     "exportCta": "Export (.md)",
     "completenessUnknown": "completeness: —",
     "adhocSection": "Other — no phase (types outside the config)",
-    "emptyPhase": "No deliverable type is defined for this phase yet — later packages will fill it."
+    "emptyPhase": "No deliverable type is defined for this phase yet — later packages will fill it.",
+    "documentsShort": "documents"
   },
   "editor": {
     "fieldPanelTitle": "Fields",
@@ -238,7 +239,18 @@
     "sourcesTitle": "Numbered sources",
     "noSources": "No sources recorded for this artifact.",
     "updatedAt": "Last saved: {date}",
-    "noTypeDef": "No type definition for this type ({type}) — the field panel is unavailable; the body stays readable/editable."
+    "noTypeDef": "No type definition for this type ({type}) — the field panel is unavailable; the body stays readable/editable.",
+    "historyLabel": "History · {count} versions",
+    "exportPdf": "Export PDF",
+    "blockedTitle": "Approval blocked: {count} required fields are empty",
+    "jumpTo": "jump to {field}",
+    "approvedTitle": "Approved",
+    "approvedOn": "Approved {date} · the gate is ready to close",
+    "goToGate": "Go to the gate",
+    "fieldMapTitle": "FIELD MAP",
+    "optionalShort": "opt.",
+    "fieldsSectionTitle": "Fields",
+    "versionsTitle": "Versions"
   },
   "artifacts": {
     "status": {
