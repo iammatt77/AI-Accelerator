@@ -277,9 +277,10 @@ export function ArtifactEditor({
           {fields.length > 0 && (
             <div className="space-y-3">
               {fields.map((f) => {
-                const emptyRequired = f.required && !f.field.value;
-                // v2: az üres kötelező mező szaggatott borostyán dobozt kap
-                // (a hiányzó feltétel a döntési ponton él).
+                // v2: az üres kötelező mező szaggatott borostyán dobozt kap —
+                // de CSAK draftban (ott tölthető ki); read-only nézetben nem
+                // sugallja tévesen a kitöltést (a mezőtérkép jelzi az ürességet).
+                const emptyRequired = editable && f.required && !f.field.value;
                 return (
                   <div
                     key={f.key}
