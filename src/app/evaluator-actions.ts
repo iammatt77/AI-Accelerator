@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import {
   AI_ACT_QUESTIONS,
+  NOTE_MAX_LENGTH,
   READINESS_DIMENSIONS,
   SUITABILITY_CRITERIA,
   isAiActWarnCategory,
@@ -58,9 +59,17 @@ async function saveEvaluator(
   return { error: null };
 }
 
-function optionalNote(raw: FormDataEntryValue | null): string | null {
+// Jegyzet-méretkorlát (review-lelet): a server action közvetlenül is
+// hívható — a korlát nélküli note a jsonb-t és minden workspace-render
+// payloadját felfújná. A konstans a tiszta lib-ben él ("use server" fájl
+// csak async függvényt exportálhat); a textarea maxLength kényelmi tükör.
+function optionalNote(
+  raw: FormDataEntryValue | null,
+): string | null | "too_long" {
   const value = String(raw ?? "").trim();
-  return value === "" ? null : value;
+  if (value === "") return null;
+  if (value.length > NOTE_MAX_LENGTH) return "too_long";
+  return value;
 }
 
 // ── 3a. AI-alkalmassági szűrő (kézikönyv 3.2) ────────────────
@@ -86,6 +95,9 @@ export async function saveAiSuitabilityAction(
     criteria[key] = raw as SuitabilityAnswer;
   }
   const note = optionalNote(formData.get("note"));
+  if (note === "too_long") {
+    return { ok: false, error: tErrors("noteTooLong"), nonce };
+  }
 
   const supabase = createServiceSupabaseClient();
   const result = await saveEvaluator(supabase, projectId, useCaseId, "ai_suitability", {
@@ -125,6 +137,9 @@ export async function saveDataReadinessAction(
     dimensions[key] = raw as ReadinessGrade;
   }
   const note = optionalNote(formData.get("note"));
+  if (note === "too_long") {
+    return { ok: false, error: tErrors("noteTooLong"), nonce };
+  }
   const readiness: DataReadiness = { dimensions, note };
   // A spec tárolt alakja a levelt is tartalmazza; olvasáskor ÚJRA számoljuk
   // (a szabály a kód, nem a tárolt érték) — l. lib/entities/evaluators.
@@ -177,6 +192,9 @@ export async function saveAiActAction(
   const confirmed_category = (confirmedRaw || null) as AiActCategory | null;
 
   const note = optionalNote(formData.get("note"));
+  if (note === "too_long") {
+    return { ok: false, error: tErrors("noteTooLong"), nonce };
+  }
   // Poka-yoke (spec F3): tiltott vagy nagy kockázatú JAVASLATNÁL (és
   // megerősítésnél) a megjegyzés KÖTELEZŐ — auto-kizárás viszont NINCS,
   // a döntés az emberé.

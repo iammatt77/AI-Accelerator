@@ -11,6 +11,7 @@ import {
 } from "@/app/evaluator-actions";
 import {
   AI_ACT_QUESTIONS,
+  NOTE_MAX_LENGTH,
   READINESS_DIMENSIONS,
   SUITABILITY_CRITERIA,
   isAiActWarnCategory,
@@ -247,6 +248,7 @@ export function AiSuitabilityPanel({
           key={`n${state.nonce ?? 0}`}
           name="note"
           rows={2}
+          maxLength={NOTE_MAX_LENGTH}
           defaultValue={current?.note ?? ""}
           placeholder={t("noteOptional")}
           className={noteClass}
@@ -303,6 +305,7 @@ export function DataReadinessPanel({
           key={`n${state.nonce ?? 0}`}
           name="note"
           rows={2}
+          maxLength={NOTE_MAX_LENGTH}
           defaultValue={current?.note ?? ""}
           placeholder={t("noteOptional")}
           className={noteClass}
@@ -404,6 +407,7 @@ export function AiActPanel({
           key={`n${state.nonce ?? 0}`}
           name="note"
           rows={2}
+          maxLength={NOTE_MAX_LENGTH}
           defaultValue={state.values?.fieldValue ?? current?.note ?? ""}
           placeholder={warn ? t("noteRequired") : t("noteOptional")}
           className={noteClass}

@@ -313,7 +313,8 @@
     "levelInvalid": "A súlyosság/kockázat értéke csak alacsony, közepes vagy magas lehet.",
     "entitySourcedNoExtract": "Ez a dokumentum entitás-forrású — a mezőit a megerősített use case-ekből tölti a „Shortlist-dokumentum az entitásokból” akció, a szabad-szöveges kivonatolás rá nem futtatható.",
     "evaluatorInvalid": "Érvénytelen értékelő-érték — frissítsd az oldalt és próbáld újra.",
-    "aiActNoteRequired": "Tiltott vagy nagy kockázatú besorolásnál a megjegyzés kötelező."
+    "aiActNoteRequired": "Tiltott vagy nagy kockázatú besorolásnál a megjegyzés kötelező.",
+    "noteTooLong": "A jegyzet legfeljebb 2000 karakter lehet."
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet a Projektek oldalon.",

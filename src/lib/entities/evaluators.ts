@@ -8,6 +8,10 @@
 // szótárban élnek, itt a kulcsok és a szabályok.
 // ─────────────────────────────────────────────────────────────
 
+/** Jegyzet-méretkorlát az értékelő note-mezőin (a mentő action kényszeríti
+ *  ki; a textarea maxLength kényelmi tükör). */
+export const NOTE_MAX_LENGTH = 2000;
+
 // ── 3a. AI-alkalmassági szűrő (kézikönyv 3.2) ────────────────
 
 export const SUITABILITY_CRITERIA = ["c1", "c2", "c3", "c4", "c5"] as const;
@@ -41,11 +45,13 @@ export function parseAiSuitability(raw: unknown): AiSuitability | null {
       criteria[key] = value as SuitabilityAnswer;
     }
   }
-  if (Object.keys(criteria).length === 0) return null;
-  return {
-    criteria,
-    note: typeof obj.note === "string" && obj.note.trim() !== "" ? obj.note : null,
-  };
+  const note =
+    typeof obj.note === "string" && obj.note.trim() !== "" ? obj.note : null;
+  // A csak-jegyzet mentés is ÉRVÉNYES tartalom (review-lelet): ha a note
+  // megvan, az objektum nem eshet null-ra — különben a jegyzet a UI-ról
+  // eltűnne, és a következő mentés üresre írná.
+  if (Object.keys(criteria).length === 0 && !note) return null;
+  return { criteria, note };
 }
 
 export function suitabilityVerdict(
@@ -94,11 +100,11 @@ export function parseDataReadiness(raw: unknown): DataReadiness | null {
       dimensions[key] = value as ReadinessGrade;
     }
   }
-  if (Object.keys(dimensions).length === 0) return null;
-  return {
-    dimensions,
-    note: typeof obj.note === "string" && obj.note.trim() !== "" ? obj.note : null,
-  };
+  const note =
+    typeof obj.note === "string" && obj.note.trim() !== "" ? obj.note : null;
+  // Csak-jegyzet tartalom is megmarad (l. parseAiSuitability kommentje).
+  if (Object.keys(dimensions).length === 0 && !note) return null;
+  return { dimensions, note };
 }
 
 /** A LEGGYENGÉBB dimenzió dominál (láncszem-elv): bármely gyenge → low ·

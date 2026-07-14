@@ -313,7 +313,8 @@
     "levelInvalid": "Severity/risk must be one of low, medium or high.",
     "entitySourcedNoExtract": "This document is entity-sourced — its fields are filled from the confirmed use cases by the “Shortlist document from entities” action; free-text extraction cannot run on it.",
     "evaluatorInvalid": "Invalid assessment value — refresh the page and try again.",
-    "aiActNoteRequired": "A note is required for a prohibited or high-risk classification."
+    "aiActNoteRequired": "A note is required for a prohibited or high-risk classification.",
+    "noteTooLong": "The note can be at most 2000 characters."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",
