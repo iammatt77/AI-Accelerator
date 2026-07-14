@@ -62,6 +62,9 @@
   --color-tint-done-border: var(--tint-done-border);
   --color-tint-done-chip: var(--tint-done-chip);
   --color-tint-error: var(--tint-error);
+  --color-tint-error-border: var(--tint-error-border);
+  --color-accent-box: var(--accent-box);
+  --color-accent-box-border: var(--accent-box-border);
 
   /* fontok */
   --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;

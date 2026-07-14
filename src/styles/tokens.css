@@ -72,6 +72,9 @@
   --tint-done-border: #bfe0cc;
   --tint-done-chip: #e4f1ea; /* zöld mini-tag */
   --tint-error: #fbecef; /* piros jelvény-háttér */
+  --tint-error-border: #e9d2d6;
+  --accent-box: #fbf5ff; /* lila blokk-doboz háttér (kártyán) */
+  --accent-box-border: #e3d3f5;
 
   /* ── TIPÓ ──
    * display: Hanken Grotesk 34/800 · title: 19/700 · body: 13.5/400
