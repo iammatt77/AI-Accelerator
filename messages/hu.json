@@ -311,7 +311,9 @@
     "scoreInvalid": "A pontszám 1 és 5 közötti egész szám lehet.",
     "noShortlistedUseCase": "Nincs megerősített use case a shortlisten — előbb erősíts meg és tegyél shortlistre legalább egyet. Üres dokumentum nem készül.",
     "levelInvalid": "A súlyosság/kockázat értéke csak alacsony, közepes vagy magas lehet.",
-    "entitySourcedNoExtract": "Ez a dokumentum entitás-forrású — a mezőit a megerősített use case-ekből tölti a „Shortlist-dokumentum az entitásokból” akció, a szabad-szöveges kivonatolás rá nem futtatható."
+    "entitySourcedNoExtract": "Ez a dokumentum entitás-forrású — a mezőit a megerősített use case-ekből tölti a „Shortlist-dokumentum az entitásokból” akció, a szabad-szöveges kivonatolás rá nem futtatható.",
+    "evaluatorInvalid": "Érvénytelen értékelő-érték — frissítsd az oldalt és próbáld újra.",
+    "aiActNoteRequired": "Tiltott vagy nagy kockázatú besorolásnál a megjegyzés kötelező."
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet a Projektek oldalon.",
@@ -560,6 +562,75 @@
       "legendRiskMedium": "közepes kockázat",
       "legendRiskHigh": "magas kockázat",
       "aiActWarn": "AI Act figyelmeztetés"
+    },
+    "evaluators": {
+      "suitabilityTitle": "AI-alkalmassági szűrő",
+      "suitabilityLead": "Az 5 kanonikus kritérium (kézikönyv 3.2) — akkor jó GenAI-jelölt, ha ezek teljesülnek.",
+      "criteria": {
+        "c1": "Nyelvi/szöveges vagy tudás-jellegű a tevékenység",
+        "c2": "Ismétlődő és nagy volumenű",
+        "c3": "A hibája tolerálható vagy az output olcsón ellenőrizhető",
+        "c4": "Az inputadat elérhető és jogilag használható",
+        "c5": "A szabályozási kockázata kezdetben alacsony (back-office előbb, ügyfél-érintett később)"
+      },
+      "answer": {
+        "unset": "—",
+        "yes": "igen",
+        "partial": "részben",
+        "no": "nem"
+      },
+      "verdict": {
+        "strong": "erős jelölt",
+        "suitable": "alkalmas",
+        "conditional": "feltételes — a nem-ek címzendők",
+        "incomplete": "részleges kitöltés"
+      },
+      "suitabilityNone": "alkalmasság: nincs értékelve",
+      "readinessTitle": "Adatérettség mini-értékelő",
+      "readinessLead": "4 dimenzió, 3 fokozat — a leggyengébb dimenzió dominál (láncszem-elv).",
+      "dimensions": {
+        "availability": "Elérhetőség (megvan-e az adat)",
+        "quality": "Minőség (megbízható-e)",
+        "legal": "Jogi használhatóság (szabad-e felhasználni)",
+        "access": "Hozzáférés/formátum (géppel feldolgozható-e)"
+      },
+      "grade": {
+        "weak": "gyenge",
+        "partial": "részleges",
+        "strong": "erős"
+      },
+      "readinessLevel": {
+        "low": "alacsony adatérettség",
+        "medium": "közepes adatérettség",
+        "high": "magas adatérettség"
+      },
+      "readinessNone": "adatérettség: nincs értékelve",
+      "aiActTitle": "AI Act gyorsbesoroló",
+      "aiActLead": "Vezetett kérdések, amelyek JAVASLATOT adnak — a besorolást te erősíted meg.",
+      "questions": {
+        "annex3": "Érint-e Annex III területet (pl. hitelbírálat, HR-toborzás/-értékelés, alapvető szolgáltatáshoz való hozzáférés)?",
+        "interacts": "Interakcióba lép-e a rendszer közvetlenül emberekkel, vagy generál-e kifelé menő AI-tartalmat?",
+        "prohibited": "Tartalmaz-e tiltott gyakorlatot (social scoring, manipulatív technika, érzelem-felismerés munkahelyen/oktatásban)?"
+      },
+      "category": {
+        "prohibited": "tiltott",
+        "high_risk": "nagy kockázatú",
+        "transparency": "átláthatósági kötelezettség",
+        "minimal": "minimális"
+      },
+      "suggestedLabel": "Javasolt besorolás:",
+      "suggestedBadge": "AI Act javaslat: {category}",
+      "confirmedLabel": "Megerősített besorolás",
+      "confirmUnset": "— még nincs megerősítve",
+      "warnNotice": "Tiltott vagy nagy kockázatú javaslat — a megjegyzés kötelező. Automatikus kizárás nincs: a döntés a tiéd.",
+      "disclaimer": "Besorolás-segítő, nem jogi tanács.",
+      "omnibusInfo": "Info: a high-risk kötelezettségek a Digital Omnibus szerint 2027-12-02-től alkalmazandók.",
+      "aiActNone": "AI Act: nincs besorolva",
+      "noteOptional": "Jegyzet (opcionális)",
+      "noteRequired": "Megjegyzés (kötelező a tiltott / nagy kockázatú besorolásnál)",
+      "saveCta": "Értékelés mentése",
+      "saving": "Mentés…",
+      "saved": "Értékelés elmentve."
     }
   }
 }

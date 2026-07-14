@@ -311,7 +311,9 @@
     "scoreInvalid": "Scores must be whole numbers between 1 and 5.",
     "noShortlistedUseCase": "There is no confirmed use case on the shortlist — confirm and shortlist at least one first. An empty document is not created.",
     "levelInvalid": "Severity/risk must be one of low, medium or high.",
-    "entitySourcedNoExtract": "This document is entity-sourced — its fields are filled from the confirmed use cases by the “Shortlist document from entities” action; free-text extraction cannot run on it."
+    "entitySourcedNoExtract": "This document is entity-sourced — its fields are filled from the confirmed use cases by the “Shortlist document from entities” action; free-text extraction cannot run on it.",
+    "evaluatorInvalid": "Invalid assessment value — refresh the page and try again.",
+    "aiActNoteRequired": "A note is required for a prohibited or high-risk classification."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",
@@ -560,6 +562,75 @@
       "legendRiskMedium": "medium risk",
       "legendRiskHigh": "high risk",
       "aiActWarn": "AI Act warning"
+    },
+    "evaluators": {
+      "suitabilityTitle": "AI suitability filter",
+      "suitabilityLead": "The 5 canonical criteria (handbook 3.2) — a good GenAI candidate meets these.",
+      "criteria": {
+        "c1": "The activity is language/text-based or knowledge work",
+        "c2": "Repetitive and high-volume",
+        "c3": "Errors are tolerable or the output is cheap to verify",
+        "c4": "The input data is available and legally usable",
+        "c5": "Regulatory risk is low initially (back-office first, customer-facing later)"
+      },
+      "answer": {
+        "unset": "—",
+        "yes": "yes",
+        "partial": "partially",
+        "no": "no"
+      },
+      "verdict": {
+        "strong": "strong candidate",
+        "suitable": "suitable",
+        "conditional": "conditional — address the no-s",
+        "incomplete": "partially filled"
+      },
+      "suitabilityNone": "suitability: not evaluated",
+      "readinessTitle": "Data readiness mini-assessment",
+      "readinessLead": "4 dimensions, 3 grades — the weakest dimension dominates (weakest-link rule).",
+      "dimensions": {
+        "availability": "Availability (does the data exist)",
+        "quality": "Quality (is it reliable)",
+        "legal": "Legal usability (may it be used)",
+        "access": "Access/format (machine-processable)"
+      },
+      "grade": {
+        "weak": "weak",
+        "partial": "partial",
+        "strong": "strong"
+      },
+      "readinessLevel": {
+        "low": "low data readiness",
+        "medium": "medium data readiness",
+        "high": "high data readiness"
+      },
+      "readinessNone": "data readiness: not evaluated",
+      "aiActTitle": "AI Act quick classifier",
+      "aiActLead": "Guided questions produce a SUGGESTION — you confirm the classification.",
+      "questions": {
+        "annex3": "Does it touch an Annex III area (e.g. creditworthiness, HR recruitment/evaluation, access to essential services)?",
+        "interacts": "Does the system interact directly with people, or generate outbound AI content?",
+        "prohibited": "Does it involve a prohibited practice (social scoring, manipulative techniques, emotion recognition at work/in education)?"
+      },
+      "category": {
+        "prohibited": "prohibited",
+        "high_risk": "high-risk",
+        "transparency": "transparency obligation",
+        "minimal": "minimal"
+      },
+      "suggestedLabel": "Suggested classification:",
+      "suggestedBadge": "AI Act suggestion: {category}",
+      "confirmedLabel": "Confirmed classification",
+      "confirmUnset": "— not confirmed yet",
+      "warnNotice": "Prohibited or high-risk suggestion — a note is required. There is no automatic exclusion: the decision is yours.",
+      "disclaimer": "Classification aid, not legal advice.",
+      "omnibusInfo": "Info: high-risk obligations apply from 2027-12-02 under the Digital Omnibus.",
+      "aiActNone": "AI Act: not classified",
+      "noteOptional": "Note (optional)",
+      "noteRequired": "Note (required for prohibited / high-risk)",
+      "saveCta": "Save assessment",
+      "saving": "Saving…",
+      "saved": "Assessment saved."
     }
   }
 }

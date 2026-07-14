@@ -33,7 +33,12 @@ import {
   type UseCaseCardData,
 } from "@/components/EntityForms";
 import { UseCaseViews } from "@/components/UseCaseHeatmap";
-import { aiActWarnFor } from "@/lib/entities/evaluators";
+import {
+  aiActWarnFor,
+  parseAiAct,
+  parseAiSuitability,
+  parseDataReadiness,
+} from "@/lib/entities/evaluators";
 import { StatusPill } from "@/components/StatusPill";
 
 // ─────────────────────────────────────────────────────────────
@@ -160,6 +165,11 @@ export async function PhaseWorkspace({
       .map((id) => painTitleById.get(id))
       .filter((title): title is string => typeof title === "string"),
     sourceIndices: toIndices(u.source_input_ids),
+    evaluators: {
+      aiSuitability: parseAiSuitability(u.ai_suitability),
+      dataReadiness: parseDataReadiness(u.data_readiness),
+      aiAct: parseAiAct(u.ai_act),
+    },
   });
 
   return (

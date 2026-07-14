@@ -20,6 +20,13 @@ import {
   shortlistUseCaseAction,
 } from "@/app/entity-actions";
 import { generateShortlistFromEntitiesAction } from "@/app/artifact-actions";
+import {
+  AiActPanel,
+  AiSuitabilityPanel,
+  DataReadinessPanel,
+  EvaluatorBadges,
+  type EvaluatorData,
+} from "@/components/EvaluatorForms";
 import type { EntityState } from "@/lib/db/types";
 import { FieldStateBadge } from "@/components/FieldStateBadge";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -394,6 +401,8 @@ export interface UseCaseCardData {
   /** Eredet-lánc: a címzett fájdalompontok címei (a chipek). */
   painChips: string[];
   sourceIndices: number[];
+  /** Értékelők (#7b) — defenzíven parse-olt jsonb-tartalom. */
+  evaluators: EvaluatorData;
 }
 
 function ScoreSelect({
@@ -592,6 +601,8 @@ export function UseCaseCard({
       {/* Megerősített: pontozás + shortlist-státusz */}
       {!isProposal && !editing && (
         <div className="mt-3 space-y-3 border-t border-line pt-3">
+          {/* Értékelő-összegzések (#7b): ikon+szöveg jelvények */}
+          <EvaluatorBadges data={useCase.evaluators} />
           <form action={scoreFormAction} className="space-y-2">
             <div className="flex flex-wrap items-center gap-3">
               <ScoreSelect
@@ -696,6 +707,25 @@ export function UseCaseCard({
               </div>
             </form>
           )}
+
+          {/* Értékelő-panelek (#7b): emberi űrlapok, LLM nélkül */}
+          <div className="space-y-2">
+            <AiSuitabilityPanel
+              projectId={projectId}
+              useCaseId={useCase.id}
+              current={useCase.evaluators.aiSuitability}
+            />
+            <DataReadinessPanel
+              projectId={projectId}
+              useCaseId={useCase.id}
+              current={useCase.evaluators.dataReadiness}
+            />
+            <AiActPanel
+              projectId={projectId}
+              useCaseId={useCase.id}
+              current={useCase.evaluators.aiAct}
+            />
+          </div>
         </div>
       )}
     </div>
