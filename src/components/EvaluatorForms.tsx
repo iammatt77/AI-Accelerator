@@ -335,8 +335,15 @@ export function AiActPanel({
   );
   // Élő javaslat-tükör: a checkbox-válaszokból azonnal látszik a javaslat
   // (a mérvadó javaslatot a szerver számítja ugyanazzal a szabállyal).
+  // KONTROLLÁLT inputok: a React 19 a server action után reseteli az
+  // űrlapot — a hibaágon (pl. hiányzó kötelező megjegyzés) a bejelölt
+  // válaszok különben elvesznének, és a második mentés HAMIS javaslatot
+  // tárolna (walkthrough-lelet).
   const [answers, setAnswers] = useState<Partial<Record<AiActQuestion, boolean>>>(
     current?.answers ?? {},
+  );
+  const [confirmedCat, setConfirmedCat] = useState<string>(
+    current?.confirmed_category ?? "",
   );
   const liveSuggested = suggestAiActCategory(answers);
   const warn = isAiActWarnCategory(liveSuggested);
@@ -349,7 +356,7 @@ export function AiActPanel({
             <input
               type="checkbox"
               name={key}
-              defaultChecked={current?.answers[key] ?? false}
+              checked={answers[key] ?? false}
               onChange={(e) =>
                 setAnswers((prev) => ({ ...prev, [key]: e.target.checked }))
               }
@@ -381,7 +388,8 @@ export function AiActPanel({
           <span>{t("confirmedLabel")}</span>
           <select
             name="confirmedCategory"
-            defaultValue={current?.confirmed_category ?? ""}
+            value={confirmedCat}
+            onChange={(e) => setConfirmedCat(e.target.value)}
             className={`${selectClass} shrink-0`}
           >
             <option value="">{t("confirmUnset")}</option>
