@@ -4,38 +4,57 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 // ─────────────────────────────────────────────────────────────
-// Zone-tabs munkaterület-váz (Redesign #1, terv „A"): a négy zóna
-// (Input / Workbench / Output / Gate) fülekké válik, felül a fázis-
-// összegző sávval, amely a totálokat és a kaput minden fülről láthatóvá
-// teszi. A panelek szerveroldalon renderelt ReactNode-ok; a fül-váltás
-// csak megjelenít/elrejt (a bennük élő kliens-állapot — drill-in, fókusz —
-// megmarad). A számlálók valós lekérdezésekből jönnek (props).
+// Zone-flow-strip munkaterület-váz (v2, terv „A" véglegesítve): a négy
+// zóna (Input → Workbench → Output → Gate) egy VÍZSZINTES flow-sáv —
+// stat-kártyák nyíl-összekötőkkel; a kiválasztott zóna kiemelve („ITT"),
+// a Gate-kártya megnevezi a nyílt kritériumot. A kártyák kattinthatók: az
+// aktív zóna panelja alul jelenik meg (a fül-mechanizmus megmarad, csak a
+// megjelenés lett flow-sáv). A panelek szerveroldalon renderelt ReactNode-ok.
 // ─────────────────────────────────────────────────────────────
 
-export interface ZoneTab {
+export interface FlowZone {
   key: string;
+  index: number;
   label: string;
-  /** Fül-jelvény (valós számláló); üres → nincs jelvény. */
-  badge?: string;
-  /** Kapu-fül: ◇ jel + borostyán hangsúly. */
-  gate?: boolean;
+  /** Felső akcentus-sáv tónusa a zóna állapotához. */
+  tone: "done" | "active" | "muted" | "gate";
+  /** Jobb-fenti státusz-chip (pl. „kész" / „Draft"). */
+  chip?: string;
+  chipTone?: "done" | "muted" | "gate";
+  /** Fő metrika (nagy szám): „14" / „7/9" / „2/3". */
+  metric?: string;
+  metricLabel?: string;
+  /** Második metrika (Workbench: fájdalompont + use case). */
+  metric2?: { value: string; label: string };
+  /** Extra sor (Gate: nyílt kritérium neve). */
+  sub?: string;
+  subMuted?: string;
+  /** Lezárt downstream zóna (üres állapot) — unlock-szöveg. */
+  lockText?: string;
 }
 
-export function WorkspaceTabs({
-  tabs,
+const TONE_BAR: Record<FlowZone["tone"], string> = {
+  done: "bg-done",
+  active: "bg-action",
+  muted: "bg-neutral-300",
+  gate: "bg-gate",
+};
+
+export function ZoneFlowStrip({
+  zones,
   panels,
-  defaultTab,
+  defaultZone,
 }: {
-  tabs: ZoneTab[];
+  zones: FlowZone[];
   panels: Record<string, React.ReactNode>;
-  defaultTab: string;
+  defaultZone: string;
 }) {
-  const [active, setActive] = useState(defaultTab);
+  const t = useTranslations("workspace");
+  const [active, setActive] = useState(defaultZone);
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // Roving fül-billentyűzet (WAI-ARIA tabs): nyilak/Home/End léptet + fókuszál.
   const onKeyNav = (e: React.KeyboardEvent, index: number) => {
-    const last = tabs.length - 1;
+    const last = zones.length - 1;
     let next = -1;
     if (e.key === "ArrowRight") next = index === last ? 0 : index + 1;
     else if (e.key === "ArrowLeft") next = index === 0 ? last : index - 1;
@@ -43,77 +62,119 @@ export function WorkspaceTabs({
     else if (e.key === "End") next = last;
     if (next < 0) return;
     e.preventDefault();
-    setActive(tabs[next].key);
+    setActive(zones[next].key);
     btnRefs.current[next]?.focus();
   };
 
   return (
     <div>
-      {/* Fül-sor */}
-      <div
-        role="tablist"
-        className="flex flex-wrap items-end gap-1 border-b border-line"
-      >
-        {tabs.map((tab, i) => {
-          const on = active === tab.key;
+      {/* Flow-sáv: stat-kártyák nyíl-összekötőkkel */}
+      <div role="tablist" className="flex flex-wrap items-stretch gap-0">
+        {zones.map((z, i) => {
+          const on = active === z.key;
+          const chipCls =
+            z.chipTone === "done"
+              ? "text-done"
+              : z.chipTone === "gate"
+                ? "text-gate"
+                : "text-ink-tertiary";
           return (
-            <button
-              key={tab.key}
-              ref={(el) => {
-                btnRefs.current[i] = el;
-              }}
-              type="button"
-              role="tab"
-              id={`ws-tab-${tab.key}`}
-              aria-selected={on}
-              aria-controls={`ws-panel-${tab.key}`}
-              tabIndex={on ? 0 : -1}
-              onClick={() => setActive(tab.key)}
-              onKeyDown={(e) => onKeyNav(e, i)}
-              className={`-mb-px flex items-center gap-2 rounded-[var(--radius-tab-top)] border-b-2 px-4 py-2.5 text-body font-medium transition-colors duration-[var(--motion-base)] ${
-                on
-                  ? "border-b-action text-ink"
-                  : "border-b-transparent text-ink-secondary hover:bg-neutral-100 hover:text-ink"
-              }`}
-            >
-              {tab.gate && (
-                <span aria-hidden className={on ? "text-gate" : "text-ink-tertiary"}>
-                  ◇
-                </span>
-              )}
-              {tab.label}
-              {tab.badge && (
-                // Jelvény = puszta számláló (nem döntési pont) → semleges, nem
-                // lila (törvény 3); az aktív fület a lila aláhúzás jelöli.
+            <div key={z.key} className="flex flex-1 items-stretch">
+              {i > 0 && (
                 <span
-                  className={`rounded-pill px-2 py-0.5 font-mono text-mono-sm ${
-                    tab.gate
-                      ? "bg-tint-gate text-gate"
-                      : on
-                        ? "bg-neutral-200 text-ink-secondary"
-                        : "bg-neutral-150 text-ink-tertiary"
-                  }`}
+                  aria-hidden
+                  className="flex items-center px-1.5 text-ink-tertiary"
                 >
-                  {tab.badge}
+                  ›
                 </span>
               )}
-            </button>
+              <button
+                ref={(el) => {
+                  btnRefs.current[i] = el;
+                }}
+                type="button"
+                role="tab"
+                id={`ws-tab-${z.key}`}
+                aria-selected={on}
+                aria-controls={`ws-panel-${z.key}`}
+                tabIndex={on ? 0 : -1}
+                onClick={() => setActive(z.key)}
+                onKeyDown={(e) => onKeyNav(e, i)}
+                className={`relative min-w-0 flex-1 overflow-hidden rounded-tile border px-4 py-3 text-left transition-colors duration-[var(--motion-base)] ${
+                  on
+                    ? "border-action bg-tint-action/50 shadow-tile-sm ring-1 ring-action/30"
+                    : "border-line bg-surface hover:bg-neutral-50"
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className={`absolute inset-x-0 top-0 h-[3px] ${on ? "bg-action" : TONE_BAR[z.tone]}`}
+                />
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-mono-sm font-bold uppercase tracking-wide text-ink-tertiary">
+                    {z.index} · {z.label}
+                  </span>
+                  <span className="ml-auto">
+                    {on ? (
+                      <span className="rounded-3 bg-action px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-white">
+                        {t("zoneHere")}
+                      </span>
+                    ) : (
+                      z.chip && (
+                        <span className={`font-mono text-mono-sm font-semibold ${chipCls}`}>
+                          {z.chip}
+                        </span>
+                      )
+                    )}
+                  </span>
+                </div>
+                {z.lockText ? (
+                  <p className="mt-2 text-body text-ink-tertiary">{z.lockText}</p>
+                ) : z.metric2 ? (
+                  <div className="mt-1.5 flex gap-5">
+                    <div>
+                      <div className="font-mono text-metric text-ink">{z.metric}</div>
+                      <div className="text-mono-sm text-ink-tertiary">{z.metricLabel}</div>
+                    </div>
+                    <div>
+                      <div className="font-mono text-metric text-ink">{z.metric2.value}</div>
+                      <div className="text-mono-sm text-ink-tertiary">{z.metric2.label}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {z.metric && (
+                      <div className="mt-1.5 font-mono text-metric text-ink">{z.metric}</div>
+                    )}
+                    {z.metricLabel && (
+                      <div className="text-mono-sm text-ink-tertiary">{z.metricLabel}</div>
+                    )}
+                  </>
+                )}
+                {z.sub && (
+                  <div className="mt-1.5 text-body font-semibold text-gate">{z.sub}</div>
+                )}
+                {z.subMuted && (
+                  <div className="mt-0.5 text-mono-sm text-ink-tertiary">{z.subMuted}</div>
+                )}
+              </button>
+            </div>
           );
         })}
       </div>
 
       {/* Panelek — mind renderelve, az inaktív rejtve (kliens-állapot megmarad) */}
-      <div className="pt-4">
-        {tabs.map((tab) => (
+      <div className="pt-5">
+        {zones.map((z) => (
           <div
-            key={tab.key}
-            id={`ws-panel-${tab.key}`}
+            key={z.key}
+            id={`ws-panel-${z.key}`}
             role="tabpanel"
-            aria-labelledby={`ws-tab-${tab.key}`}
+            aria-labelledby={`ws-tab-${z.key}`}
             tabIndex={0}
-            hidden={active !== tab.key}
+            hidden={active !== z.key}
           >
-            {panels[tab.key]}
+            {panels[z.key]}
           </div>
         ))}
       </div>

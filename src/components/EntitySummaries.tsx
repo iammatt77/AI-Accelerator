@@ -23,15 +23,19 @@ type EntityState = "ai_suggested" | "confirmed" | "manual" | "rejected";
 
 function StatusChip({ state }: { state: EntityState }) {
   const t = useTranslations("entities");
+  // v2: a lezárt „Confirmed" TÖMÖR zöld pill (bg-done, fehér); a javaslat
+  // borostyán fátyol-pill; a kézi semleges. Törvény 4: mindig ikon + szöveg.
   const cls =
     state === "confirmed"
-      ? "text-done"
+      ? "bg-done text-white"
       : state === "ai_suggested"
-        ? "text-gate"
-        : "text-ink-secondary";
+        ? "bg-tint-gate text-gate"
+        : "bg-neutral-150 text-ink-secondary";
   const dot = state === "confirmed" ? "✓" : state === "ai_suggested" ? "•" : "✎";
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1 text-mono-sm font-medium ${cls}`}>
+    <span
+      className={`inline-flex shrink-0 items-center gap-1 rounded-pill px-2 py-0.5 text-mono-sm font-semibold ${cls}`}
+    >
       <span aria-hidden>{dot}</span>
       {t(`state.${state}`)}
     </span>

@@ -51,11 +51,11 @@ import {
   parseDataReadiness,
 } from "@/lib/entities/evaluators";
 import {
-  WorkspaceTabs,
+  ZoneFlowStrip,
   DrillRow,
   ShowMore,
   CollapsedGroup,
-  type ZoneTab,
+  type FlowZone,
 } from "@/components/WorkspaceShell";
 import { GateCloseForm } from "@/components/PhaseGateForms";
 import { PhaseStateIcon } from "@/components/icons";
@@ -227,6 +227,7 @@ export async function PhaseWorkspace({
       feasibility: u.score_feasibility as number,
       risk: u.risk,
       quickWin: u.quick_win,
+      shortlisted: u.list_status === "shortlist" || u.list_status === "selected",
       aiActWarn: aiActWarnFor(u),
     }));
   const heatmapUnscored = useCases
@@ -449,8 +450,11 @@ export async function PhaseWorkspace({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         {/* Bal: entitás-munka */}
         <div className="space-y-5">
-          {/* Fájdalompontok */}
-          <section className="glass-tile p-4">
+          {/* Fájdalompontok (v2: tömör lap, a „Next" CTA görgetési célpontja) */}
+          <section
+            id="pain-points"
+            className="scroll-mt-4 rounded-tile border border-line bg-surface p-4 shadow-tile-sm"
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-body font-semibold">
                 {tEnt("painSectionTitle")}{" "}
@@ -687,6 +691,53 @@ export async function PhaseWorkspace({
     </section>
   );
 
+  // ── Üres állapot (v2 1b): csak az Input él (dashed lila); a downstream
+  // zónák megnevezik a saját unlock-feltételüket, alul a „Next best step". ──
+  if (isP1 && inputs.length === 0) {
+    const zLabel = (key: string) => tGates(key).replace(/^[^\p{L}]+/u, "");
+    const lockedZone = (index: number, labelKey: string, lockText: string) => (
+      <div className="flex flex-1 items-stretch">
+        <span aria-hidden className="flex items-center px-1.5 text-neutral-300">
+          ›
+        </span>
+        <div className="min-w-0 flex-1 rounded-tile border border-line bg-neutral-100 p-4 text-ink-tertiary">
+          <div className="font-mono text-mono-sm font-bold uppercase tracking-wide">
+            {index} · {zLabel(labelKey)}
+          </div>
+          <p className="mt-2 text-body">{lockText}</p>
+        </div>
+      </div>
+    );
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col items-stretch gap-0 lg:flex-row lg:flex-wrap">
+          <div className="flex flex-[1.3] flex-col items-center justify-center gap-2.5 rounded-tile border-[1.5px] border-dashed border-action bg-tint-action/40 p-6 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-tile bg-action-light text-action">
+              <span className="text-title leading-none">+</span>
+            </div>
+            <h3 className="text-title">{t("emptyAddTitle")}</h3>
+            <p className="max-w-md text-body text-ink-secondary">{t("emptyAddBody")}</p>
+            <div className="mt-1 w-full max-w-md text-left">
+              <PhaseInputForm projectId={projectId} phase={phase} />
+            </div>
+          </div>
+          {lockedZone(2, "zoneTools", t("unlockWorkbench"))}
+          {lockedZone(3, "zoneOutput", t("unlockOutput"))}
+          {lockedZone(4, "zoneGate", t("gateCriteriaList"))}
+        </div>
+        <div className="flex items-center gap-3 rounded-tile border border-action/20 bg-tint-action/30 px-4 py-3">
+          <span
+            aria-hidden
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-3 bg-action-light text-action"
+          >
+            →
+          </span>
+          <span className="text-body font-semibold">{t("nextBestStep")}</span>
+        </div>
+      </div>
+    );
+  }
+
   // ── Fül-jelvények (valós számlálók) ─────────────────────────
   const confirmedFieldCount = fieldTypes.reduce((acc, td) => {
     const latest = latestOfType(td);
@@ -700,123 +751,142 @@ export async function PhaseWorkspace({
       }).length
     );
   }, 0);
-  const startedOutputs = phaseTypes.filter((td) => latestOfType(td) !== null).length;
+  // ── Output-mezők összegzése (kitöltött/kötelező) a flow-sáv Output-kártyához ──
+  let outFilled = 0;
+  let outRequired = 0;
+  for (const td of phaseTypes) {
+    const latest = latestOfType(td);
+    if (!latest) continue;
+    const c = completeness(td, parseArtifactFields(td, latest.fields));
+    outFilled += c.filled;
+    outRequired += c.required;
+  }
+  const firstStartedOutput = phaseTypes
+    .map((td) => latestOfType(td))
+    .find((a): a is ArtifactRow => a !== null);
+  const latestOutputStatus = firstStartedOutput
+    ? tArtifacts(`status.${firstStartedOutput.status}`)
+    : undefined;
 
-  const tabs: ZoneTab[] = [
-    { key: "input", label: tGates("zoneInput"), badge: `${inputs.length}` },
+  const painTotal = allPains.filter((p) => p.state !== "rejected").length;
+  const ucScored = useCases.filter(
+    (u) => u.score_value !== null && u.score_feasibility !== null,
+  ).length;
+
+  // ── Kapu ──
+  const firstUnmet = criteria.find((c) => !c.satisfied);
+  const gateReady = hasGate(phase) && criteria.length > 0 && !firstUnmet;
+
+  const stripLabel = (s: string) => s.replace(/^[^\p{L}]+/u, "");
+
+  // ── Flow-zónák (v2): a négy zóna stat-kártyaként, nyíllal összekötve ──
+  const zones: FlowZone[] = [
+    {
+      key: "input",
+      index: 1,
+      label: stripLabel(tGates("zoneInput")),
+      tone: inputs.length > 0 ? "done" : "active",
+      chip: inputs.length > 0 ? t("zoneReady") : undefined,
+      chipTone: "done",
+      metric: `${inputs.length}`,
+      metricLabel: t("zoneRawLabel"),
+    },
     {
       key: "workbench",
-      label: tGates("zoneTools"),
-      badge: isP1
-        ? `${allPains.filter((p) => p.state !== "rejected").length} · ${painConfirmed.length}`
-        : confirmedFieldCount > 0
-          ? `${confirmedFieldCount}`
-          : undefined,
+      index: 2,
+      label: stripLabel(tGates("zoneTools")),
+      tone: "active",
+      ...(isP1
+        ? {
+            metric: `${painConfirmed.length}/${painTotal}`,
+            metricLabel: t("zonePainLabel"),
+            metric2: { value: `${ucScored}`, label: t("zoneUcLabel") },
+          }
+        : {
+            metric: `${confirmedFieldCount}`,
+            metricLabel: t("zoneFieldLabel"),
+          }),
     },
     {
       key: "output",
-      label: tGates("zoneOutput"),
-      badge: startedOutputs > 0 ? `${startedOutputs}` : undefined,
+      index: 3,
+      label: stripLabel(tGates("zoneOutput")),
+      tone: "muted",
+      chip: latestOutputStatus,
+      chipTone: "muted",
+      metric: outRequired > 0 ? `${outFilled}/${outRequired}` : undefined,
+      metricLabel: outRequired > 0 ? t("zoneOutputLabel") : undefined,
     },
     {
       key: "gate",
-      label: tGates("zoneGate"),
-      badge: hasGate(phase) ? `${satisfiedCount}/${criteria.length}` : undefined,
-      gate: true,
+      index: 4,
+      label: stripLabel(tGates("zoneGate")),
+      tone: "gate",
+      chip: hasGate(phase) ? `${satisfiedCount}/${criteria.length}` : undefined,
+      chipTone: "gate",
+      sub: !hasGate(phase)
+        ? undefined
+        : gateReady
+          ? t("gateReadyShort")
+          : firstUnmet
+            ? `${t("gateOpenLabel")} ${criterionLabel(firstUnmet, tCriteria, tTypes)}`
+            : undefined,
+      subMuted:
+        hasGate(phase) && satisfiedCount > 0
+          ? `${satisfiedCount} ${tGates("criterionSatisfied")}`
+          : undefined,
     },
   ];
 
-  const defaultTab =
+  const defaultZone =
     state === "open" || inputs.length === 0
       ? "input"
       : state === "gate_pending"
         ? "gate"
         : "workbench";
 
-  // ── Összegző sáv (totálok + kapu + Next) ────────────────────
-  const firstUnmet = criteria.find((c) => !c.satisfied);
-  const gateReady = hasGate(phase) && criteria.length > 0 && !firstUnmet;
-  const nextHint =
-    state === "open"
-      ? t("nextStart")
-      : state === "gate_pending" || gateReady
-        ? t("nextCloseGate")
-        : firstUnmet
-          ? t("nextSatisfy", { criterion: criterionLabel(firstUnmet, tCriteria, tTypes) })
-          : t("nextCloseGate");
+  // ── Összegző mondat + elsődleges „Next" CTA (v2) ──
+  const firstProposalCode =
+    painProposals.length > 0 ? (painCode.get(painProposals[0].id) ?? "") : "";
+  const summaryLead = isP1
+    ? t("summaryP1Lead", { confirmed: painConfirmed.length, total: painTotal, scored: ucScored })
+    : t("summaryGeneric", { confirmed: confirmedFieldCount });
+  const fieldsLeft = Math.max(0, outRequired - outFilled);
+  const summaryRest = [
+    isP1 && painProposals.length > 0 ? t("summaryWaiting", { code: firstProposalCode }) : "",
+    fieldsLeft > 0 ? t("summaryFieldsLeft", { n: fieldsLeft }) : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="space-y-4">
-      {/* Összegző sáv */}
-      <div className="glass-tile flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <SummaryStat value={`${inputs.length}`} label={t("statRawInputs")} />
-          {isP1 && (
-            <>
-              <SummaryStat
-                value={`${allPains.filter((p) => p.state !== "rejected").length}`}
-                label={t("statPainPoints")}
-                note={`${painConfirmed.length} ${tEnt("confirmedShort")}`}
-              />
-              <SummaryStat
-                value={`${useCases.length}`}
-                label={t("statUseCases")}
-                note={`${ucShortlistedCount} ${tEnt("shortlistedShort")} · ${ucQuickWinCount} ${tEnt("quickWinShort")}`}
-              />
-            </>
-          )}
-        </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {hasGate(phase) && (
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-body font-medium ${
-                gateReady
-                  ? "border-done/40 bg-tint-done text-done"
-                  : "border-gate/50 bg-tint-gate text-gate"
-              }`}
-            >
-              {/* Törvény 4: nem csak szín — a készenlétet ikon is jelöli
-                  (✓ kész / ◇ vár) a szám-pár mellett. */}
-              <span aria-hidden>{gateReady ? "✓" : "◇"}</span>
-              {tGates("zoneGate")} {satisfiedCount}/{criteria.length}
-            </span>
-          )}
-          {/* „Next" = navigációs útmutató (nem döntési pont) → semleges chip;
-              a lila a döntés-gomboknak marad (törvény 3). */}
-          <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-neutral-100 px-3 py-1.5 text-body font-medium text-ink-secondary">
-            <span className="text-ink-tertiary">{t("nextLabel")}</span> {nextHint}
-          </span>
-        </div>
+      {/* Összegző mondat + elsődleges „Next" CTA (v2: halvány lila sáv) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-tile border border-action/20 bg-tint-action/30 px-4 py-3">
+        <p className="min-w-0 flex-1 text-body text-ink">
+          <span className="font-semibold">{summaryLead}</span>
+          {summaryRest && <span className="text-ink-secondary"> {summaryRest}</span>}
+        </p>
+        {isP1 && painProposals.length > 0 && (
+          <a
+            href="#pain-points"
+            className="shrink-0 rounded-control bg-action px-3.5 py-2 text-body font-semibold text-white shadow-action transition-colors duration-[var(--motion-base)] hover:bg-action-hover"
+          >
+            {t("nextConfirm", { code: firstProposalCode })}
+          </a>
+        )}
       </div>
 
-      <WorkspaceTabs
-        tabs={tabs}
+      <ZoneFlowStrip
+        zones={zones}
         panels={{
           input: inputPanel,
           workbench: workbenchPanel,
           output: outputPanel,
           gate: gatePanel,
         }}
-        defaultTab={defaultTab}
+        defaultZone={defaultZone}
       />
-    </div>
-  );
-}
-
-function SummaryStat({
-  value,
-  label,
-  note,
-}: {
-  value: string;
-  label: string;
-  note?: string;
-}) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="font-mono text-metric text-ink">{value}</span>
-      <span className="text-body text-ink-secondary">{label}</span>
-      {note && <span className="text-mono-sm text-done">· {note}</span>}
     </div>
   );
 }

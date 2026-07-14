@@ -203,7 +203,29 @@
     "nextSatisfy": "{criterion}",
     "statRawInputs": "raw inputs",
     "statPainPoints": "pain points",
-    "statUseCases": "use cases"
+    "statUseCases": "use cases",
+    "zoneHere": "HERE",
+    "zoneReady": "ready",
+    "zoneRawLabel": "raw materials",
+    "zonePainLabel": "pain points",
+    "zoneUcLabel": "use cases scored",
+    "zoneFieldLabel": "fields confirmed",
+    "zoneOutputLabel": "report fields filled",
+    "gateOpenLabel": "Open:",
+    "gateReadyShort": "ready — can close",
+    "summaryP1Lead": "{confirmed} of {total} pain points confirmed, {scored} use cases scored.",
+    "summaryGeneric": "{confirmed} fields confirmed.",
+    "summaryWaiting": "{code} is waiting on you.",
+    "summaryFieldsLeft": "The report needs {n} more fields before the gate can close.",
+    "nextConfirm": "Next: confirm {code}",
+    "emptyAddTitle": "Add your first raw material",
+    "emptyAddBody": "Next concrete step: paste the kickoff interview transcript. AI extraction runs from it — pain points and use cases appear here for your confirmation.",
+    "emptyPaste": "Paste transcript",
+    "emptyUpload": "Upload file",
+    "unlockWorkbench": "Unlocks after the first extraction.",
+    "unlockOutput": "Unlocks once ≥1 pain point is confirmed.",
+    "gateCriteriaList": "prioritise · score · approve report",
+    "nextBestStep": "Next best step: paste the kickoff interview transcript"
   },
   "export": {
     "notFound": "Artifact not found.",
@@ -596,7 +618,8 @@
       "shortlistTitle": "Shortlist — {n} selected",
       "shortlistEmpty": "No shortlisted use case yet.",
       "readingTitle": "Reading the map",
-      "readingBody": "Filled tiles are shortlisted. Position comes from the confirmed value/implementability scores; risk is the badge. Focus mode is read-only — scores change only via the confirm step."
+      "readingBody": "Filled tiles are shortlisted. Position comes from the confirmed value/implementability scores; risk is the badge. Focus mode is read-only — scores change only via the confirm step.",
+      "filledShortlisted": "filled = shortlisted"
     },
     "evaluators": {
       "suitabilityTitle": "AI suitability filter",
@@ -681,6 +704,8 @@
       "low": "L",
       "medium": "M",
       "high": "H"
-    }
+    },
+    "aiSuggestionLabel": "AI SUGGESTION — NEEDS YOUR CONFIRM",
+    "painLinkedLabel": "Linked:"
   }
 }

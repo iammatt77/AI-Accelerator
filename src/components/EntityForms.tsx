@@ -188,6 +188,13 @@ export function PainPointProposalCard({
 
       {!editing && (
         <>
+          {/* v2: félreérthetetlen HITL-címke — az AI javasol, sosem alkalmaz
+              automatikusan (a beágyazott, még megerősítésre váró soron). */}
+          {headerHasDecision && (
+            <div className="mb-1.5 inline-flex items-center rounded-3 bg-tint-action px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-action-deep">
+              {t("aiSuggestionLabel")}
+            </div>
+          )}
           {painPoint.description && (
             <p className="mt-1.5 whitespace-pre-wrap text-body text-ink-secondary">
               {painPoint.description}

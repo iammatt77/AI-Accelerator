@@ -203,7 +203,29 @@
     "nextSatisfy": "{criterion}",
     "statRawInputs": "nyers bemenet",
     "statPainPoints": "fájdalompont",
-    "statUseCases": "use case"
+    "statUseCases": "use case",
+    "zoneHere": "ITT",
+    "zoneReady": "kész",
+    "zoneRawLabel": "nyersanyag",
+    "zonePainLabel": "fájdalompont",
+    "zoneUcLabel": "use case pontozva",
+    "zoneFieldLabel": "megerősített mező",
+    "zoneOutputLabel": "riport-mező kitöltve",
+    "gateOpenLabel": "Nyílt:",
+    "gateReadyShort": "kész — zárható",
+    "summaryP1Lead": "{confirmed}/{total} fájdalompont megerősítve, {scored} use case pontozva.",
+    "summaryGeneric": "{confirmed} mező megerősítve.",
+    "summaryWaiting": "{code} megerősítésre vár rád.",
+    "summaryFieldsLeft": "A riporthoz még {n} mező kell a kapu zárása előtt.",
+    "nextConfirm": "Következő: {code} megerősítése",
+    "emptyAddTitle": "Add meg az első nyersanyagot",
+    "emptyAddBody": "Következő konkrét lépés: illeszd be a kickoff interjú átiratát. Az AI-kivonatolás ebből fut — a fájdalompontok és use case-ek itt jelennek meg megerősítésre.",
+    "emptyPaste": "Átirat beillesztése",
+    "emptyUpload": "Fájl feltöltése",
+    "unlockWorkbench": "Az első kivonatolás után nyílik.",
+    "unlockOutput": "Legalább 1 megerősített fájdalompont után nyílik.",
+    "gateCriteriaList": "prioritizálás · pontozás · riport-jóváhagyás",
+    "nextBestStep": "Következő legjobb lépés: illeszd be a kickoff interjú átiratát"
   },
   "export": {
     "notFound": "Az artefaktum nem található.",
@@ -596,7 +618,8 @@
       "shortlistTitle": "Shortlist — {n} kiválasztva",
       "shortlistEmpty": "Még nincs shortlisten lévő use case.",
       "readingTitle": "A térkép olvasása",
-      "readingBody": "A kitöltött csempék a shortlisten vannak. A pozíció a megerősített érték/megvalósíthatóság pontszámokból jön; a kockázat a jelvény. A fókusz-mód read-only — a pontszám csak a megerősítő lépésen át változik."
+      "readingBody": "A kitöltött csempék a shortlisten vannak. A pozíció a megerősített érték/megvalósíthatóság pontszámokból jön; a kockázat a jelvény. A fókusz-mód read-only — a pontszám csak a megerősítő lépésen át változik.",
+      "filledShortlisted": "kitöltött = shortlisten"
     },
     "evaluators": {
       "suitabilityTitle": "AI-alkalmassági szűrő",
@@ -681,6 +704,8 @@
       "low": "A",
       "medium": "K",
       "high": "M"
-    }
+    },
+    "aiSuggestionLabel": "AI-JAVASLAT — MEGERŐSÍTÉSRE VÁR",
+    "painLinkedLabel": "Kapcsolt:"
   }
 }
