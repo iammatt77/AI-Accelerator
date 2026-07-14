@@ -349,7 +349,13 @@ export function AiActPanel({
     current?.confirmed_category ?? "",
   );
   const liveSuggested = suggestAiActCategory(answers);
-  const warn = isAiActWarnCategory(liveSuggested);
+  // A figyelmeztetés/kötelező-megjegyzés tükör a JAVASLATRA ÉS az emberi
+  // megerősítés-választásra is reagál (a szerver-poka-yoke is mindkettőt
+  // nézi — review-lelet: a kliens-tükör hiányos volt).
+  const warn =
+    isAiActWarnCategory(liveSuggested) ||
+    confirmedCat === "prohibited" ||
+    confirmedCat === "high_risk";
 
   return (
     <PanelShell title={t("aiActTitle")} lead={t("aiActLead")}>

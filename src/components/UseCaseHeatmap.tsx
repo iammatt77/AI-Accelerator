@@ -77,16 +77,24 @@ const sy = (score: number) => M.top + PH - ((score - 1) / 4) * PH;
 const X_SPLIT = sx(3.5);
 const Y_SPLIT = sy(3.5);
 
-/** Azonos koordinátájú pontok szétterítése (ütközés-feloldás). */
+/** Azonos koordinátájú pontok szétterítése (ütközés-feloldás). A pozíció a
+ *  rajzterületre CSATOLT (review-lelet): a szélső pontszámok (1/5)
+ *  duplikátumai különben a viewBoxon kívülre tolódnának — láthatatlan
+ *  pont a jegyzékben szereplő szám mögött. Sok (6+) azonos koordinátájú
+ *  duplikátumnál a szétterítés átfedhet — v1-ben elfogadott (jelentésben
+ *  dokumentálva). */
 function spreadPoints(points: HeatmapPoint[]): (HeatmapPoint & { x: number; y: number })[] {
   const byCoord = new Map<string, number>();
+  const XMIN = M.left + 14;
+  const XMAX = M.left + PW - 14;
   return points.map((p) => {
     const key = `${p.feasibility}:${p.value}`;
     const n = byCoord.get(key) ?? 0;
     byCoord.set(key, n + 1);
     // az első pont középen; a továbbiak jobbra-balra váltakozva tolódnak
     const shift = n === 0 ? 0 : (Math.ceil(n / 2) * 22) * (n % 2 === 1 ? 1 : -1);
-    return { ...p, x: sx(p.feasibility) + shift, y: sy(p.value) };
+    const x = Math.min(XMAX, Math.max(XMIN, sx(p.feasibility) + shift));
+    return { ...p, x, y: sy(p.value) };
   });
 }
 
@@ -160,7 +168,14 @@ function Heatmap({
               key={p.id}
               transform={`translate(${p.x} ${p.y})`}
               onClick={() => onSelect(p.id)}
-              className="cursor-pointer"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(p.id);
+                }
+              }}
+              tabIndex={0}
+              className="cursor-pointer focus:outline-none focus-visible:opacity-80"
               role="button"
               aria-label={`${i + 1}. ${p.title}`}
             >
