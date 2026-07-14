@@ -4,8 +4,10 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { loadPhaseBoard } from "@/lib/phases/service";
 import { isPhaseId, previousPhase, type PhaseId } from "@/lib/phases/config";
+import { loadPhaseDocTiles } from "@/lib/artifacts/phase-tiles";
 import { PhaseStepperV2 } from "@/components/PhaseStepper";
 import { PhaseWorkspace } from "@/components/PhaseWorkspace";
+import { PhaseDocumentTiles } from "@/components/PhaseDocumentTiles";
 import { StartPhaseForm } from "@/components/PhaseGateForms";
 import { PhaseStateIcon, PHASE_STATE_TEXT, IconLock } from "@/components/icons";
 import type { DecisionRow, ProjectRow } from "@/lib/db/types";
@@ -73,6 +75,13 @@ export default async function PhasePage({
   const phaseDecisions = decisionsForPhase(
     (decisionData ?? []) as DecisionRow[],
     phase,
+  );
+
+  // „Ebben a fázisban készült dokumentumok" — a tár típusonkénti-sorával
+  // azonos adat (típus-konfig + completeness), fázisra szűrve.
+  const docTiles = state === "locked" ? [] : await loadPhaseDocTiles(supabase, id, phase);
+  const blockingKeys = new Set(
+    entry.criteria.filter((c) => !c.satisfied && c.typeKey).map((c) => c.typeKey as string),
   );
 
   const [locale, tPhases, tLex, tGates] = await Promise.all([
@@ -166,6 +175,7 @@ export default async function PhasePage({
               </div>
             )}
           </section>
+          <PhaseDocumentTiles projectId={id} tiles={docTiles} blockingKeys={blockingKeys} />
           <DecisionHistory
             decisions={phaseDecisions}
             title={tGates("decisionsTitle")}
@@ -196,6 +206,8 @@ export default async function PhasePage({
             clientName={clientName}
             phaseName={shortName}
           />
+
+          <PhaseDocumentTiles projectId={id} tiles={docTiles} blockingKeys={blockingKeys} />
 
           <DecisionHistory
             decisions={phaseDecisions}

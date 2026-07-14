@@ -184,7 +184,8 @@
       "in_progress": "In progress",
       "gate_pending": "Decision pending",
       "completed": "Closed"
-    }
+    },
+    "documentsTitle": "Documents produced in this phase"
   },
   "gates": {
     "label": "Gate",

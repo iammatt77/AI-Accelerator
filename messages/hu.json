@@ -184,7 +184,8 @@
       "in_progress": "Folyamatban",
       "gate_pending": "Döntés vár",
       "completed": "Lezárva"
-    }
+    },
+    "documentsTitle": "Ebben a fázisban készült dokumentumok"
   },
   "gates": {
     "label": "Kapu",
