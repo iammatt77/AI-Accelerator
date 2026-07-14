@@ -102,7 +102,7 @@ export function ZoneFlowStrip({
                 onKeyDown={(e) => onKeyNav(e, i)}
                 className={`relative min-w-0 flex-1 overflow-hidden rounded-tile border px-4 py-3 text-left transition-colors duration-[var(--motion-base)] ${
                   on
-                    ? "border-action bg-tint-action/50 shadow-tile-sm ring-1 ring-action/30"
+                    ? "border-[1.5px] border-action bg-accent-tint shadow-accent"
                     : "border-line bg-surface hover:bg-neutral-50"
                 }`}
               >

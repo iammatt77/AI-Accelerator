@@ -725,7 +725,7 @@ export async function PhaseWorkspace({
           {lockedZone(3, "zoneOutput", t("unlockOutput"))}
           {lockedZone(4, "zoneGate", t("gateCriteriaList"))}
         </div>
-        <div className="flex items-center gap-3 rounded-tile border border-action/20 bg-tint-action/30 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-tile border border-line-soft bg-context px-4 py-3">
           <span
             aria-hidden
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-3 bg-action-light text-action"
@@ -862,7 +862,7 @@ export async function PhaseWorkspace({
   return (
     <div className="space-y-4">
       {/* Összegző mondat + elsődleges „Next" CTA (v2: halvány lila sáv) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-tile border border-action/20 bg-tint-action/30 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-tile border border-line-soft bg-context px-4 py-3">
         <p className="min-w-0 flex-1 text-body text-ink">
           <span className="font-semibold">{summaryLead}</span>
           {summaryRest && <span className="text-ink-secondary"> {summaryRest}</span>}

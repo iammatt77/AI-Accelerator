@@ -303,7 +303,7 @@ export function WorkbenchHeatmap({
             type="button"
             onClick={() => setFocus(true)}
             disabled={points.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 py-1.5 text-mono-sm font-medium text-ink-secondary shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-control border border-action-light bg-accent-tint px-2.5 py-1.5 text-mono-sm font-semibold text-action-deep transition-colors duration-[var(--motion-base)] hover:bg-sunken disabled:opacity-50"
           >
             <span aria-hidden>⛶</span>
             {t("focusMode")}
