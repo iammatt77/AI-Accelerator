@@ -78,13 +78,17 @@
     "listTitle": "Clients",
     "projectsOfClient": "Projects of this client",
     "noProjects": "This client has no projects yet.",
-    "sinceLabel": "Client since"
+    "sinceLabel": "Client since",
+    "projectCount": "{n} projects",
+    "projectCountZero": "no projects yet"
   },
   "projects": {
     "nameLabel": "Project name",
     "packageLabel": "Package",
     "packagePlaceholder": "e.g. Discovery",
-    "listTitle": "Projects"
+    "listTitle": "Projects",
+    "progressLabel": "{closed}/{total} closed",
+    "activePhaseLabel": "Active phase: {phase}"
   },
   "cockpit": {
     "backToProjects": "Projects",

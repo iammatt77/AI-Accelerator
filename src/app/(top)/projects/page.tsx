@@ -1,14 +1,15 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { createClientAndProject } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ProjectListCard } from "@/components/ProjectListCard";
+import { loadProjectListCard, type ProjectListStatus } from "@/lib/projects/list-card";
 import type { ClientRow, ProjectRow } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
 
-// Projektek — valós lista + a #1-es kliens+projekt-létrehozó flow
-// (a nav-vázba illesztve; a dashboard a főoldalra került).
+// Projektek — valós lista (Dashboard-kártya nyelvén, X/7 lezárva-
+// progresszussal) + a #1-es kliens+projekt-létrehozó flow.
 
 interface ProjectWithClient extends ProjectRow {
   clients: Pick<ClientRow, "name" | "industry"> | null;
@@ -27,51 +28,78 @@ async function loadProjects(): Promise<ProjectWithClient[]> {
   return (data ?? []) as ProjectWithClient[];
 }
 
+const STATUS_LABEL_KEY: Record<Exclude<ProjectListStatus, "healthy">, string> = {
+  needs_you: "statusNeedsYou",
+  gate: "statusGate",
+  stalled: "statusStalled",
+};
+
 export default async function ProjectsPage() {
-  const [projects, tCommon, tClients, tProjects, tEmpty] = await Promise.all([
+  const supabase = createServiceSupabaseClient();
+  const [projects, tCommon, tClients, tProjects, tDash, tEmpty] = await Promise.all([
     loadProjects(),
     getTranslations("common"),
     getTranslations("clients"),
     getTranslations("projects"),
+    getTranslations("dashboard"),
     getTranslations("empty"),
   ]);
 
+  const cards = await Promise.all(
+    projects.map(async (project) => {
+      const card = await loadProjectListCard(supabase, project.id, project.created_at);
+      const initials = (project.clients?.name ?? project.name)
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+      return { project, card, initials };
+    }),
+  );
+
   return (
-    <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
       {/* Projektlista */}
       <section>
         <h1 className="text-title">{tProjects("listTitle")}</h1>
 
-        <ul className="mt-6 space-y-3">
-          {projects.length === 0 && (
-            <li className="rounded-tile border border-dashed border-line p-6 text-body text-ink-tertiary">
-              {tEmpty("noProjects")}
-            </li>
-          )}
-          {projects.map((project) => (
-            <li key={project.id}>
-              <Link
+        {cards.length === 0 ? (
+          <p className="mt-6 rounded-tile border border-dashed border-line p-6 text-body text-ink-tertiary">
+            {tEmpty("noProjects")}
+          </p>
+        ) : (
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {cards.map(({ project, card, initials }) => (
+              <ProjectListCard
+                key={project.id}
                 href={`/project/${project.id}`}
-                className="surface-card surface-card-interactive block p-4"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-medium">{project.name}</span>
-                  <span className="rounded-pill border border-line px-2 py-0.5 text-mono-sm font-sans text-ink-tertiary">
-                    {project.package ?? "—"}
-                  </span>
-                </div>
-                <div className="mt-1 text-body text-ink-secondary">
-                  {project.clients?.name ?? tClients("unknown")}
-                  {project.clients?.industry ? ` · ${project.clients.industry}` : ""}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                name={project.name}
+                clientName={project.clients?.name ?? tClients("unknown")}
+                industry={project.clients?.industry ?? ""}
+                initials={initials}
+                status={card.status}
+                statusLabel={
+                  card.status === "healthy" ? null : tDash(STATUS_LABEL_KEY[card.status])
+                }
+                progressLabel={tProjects("progressLabel", {
+                  closed: card.closedCount,
+                  total: card.totalPhases,
+                })}
+                activePhaseLabel={
+                  card.activePhase
+                    ? tProjects("activePhaseLabel", { phase: card.activePhase })
+                    : null
+                }
+                spine={card.spine}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* (a) Kliens + projekt létrehozása (#1 flow) */}
-      <section>
+      <section className="h-fit rounded-shell border border-line bg-surface p-5 shadow-card">
         <h2 className="text-body font-semibold">{tClients("newTitle")}</h2>
         <form action={createClientAndProject} className="mt-4 space-y-3">
           <Field label={tClients("nameLabel")} name="clientName" required />

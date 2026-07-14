@@ -78,13 +78,17 @@
     "listTitle": "Ügyfelek",
     "projectsOfClient": "A kliens projektjei",
     "noProjects": "Ennek a kliensnek még nincs projektje.",
-    "sinceLabel": "Ügyfél ekkortól"
+    "sinceLabel": "Ügyfél ekkortól",
+    "projectCount": "{n} projekt",
+    "projectCountZero": "még nincs projekt"
   },
   "projects": {
     "nameLabel": "Projekt neve",
     "packageLabel": "Csomag",
     "packagePlaceholder": "pl. Felmérés",
-    "listTitle": "Projektek"
+    "listTitle": "Projektek",
+    "progressLabel": "{closed}/{total} lezárva",
+    "activePhaseLabel": "Aktív fázis: {phase}"
   },
   "cockpit": {
     "backToProjects": "Projektek",

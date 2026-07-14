@@ -5,10 +5,20 @@ import type { ClientRow } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
 
-// Ügyfelek — valós lista projekt-számmal.
+// Ügyfelek — valós lista, a Dashboard/Repository tömör-lapos kártya-
+// nyelvén: fehér sor-kártya, avatar-monogram, projekt-szám pill.
 
 interface ClientWithCount extends ClientRow {
   projects: { count: number }[];
+}
+
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 export default async function ClientsPage() {
@@ -31,31 +41,42 @@ export default async function ClientsPage() {
   return (
     <div>
       <h1 className="text-title">{tClients("listTitle")}</h1>
-      <ul className="mt-6 grid gap-4 lg:grid-cols-2">
-        {clients.length === 0 && (
-          <li className="rounded-tile border border-dashed border-line p-6 text-body text-ink-tertiary">
-            {tEmpty("noClients")}
-          </li>
-        )}
-        {clients.map((client) => (
-          <li key={client.id}>
-            <Link
-              href={`/clients/${client.id}`}
-              className="surface-card surface-card-interactive block p-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium">{client.name}</span>
-                <span className="font-mono text-metric text-ink-secondary">
-                  {client.projects?.[0]?.count ?? 0}
+
+      {clients.length === 0 ? (
+        <p className="mt-6 rounded-tile border border-dashed border-line p-6 text-body text-ink-tertiary">
+          {tEmpty("noClients")}
+        </p>
+      ) : (
+        <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {clients.map((client) => {
+            const count = client.projects?.[0]?.count ?? 0;
+            return (
+              <Link
+                key={client.id}
+                href={`/clients/${client.id}`}
+                className="flex items-center gap-3 rounded-shell border border-line bg-surface p-4 shadow-card transition-shadow duration-[var(--motion-base)] hover:shadow-shell"
+              >
+                <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-control border border-line bg-sunken font-mono text-[12px] font-bold text-ink-secondary">
+                  {initialsOf(client.name)}
                 </span>
-              </div>
-              <div className="mt-1 text-body text-ink-secondary">
-                {client.industry ?? "—"}
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14.5px] font-bold tracking-tight">
+                    {client.name}
+                  </span>
+                  <span className="block truncate text-[11.5px] text-ink-tertiary">
+                    {client.industry ?? "—"}
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-pill border border-line bg-sunken px-2.5 py-1 font-mono text-[11px] font-semibold text-ink-secondary">
+                  {count > 0
+                    ? tClients("projectCount", { n: count })
+                    : tClients("projectCountZero")}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
