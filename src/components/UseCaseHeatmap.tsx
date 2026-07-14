@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 // ─────────────────────────────────────────────────────────────
@@ -279,6 +279,235 @@ function Heatmap({
         </ol>
       )}
       <p className="mt-1 text-mono-sm text-ink-tertiary">{t("clickHint")}</p>
+    </div>
+  );
+}
+
+/** Kártya-fókusz a listában: a use case kártyájához görget + kiemel.
+ *  A workbench bal-oldali listája és a jobb-oldali hőtérkép ugyanabban a
+ *  DOM-ban él, így a pontra kattintás közvetlenül a kártyát emeli ki. */
+function focusUseCard(id: string) {
+  const el = document.getElementById(`uc-${id}`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.add("ring-2", "ring-active");
+  window.setTimeout(() => el.classList.remove("ring-2", "ring-active"), 2400);
+}
+
+/**
+ * Workbench hőtérkép (Redesign #1, terv „A"): a munka MELLETT mindig
+ * látható kompakt előnézet + ⛶ fókusz-mód. Pontra kattintva a bal-oldali
+ * use case-kártyához görget. A geometriát a #7b `Heatmap` adja (nincs
+ * újraírva) — a fókusz-mód ennek nagyított, prezentációs változata.
+ */
+export interface ShortlistItem {
+  id: string;
+  title: string;
+  value: number;
+  feasibility: number;
+}
+
+export function WorkbenchHeatmap({
+  points,
+  unscored,
+  shortlist,
+  clientName,
+  phaseName,
+}: {
+  points: HeatmapPoint[];
+  unscored: UnscoredItem[];
+  shortlist: ShortlistItem[];
+  clientName: string;
+  phaseName: string;
+}) {
+  const t = useTranslations("entities.heatmap");
+  const [focus, setFocus] = useState(false);
+
+  return (
+    <>
+      <section className="glass-tile p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-body font-semibold">{t("title")}</h4>
+          <button
+            type="button"
+            onClick={() => setFocus(true)}
+            disabled={points.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 py-1.5 text-mono-sm font-medium text-ink-secondary shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken disabled:opacity-50"
+          >
+            <span aria-hidden>⛶</span>
+            {t("focusMode")}
+          </button>
+        </div>
+        {points.length === 0 ? (
+          <p className="mt-3 rounded-tile border border-dashed border-line px-3 py-6 text-center text-body text-ink-tertiary">
+            {t("empty")}
+          </p>
+        ) : (
+          <div className="mt-3">
+            <Heatmap points={points} onSelect={focusUseCard} />
+          </div>
+        )}
+        {unscored.length > 0 && (
+          <div className="mt-3 rounded-tile border border-line bg-surface p-3">
+            <h5 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
+              {t("unscoredTitle")}
+            </h5>
+            <ul className="mt-1.5 space-y-1">
+              {unscored.map((u) => (
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    onClick={() => focusUseCard(u.id)}
+                    className="flex w-full items-center justify-between gap-2 rounded-control px-2 py-1 text-left text-body hover:bg-sunken"
+                  >
+                    <span className="min-w-0 truncate">{u.title}</span>
+                    <span className="shrink-0 text-mono-sm text-ink-tertiary">
+                      {t("unscoredHint")}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      {focus && (
+        <HeatmapFocus
+          points={points}
+          shortlist={shortlist}
+          clientName={clientName}
+          phaseName={phaseName}
+          onExit={() => setFocus(false)}
+        />
+      )}
+    </>
+  );
+}
+
+/** Hőtérkép fókusz-mód (design 1d): teljes képernyős, ügyfél-workshop
+ *  nézet. All ⇄ Shortlist szűrő, nagy térkép + shortlist-sáv + „a térkép
+ *  olvasása" magyarázó. Read-only (a pontozás a workbench confirm-lépésén
+ *  történik — a kaput/jóváhagyást nem érinti). */
+function HeatmapFocus({
+  points,
+  shortlist,
+  clientName,
+  phaseName,
+  onExit,
+}: {
+  points: HeatmapPoint[];
+  shortlist: ShortlistItem[];
+  clientName: string;
+  phaseName: string;
+  onExit: () => void;
+}) {
+  const t = useTranslations("entities.heatmap");
+  const tEnt = useTranslations("entities");
+  const [onlyShortlist, setOnlyShortlist] = useState(false);
+  const shortlistIds = new Set(shortlist.map((s) => s.id));
+  const shown = onlyShortlist ? points.filter((p) => shortlistIds.has(p.id)) : points;
+
+  // Escape zárja a fókuszt.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onExit();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onExit]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("focusTitle")}
+      className="fixed inset-0 z-50 overflow-auto bg-app/90 p-4 backdrop-blur-sm sm:p-8"
+    >
+      <div
+        className="mx-auto max-w-6xl rounded-shell bg-surface p-5 sm:p-6"
+        style={{ boxShadow: "var(--shadow-focus-lift)" }}
+      >
+        {/* Fejléc */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-mono-sm text-ink-tertiary">
+              {clientName} · {phaseName}
+            </p>
+            <h2 className="mt-0.5 text-title">{t("focusTitle")}</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-tile border border-line bg-sunken p-1">
+              <button
+                type="button"
+                aria-pressed={!onlyShortlist}
+                onClick={() => setOnlyShortlist(false)}
+                className={`rounded-control px-3 py-1 text-body font-medium ${!onlyShortlist ? "border border-line bg-surface shadow-tile-sm" : "text-ink-secondary hover:bg-neutral-100"}`}
+              >
+                {t("filterAll", { n: points.length })}
+              </button>
+              <button
+                type="button"
+                aria-pressed={onlyShortlist}
+                onClick={() => setOnlyShortlist(true)}
+                className={`rounded-control px-3 py-1 text-body font-medium ${onlyShortlist ? "border border-line bg-surface shadow-tile-sm" : "text-ink-secondary hover:bg-neutral-100"}`}
+              >
+                {t("filterShortlist", { n: shortlist.length })}
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={onExit}
+              className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm hover:bg-sunken"
+            >
+              {t("exitFocus")} <span aria-hidden>✕</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div>
+            {shown.length === 0 ? (
+              <p className="rounded-tile border border-dashed border-line px-3 py-10 text-center text-body text-ink-tertiary">
+                {t("empty")}
+              </p>
+            ) : (
+              <Heatmap points={shown} onSelect={() => {}} />
+            )}
+          </div>
+          <div className="space-y-4">
+            <div className="rounded-tile border border-line bg-surface p-4">
+              <h3 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
+                {t("shortlistTitle", { n: shortlist.length })}
+              </h3>
+              {shortlist.length === 0 ? (
+                <p className="mt-2 text-body text-ink-tertiary">{t("shortlistEmpty")}</p>
+              ) : (
+                <ul className="mt-2 space-y-1.5">
+                  {shortlist.map((s) => (
+                    <li
+                      key={s.id}
+                      className="flex items-center justify-between gap-2 text-body"
+                    >
+                      <span className="min-w-0 truncate">{s.title}</span>
+                      <span className="shrink-0 font-mono text-mono-sm text-ink-tertiary">
+                        {s.value} · {s.feasibility}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="card-sunken p-4">
+              <h3 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
+                {t("readingTitle")}
+              </h3>
+              <p className="mt-2 text-body text-ink-secondary">{t("readingBody")}</p>
+            </div>
+            <p className="text-mono-sm text-ink-tertiary">{tEnt("quickWinBadge")}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

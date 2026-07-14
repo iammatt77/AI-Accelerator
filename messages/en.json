@@ -142,7 +142,8 @@
     "zoneGate": "④ Gate",
     "confirmLabel": "I confirm closing the gate",
     "interimBadge": "interim threshold",
-    "interimHint": "The canonical threshold (golden set / scale-pivot-stop / adoption) arrives with the depth packages."
+    "interimHint": "The canonical threshold (golden set / scale-pivot-stop / adoption) arrives with the depth packages.",
+    "startFirstHint": "Start the phase first so the gate can be closed."
   },
   "inputs": {
     "placeholder": "Paste the raw client material…",
@@ -193,7 +194,16 @@
     "generateOverwriteWarn": "Generating fully overwrites the existing body — manual edits are lost.",
     "openEditor": "Open editor",
     "noArtifactYet": "No artifact of this type yet.",
-    "entitySourcedHint": "This document's fields derive from the P1 entities (confirmed use cases) — extraction does not run here; start generation in zone ③ Output."
+    "entitySourcedHint": "This document's fields derive from the P1 entities (confirmed use cases) — extraction does not run here; start generation in zone ③ Output.",
+    "groupExpanded": "expanded",
+    "groupCollapsed": "collapsed",
+    "nextLabel": "Next:",
+    "nextStart": "start the phase",
+    "nextCloseGate": "close the gate",
+    "nextSatisfy": "{criterion}",
+    "statRawInputs": "raw inputs",
+    "statPainPoints": "pain points",
+    "statUseCases": "use cases"
   },
   "export": {
     "notFound": "Artifact not found.",
@@ -562,7 +572,17 @@
       "legendRiskLow": "low risk",
       "legendRiskMedium": "medium risk",
       "legendRiskHigh": "high risk",
-      "aiActWarn": "AI Act warning"
+      "aiActWarn": "AI Act warning",
+      "title": "Value × implementability",
+      "focusMode": "Focus mode",
+      "focusTitle": "Use-case heatmap",
+      "filterAll": "All · {n}",
+      "filterShortlist": "Shortlist · {n}",
+      "exitFocus": "Exit",
+      "shortlistTitle": "Shortlist — {n} selected",
+      "shortlistEmpty": "No shortlisted use case yet.",
+      "readingTitle": "Reading the map",
+      "readingBody": "Filled tiles are shortlisted. Position comes from the confirmed value/implementability scores; risk is the badge. Focus mode is read-only — scores change only via the confirm step."
     },
     "evaluators": {
       "suitabilityTitle": "AI suitability filter",
@@ -632,6 +652,21 @@
       "saveCta": "Save assessment",
       "saving": "Saving…",
       "saved": "Assessment saved."
+    },
+    "confirmedShort": "confirmed",
+    "shortlistedShort": "shortlisted",
+    "quickWinShort": "quick win",
+    "needsConfirmationHeading": "Needs confirmation · {n}",
+    "showMoreWaiting": "Show {n} more…",
+    "showMoreUseCases": "Show {n} more…",
+    "showLess": "Show less",
+    "riskShort": "RISK",
+    "scoreShortValue": "V",
+    "scoreShortFeas": "I",
+    "riskLetter": {
+      "low": "L",
+      "medium": "M",
+      "high": "H"
     }
   }
 }

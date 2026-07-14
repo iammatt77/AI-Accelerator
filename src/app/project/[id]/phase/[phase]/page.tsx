@@ -3,17 +3,10 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { loadPhaseBoard } from "@/lib/phases/service";
-import {
-  hasGate,
-  isManualClose,
-  isPhaseId,
-  previousPhase,
-  type PhaseId,
-} from "@/lib/phases/config";
-import { criterionLabel } from "@/lib/phases/criterion-label";
+import { isPhaseId, previousPhase, type PhaseId } from "@/lib/phases/config";
 import { PhaseStepperV2 } from "@/components/PhaseStepper";
 import { PhaseWorkspace } from "@/components/PhaseWorkspace";
-import { StartPhaseForm, GateCloseForm } from "@/components/PhaseGateForms";
+import { StartPhaseForm } from "@/components/PhaseGateForms";
 import { PhaseStateIcon, PHASE_STATE_TEXT, IconLock } from "@/components/icons";
 import type { DecisionRow, ProjectRow } from "@/lib/db/types";
 
@@ -54,6 +47,15 @@ export default async function PhasePage({
     .maybeSingle();
   if (!project) notFound();
   const projectRow = project as ProjectRow;
+  // Ügyfélnév a fázis-kontextushoz (fejléc + hőtérkép fókusz-mód).
+  const { data: clientRow } = projectRow.client_id
+    ? await supabase
+        .from("clients")
+        .select("name")
+        .eq("id", projectRow.client_id)
+        .maybeSingle()
+    : { data: null };
+  const clientName = (clientRow as { name?: string } | null)?.name ?? projectRow.name;
 
   const [board, { data: decisionData }] = await Promise.all([
     loadPhaseBoard(supabase, id),
@@ -73,13 +75,11 @@ export default async function PhasePage({
     phase,
   );
 
-  const [locale, tPhases, tLex, tGates, tCriteria, tTypes] = await Promise.all([
+  const [locale, tPhases, tLex, tGates] = await Promise.all([
     getLocale(),
     getTranslations("phases"),
     getTranslations("phases.lexicon"),
     getTranslations("gates"),
-    getTranslations("criteria"),
-    getTranslations("artifactTypes"),
   ]);
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   const dateOptions = { timeZone: "Europe/Budapest" } as const;
@@ -175,7 +175,7 @@ export default async function PhasePage({
         </div>
       )}
 
-      {/* ── open / in_progress / gate_pending: zónák + működő kapu ── */}
+      {/* ── open / in_progress / gate_pending: zone-tabs munkaterület ── */}
       {(state === "open" || state === "in_progress" || state === "gate_pending") && (
         <div className="space-y-6">
           {state === "open" && (
@@ -184,78 +184,18 @@ export default async function PhasePage({
             </section>
           )}
 
-          {/* ①–③ zóna: élő munkaterület (#5a) — bemenet → kivonatolás →
-              mező-megerősítés (E1) → generálás */}
-          <PhaseWorkspace supabase={supabase} projectId={id} phase={phase} />
-
-          {/* ④ Kapu */}
-          {!hasGate(phase) ? (
-            <section className="card-sunken p-4">
-              <h3 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
-                {tGates("zoneGate")}
-              </h3>
-              <p className="mt-1 text-body font-semibold">{tGates("noGate")}</p>
-              <p className="mt-1 text-body text-ink-secondary">{tGates("noGateBody")}</p>
-            </section>
-          ) : (
-            <section
-              className={`glass-tile p-4 ${
-                state === "gate_pending" ? "border-gate/40" : ""
-              }`}
-            >
-              <h3 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
-                {tGates("zoneGate")} — {tGates("criteriaTitle")}
-              </h3>
-
-              {/* Kritérium-checklist (#6: többkritériumos, deliverable-alapú):
-                  élő kiértékelés, zöld/borostyán, MINDIG ikon + szöveg */}
-              <ul className="mt-2 space-y-1.5">
-                {entry.criteria.map((criterion) => (
-                  <li key={criterion.id} className="flex items-center gap-2 text-body">
-                    <span className={criterion.satisfied ? "text-done" : "text-gate"}>
-                      <PhaseStateIcon
-                        state={criterion.satisfied ? "completed" : "gate_pending"}
-                        size={11}
-                      />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      {criterionLabel(criterion, tCriteria, tTypes)}
-                    </span>
-                    {/* interim küszöb (#6): a kanonikus kritérium mélység-
-                        csomaggal érkezik — halk, szaggatott jelölés */}
-                    {criterion.interim && (
-                      <span
-                        title={tGates("interimHint")}
-                        className="shrink-0 rounded-pill border border-dashed border-line px-1.5 py-px text-[10px] font-medium text-ink-tertiary"
-                      >
-                        {tGates("interimBadge")}
-                      </span>
-                    )}
-                    <span
-                      className={`shrink-0 text-mono-sm font-medium ${
-                        criterion.satisfied ? "text-done" : "text-gate"
-                      }`}
-                    >
-                      {criterion.satisfied
-                        ? tGates("criterionSatisfied")
-                        : tGates("criterionPending")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Zárás-flow — csak indított fázison (open-nél előbb indítás) */}
-              {state !== "open" && (
-                <div className="mt-4">
-                  <GateCloseForm
-                    projectId={id}
-                    phase={phase}
-                    temporary={isManualClose(phase)}
-                  />
-                </div>
-              )}
-            </section>
-          )}
+          {/* Redesign #1: a négy zóna (Input/Workbench/Output/Gate) fülekké
+              válik — a kapu is a munkaterület része lett (minden fülről
+              látható összegzővel). A funkció változatlan. */}
+          <PhaseWorkspace
+            supabase={supabase}
+            projectId={id}
+            phase={phase}
+            state={state}
+            criteria={entry.criteria}
+            clientName={clientName}
+            phaseName={shortName}
+          />
 
           <DecisionHistory
             decisions={phaseDecisions}

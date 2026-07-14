@@ -142,9 +142,13 @@ export interface PainPointCardData {
 export function PainPointProposalCard({
   projectId,
   painPoint,
+  embedded,
 }: {
   projectId: string;
   painPoint: PainPointCardData;
+  /** Drill-in részletként (Redesign #1): a külső keret + fejléc-sor a
+   *  DrillRow-ból jön, itt csak a részlet + akciók renderelnek. */
+  embedded?: boolean;
 }) {
   const t = useTranslations("entities");
   const tWs = useTranslations("workspace");
@@ -164,11 +168,19 @@ export function PainPointProposalCard({
   );
 
   return (
-    <div className="rounded-tile border border-line border-l-2 border-l-gate bg-surface p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="min-w-0 text-body font-medium">{painPoint.title}</span>
-        <EntityStateBadge state={painPoint.state} />
-      </div>
+    <div
+      className={
+        embedded
+          ? ""
+          : "rounded-tile border border-line border-l-2 border-l-gate bg-surface p-3"
+      }
+    >
+      {!embedded && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="min-w-0 text-body font-medium">{painPoint.title}</span>
+          <EntityStateBadge state={painPoint.state} />
+        </div>
+      )}
 
       {!editing && (
         <>
@@ -437,9 +449,12 @@ function ScoreSelect({
 export function UseCaseCard({
   projectId,
   useCase,
+  embedded,
 }: {
   projectId: string;
   useCase: UseCaseCardData;
+  /** Drill-in részletként (Redesign #1): külső keret + fejléc a DrillRow-ból. */
+  embedded?: boolean;
 }) {
   const t = useTranslations("entities");
   const tWs = useTranslations("workspace");
@@ -475,38 +490,46 @@ export function UseCaseCard({
   const accent = isProposal ? "border-l-gate" : "border-l-done";
 
   return (
-    <div className={`rounded-tile border border-line border-l-2 ${accent} bg-surface p-3`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="min-w-0 text-body font-medium">{useCase.title}</span>
-        <span className="flex shrink-0 items-center gap-2">
-          {useCase.quickWin && (
-            // Jelvény, nem döntési pont → NEM lila (törvény 3); ikon+szöveg
-            // (törvény 4): villám = quick win.
-            <span className="inline-flex items-center gap-1 rounded-pill border border-line bg-surface px-2 py-0.5 font-mono text-mono-sm text-ink-secondary">
-              <svg
-                width={11}
-                height={11}
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <path d="M9 2L4 9.5h3.5L7 14l5-7.5H8.5L9 2z" />
-              </svg>
-              {t("quickWinBadge")}
-            </span>
-          )}
-          {!isProposal && (
-            <span className="inline-flex items-center rounded-pill border border-line bg-surface px-2 py-0.5 font-mono text-mono-sm text-ink-secondary">
-              {t(`listStatus.${useCase.listStatus}`)}
-            </span>
-          )}
-          <EntityStateBadge state={useCase.state} />
-        </span>
-      </div>
+    <div
+      className={
+        embedded
+          ? ""
+          : `rounded-tile border border-line border-l-2 ${accent} bg-surface p-3`
+      }
+    >
+      {!embedded && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="min-w-0 text-body font-medium">{useCase.title}</span>
+          <span className="flex shrink-0 items-center gap-2">
+            {useCase.quickWin && (
+              // Jelvény, nem döntési pont → NEM lila (törvény 3); ikon+szöveg
+              // (törvény 4): villám = quick win.
+              <span className="inline-flex items-center gap-1 rounded-pill border border-line bg-surface px-2 py-0.5 font-mono text-mono-sm text-ink-secondary">
+                <svg
+                  width={11}
+                  height={11}
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M9 2L4 9.5h3.5L7 14l5-7.5H8.5L9 2z" />
+                </svg>
+                {t("quickWinBadge")}
+              </span>
+            )}
+            {!isProposal && (
+              <span className="inline-flex items-center rounded-pill border border-line bg-surface px-2 py-0.5 font-mono text-mono-sm text-ink-secondary">
+                {t(`listStatus.${useCase.listStatus}`)}
+              </span>
+            )}
+            <EntityStateBadge state={useCase.state} />
+          </span>
+        </div>
+      )}
 
       {!editing && useCase.description && (
         <p className="mt-1.5 whitespace-pre-wrap text-body text-ink-secondary">

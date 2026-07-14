@@ -142,7 +142,8 @@
     "zoneGate": "④ Kapu",
     "confirmLabel": "Megerősítem a kapu lezárását",
     "interimBadge": "interim küszöb",
-    "interimHint": "A kanonikus küszöb (golden set / scale-pivot-stop / adopció) a mélység-csomagokkal érkezik."
+    "interimHint": "A kanonikus küszöb (golden set / scale-pivot-stop / adopció) a mélység-csomagokkal érkezik.",
+    "startFirstHint": "Előbb indítsd el a fázist, hogy a kapu zárhatóvá váljon."
   },
   "inputs": {
     "placeholder": "Illeszd be a nyers ügyfélanyagot…",
@@ -193,7 +194,16 @@
     "generateOverwriteWarn": "A generálás a meglévő body-t teljesen felülírja — a kézi szerkesztés elvész.",
     "openEditor": "Szerkesztő megnyitása",
     "noArtifactYet": "Még nincs artefaktum ebből a típusból.",
-    "entitySourcedHint": "E dokumentum mezői a P1 entitásokból (megerősített use case-ekből) származnak — a kivonatolás itt nem fut; a generálást a ③ Kimenet zónában indítod."
+    "entitySourcedHint": "E dokumentum mezői a P1 entitásokból (megerősített use case-ekből) származnak — a kivonatolás itt nem fut; a generálást a ③ Kimenet zónában indítod.",
+    "groupExpanded": "kinyitva",
+    "groupCollapsed": "összecsukva",
+    "nextLabel": "Következő:",
+    "nextStart": "indítsd el a fázist",
+    "nextCloseGate": "zárd le a kaput",
+    "nextSatisfy": "{criterion}",
+    "statRawInputs": "nyers bemenet",
+    "statPainPoints": "fájdalompont",
+    "statUseCases": "use case"
   },
   "export": {
     "notFound": "Az artefaktum nem található.",
@@ -562,7 +572,17 @@
       "legendRiskLow": "alacsony kockázat",
       "legendRiskMedium": "közepes kockázat",
       "legendRiskHigh": "magas kockázat",
-      "aiActWarn": "AI Act figyelmeztetés"
+      "aiActWarn": "AI Act figyelmeztetés",
+      "title": "Érték × megvalósíthatóság",
+      "focusMode": "Fókusz-mód",
+      "focusTitle": "Use case-hőtérkép",
+      "filterAll": "Mind · {n}",
+      "filterShortlist": "Shortlist · {n}",
+      "exitFocus": "Kilépés",
+      "shortlistTitle": "Shortlist — {n} kiválasztva",
+      "shortlistEmpty": "Még nincs shortlisten lévő use case.",
+      "readingTitle": "A térkép olvasása",
+      "readingBody": "A kitöltött csempék a shortlisten vannak. A pozíció a megerősített érték/megvalósíthatóság pontszámokból jön; a kockázat a jelvény. A fókusz-mód read-only — a pontszám csak a megerősítő lépésen át változik."
     },
     "evaluators": {
       "suitabilityTitle": "AI-alkalmassági szűrő",
@@ -632,6 +652,21 @@
       "saveCta": "Értékelés mentése",
       "saving": "Mentés…",
       "saved": "Értékelés elmentve."
+    },
+    "confirmedShort": "megerősítve",
+    "shortlistedShort": "shortlisten",
+    "quickWinShort": "quick win",
+    "needsConfirmationHeading": "Megerősítésre vár · {n}",
+    "showMoreWaiting": "Még {n} megjelenítése…",
+    "showMoreUseCases": "Még {n} megjelenítése…",
+    "showLess": "Kevesebb",
+    "riskShort": "RISK",
+    "scoreShortValue": "É",
+    "scoreShortFeas": "M",
+    "riskLetter": {
+      "low": "A",
+      "medium": "K",
+      "high": "M"
     }
   }
 }
