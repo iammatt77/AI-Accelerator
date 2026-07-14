@@ -14,6 +14,7 @@ import {
   type ArtifactTypeDef,
 } from "@/lib/artifacts/config";
 import { isPhaseId } from "@/lib/phases/config";
+import { parseAiAct } from "@/lib/entities/evaluators";
 import { loadNumberedSources } from "@/lib/sources";
 import type { ArtifactRow, InputItemRow, UseCaseRow } from "@/lib/db/types";
 import type { FormState } from "./actions";
@@ -581,6 +582,15 @@ const RISK_HU: Record<string, string> = {
   high: "magas",
 };
 
+// #7b: a MEGERŐSÍTETT AI Act-besorolás magyar megnevezése a dokumentumban
+// (a puszta javaslat nem folyik dokumentumba — E1).
+const AI_ACT_HU: Record<string, string> = {
+  prohibited: "tiltott",
+  high_risk: "nagy kockázatú (Annex III)",
+  transparency: "átláthatósági kötelezettség (Art. 50)",
+  minimal: "minimális",
+};
+
 export async function generateShortlistFromEntitiesAction(
   projectId: string,
   _prevState: FormState,
@@ -668,9 +678,21 @@ export async function generateShortlistFromEntitiesAction(
   const excludedValue = excluded
     .map((u) => `${u.title} — ${u.exclusion_reason ?? "(indoklás nélkül)"}`)
     .join("\n");
-  const riskNoted = ranked.filter((u) => u.risk !== null);
+  // #7b: a kockázati jegyzet a kockázat-jelölések MELLETT a megerősített
+  // AI Act-besorolásokat is hordozza (use case-enként).
+  const confirmedAiAct = (u: UseCaseRow) =>
+    parseAiAct(u.ai_act)?.confirmed_category ?? null;
+  const riskNoted = ranked.filter(
+    (u) => u.risk !== null || confirmedAiAct(u) !== null,
+  );
   const riskValue = riskNoted
-    .map((u) => `${u.title}: ${riskMark(u.risk)} kockázat`)
+    .map((u) => {
+      const parts: string[] = [];
+      if (u.risk) parts.push(`${riskMark(u.risk)} kockázat`);
+      const category = confirmedAiAct(u);
+      if (category) parts.push(`AI Act: ${AI_ACT_HU[category] ?? category}`);
+      return `${u.title}: ${parts.join(" · ")}`;
+    })
     .join("\n");
   const criteriaValue =
     "Érték (1–5): a várt üzleti haszon mértéke. " +
