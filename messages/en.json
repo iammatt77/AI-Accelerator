@@ -541,6 +541,25 @@
     "generatingShortlist": "Generating…",
     "shortlistFieldsDone": "Fields refreshed from the confirmed entities.",
     "generateShortlistHint": "Fills the fields from the confirmed, shortlisted use cases (overwrites existing field values); the body is then produced with the “Generate draft” button.",
-    "quoteWrapped": "“{quote}”"
+    "quoteWrapped": "“{quote}”",
+    "heatmap": {
+      "viewList": "List",
+      "viewHeatmap": "Heatmap",
+      "ariaLabel": "Use case heatmap: value by feasibility matrix",
+      "quadrantQuickWin": "Quick win zone",
+      "quadrantStrategic": "Strategic bet",
+      "quadrantOpportunistic": "Opportunistic",
+      "quadrantAvoid": "Avoid",
+      "axisFeasibility": "Feasibility",
+      "axisValue": "Value",
+      "empty": "No scored use cases for the map yet — confirm and score use cases in the list view.",
+      "unscoredTitle": "Awaiting scoring",
+      "unscoredHint": "appears on the map once scored",
+      "clickHint": "Click a dot or row to jump to the card in the list view.",
+      "legendRiskLow": "low risk",
+      "legendRiskMedium": "medium risk",
+      "legendRiskHigh": "high risk",
+      "aiActWarn": "AI Act warning"
+    }
   }
 }

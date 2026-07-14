@@ -83,6 +83,10 @@ export interface UseCaseRow {
   exclusion_reason: string | null;
   source_input_ids: string[];
   state: EntityState;
+  /** Értékelő jsonb-k (0005) — defenzív parse: lib/entities/evaluators. */
+  ai_suitability: unknown;
+  data_readiness: unknown;
+  ai_act: unknown;
   created_at: string;
   updated_at: string;
 }

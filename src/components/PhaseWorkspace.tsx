@@ -32,6 +32,8 @@ import {
   type PainPointCardData,
   type UseCaseCardData,
 } from "@/components/EntityForms";
+import { UseCaseViews } from "@/components/UseCaseHeatmap";
+import { aiActWarnFor } from "@/lib/entities/evaluators";
 import { StatusPill } from "@/components/StatusPill";
 
 // ─────────────────────────────────────────────────────────────
@@ -254,15 +256,42 @@ export async function PhaseWorkspace({
               <p className="text-mono-sm text-ink-tertiary">{tEnt("useCaseLead")}</p>
               <DeriveUseCasesForm projectId={projectId} />
               {useCases.length > 0 ? (
-                <div className="space-y-2">
+                // Nézet-váltó (#7b): lista ⇄ hőtérkép. Pont = megerősített,
+                // NEM kizárt, pontozott use case; a pontozatlan a térkép
+                // melletti „Pontozásra vár" listába kerül.
+                <UseCaseViews
+                  points={useCases
+                    .filter(
+                      (u) =>
+                        (u.state === "confirmed" || u.state === "manual") &&
+                        u.list_status !== "excluded" &&
+                        u.score_value !== null &&
+                        u.score_feasibility !== null,
+                    )
+                    .map((u) => ({
+                      id: u.id,
+                      title: u.title,
+                      value: u.score_value as number,
+                      feasibility: u.score_feasibility as number,
+                      risk: u.risk,
+                      quickWin: u.quick_win,
+                      aiActWarn: aiActWarnFor(u),
+                    }))}
+                  unscored={useCases
+                    .filter(
+                      (u) =>
+                        (u.state === "confirmed" || u.state === "manual") &&
+                        u.list_status !== "excluded" &&
+                        (u.score_value === null || u.score_feasibility === null),
+                    )
+                    .map((u) => ({ id: u.id, title: u.title }))}
+                >
                   {useCases.map((u) => (
-                    <UseCaseCard
-                      key={u.id}
-                      projectId={projectId}
-                      useCase={toUseCaseCard(u)}
-                    />
+                    <div key={u.id} id={`uc-${u.id}`} className="rounded-tile">
+                      <UseCaseCard projectId={projectId} useCase={toUseCaseCard(u)} />
+                    </div>
                   ))}
-                </div>
+                </UseCaseViews>
               ) : (
                 <p className="text-body text-ink-tertiary">{tEnt("noUseCases")}</p>
               )}

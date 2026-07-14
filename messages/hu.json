@@ -541,6 +541,25 @@
     "generatingShortlist": "Generálás…",
     "shortlistFieldsDone": "A mezők frissültek a megerősített entitásokból.",
     "generateShortlistHint": "A mezőket a megerősített, shortlisten lévő use case-ekből tölti (a meglévő mezőértékeket felülírja); a body ezután a „Draft generálása” gombbal készül.",
-    "quoteWrapped": "„{quote}”"
+    "quoteWrapped": "„{quote}”",
+    "heatmap": {
+      "viewList": "Lista",
+      "viewHeatmap": "Hőtérkép",
+      "ariaLabel": "Use case hőtérkép: érték és megvalósíthatóság mátrix",
+      "quadrantQuickWin": "Quick win sáv",
+      "quadrantStrategic": "Strategic bet",
+      "quadrantOpportunistic": "Opportunista",
+      "quadrantAvoid": "Kerülendő",
+      "axisFeasibility": "Megvalósíthatóság",
+      "axisValue": "Érték",
+      "empty": "Még nincs pontozott use case a térképhez — erősíts meg és pontozz use case-eket a lista nézetben.",
+      "unscoredTitle": "Pontozásra vár",
+      "unscoredHint": "pontozás után kerül a térképre",
+      "clickHint": "Kattints egy pontra vagy sorra: a lista nézetben a kártyához ugrik.",
+      "legendRiskLow": "alacsony kockázat",
+      "legendRiskMedium": "közepes kockázat",
+      "legendRiskHigh": "magas kockázat",
+      "aiActWarn": "AI Act figyelmeztetés"
+    }
   }
 }
