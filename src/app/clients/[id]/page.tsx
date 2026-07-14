@@ -80,7 +80,7 @@ export default async function ClientPage({
             <li key={project.id}>
               <Link
                 href={`/project/${project.id}`}
-                className="glass-tile glass-tile-interactive block p-4"
+                className="surface-card surface-card-interactive block p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium">{project.name}</span>

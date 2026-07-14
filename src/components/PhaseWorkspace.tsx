@@ -264,7 +264,7 @@ export async function PhaseWorkspace({
       : false;
     return (
       <div className="space-y-3">
-        <div className="glass-tile p-4">
+        <div className="surface-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-body font-semibold">{typeName(typeDef)}</span>
             {latest ? (
@@ -359,7 +359,7 @@ export async function PhaseWorkspace({
     const editable = latest?.status === "draft";
     const fields = latest ? parseArtifactFields(typeDef, latest.fields) : null;
     return (
-      <div className="glass-tile space-y-3 p-4">
+      <div className="surface-card space-y-3 p-4">
         <h4 className="text-body font-semibold">{typeName(typeDef)}</h4>
         <p className="text-mono-sm text-ink-tertiary">{t("toolsLead")}</p>
         {latest && !editable && (
@@ -408,7 +408,7 @@ export async function PhaseWorkspace({
   // ── Panelek ─────────────────────────────────────────────────
 
   const inputPanel = (
-    <section className="glass-tile p-4">
+    <section className="surface-card p-4">
       <p className="text-mono-sm text-ink-tertiary">{t("inputsLead", { phase })}</p>
       {inputs.length === 0 ? (
         <p className="mt-3 rounded-tile border border-dashed border-line px-3 py-6 text-center text-body text-ink-tertiary">
@@ -546,7 +546,7 @@ export async function PhaseWorkspace({
           </section>
 
           {/* Use case-ek */}
-          <section className="glass-tile p-4">
+          <section className="surface-card p-4">
             <h4 className="text-body font-semibold">
               {tEnt("useCaseSectionTitle")}{" "}
               <span className="font-mono text-mono-sm font-normal text-ink-tertiary">
@@ -618,7 +618,7 @@ export async function PhaseWorkspace({
       ))}
     </div>
   ) : phaseTypes.length === 0 ? (
-    <p className="glass-tile p-4 text-body text-ink-tertiary">{t("noTypesForPhase")}</p>
+    <p className="surface-card p-4 text-body text-ink-tertiary">{t("noTypesForPhase")}</p>
   ) : (
     <div className="space-y-5">
       {phaseTypes.map((typeDef) => (
@@ -629,7 +629,7 @@ export async function PhaseWorkspace({
 
   const outputPanel =
     phaseTypes.length === 0 ? (
-      <p className="glass-tile p-4 text-body text-ink-tertiary">{t("noTypesForPhase")}</p>
+      <p className="surface-card p-4 text-body text-ink-tertiary">{t("noTypesForPhase")}</p>
     ) : (
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {phaseTypes.map((typeDef) => (
@@ -647,7 +647,7 @@ export async function PhaseWorkspace({
     </section>
   ) : (
     <section
-      className={`glass-tile p-4 ${state === "gate_pending" ? "border-gate/40" : ""}`}
+      className={`surface-card p-4 ${state === "gate_pending" ? "border-gate/40" : ""}`}
     >
       <h3 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
         {tGates("criteriaTitle")}

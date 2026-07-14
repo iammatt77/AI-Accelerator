@@ -64,8 +64,8 @@ export async function PhaseStepperV1({
         const tileByState = locked
           ? "border border-line bg-sunken"
           : state === "gate_pending"
-            ? "glass-tile glass-tile-interactive border-gate/40"
-            : "glass-tile glass-tile-interactive";
+            ? "surface-card surface-card-interactive border-gate/40"
+            : "surface-card surface-card-interactive";
 
         return (
           <li key={phase} className="min-w-0 flex-1">

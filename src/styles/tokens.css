@@ -1,52 +1,55 @@
 /* ─────────────────────────────────────────────────────────────
- * Design-tokenek — v0.4 „angular glass"
+ * Design-tokenek — Handoff Master (2026-07-14), lapos-tömör modell
  * EGYETLEN forrásfájl: minden szín/tipó/tér/mozgás token itt él.
  * A komponensek Tailwind-osztályokon át (semantic mapping a
  * globals.css @theme blokkjában) vagy közvetlen var()-ral
  * hivatkoznak ezekre. Literál hex az alap-chrome-ban TILOS —
  * csak ebben a fájlban szerepelhet.
  *
- * Törvények (v0.4):
- *  1. üveg-csempe alatt tömör fátyol; törzs-kontraszt ≥7:1;
- *     ink/tertiary csak meta-szövegre
- *  2. lágy árnyék + 1px felső fény-él; erős gradiens/neon tilos
- *  3. egy akcentus: lila csak döntési pontokon
- *  4. státusz = ikon + szöveg, sosem csak szín
- *  5. fókusz: 2px lila gyűrű
- *  6. öröklött kontextus-kártya süllyesztett, nem üveg
- *  7. zárt elem halk: ink/tertiary + lakat + tooltip
+ * A Master token-referenciája (kötelező):
+ *   accent/active #8458B3 · done #3E9E6E · gate #B4801E ·
+ *   source/info #2E77A8 · stalled/high #C0455A · text #23262F ·
+ *   muted #8B90A3 · app bg #ECEEF4 · surface #FFFFFF
+ * Felületek: tömör fehér, EGY árnyék-token, lapos háttér —
+ * NINCS glassmorphism / backdrop-blur. Sarok-rádiusz 4–6px.
+ * Ikonok: 1.5px vonalvastagságú line-ikonok.
  * ───────────────────────────────────────────────────────────── */
 
 :root {
   /* ── SZÍN ── */
-  --bg-app: #eaecf3;
-  --glass-tile: rgba(255, 255, 255, 0.55);
+  --bg-app: #eceef4;
   --surface-solid: #ffffff;
   --surface-sunken: #f4f5f9;
+  --surface-rail: #f6f7fa; /* ikon-rail / sín-hátterek (Master) */
+  --surface-soft: #fafafc; /* oldalsó sávok, lágy panelek */
+  --surface-context: #faf8fd; /* projekt-kontextus oszlop / összegző sávok */
 
   --ink-primary: #23262f;
-  --ink-secondary: #55596b; /* származtatott (redesign #1: finomítva) */
-  --ink-tertiary: #8b90a3; /* csak meta-szöveg */
+  --ink-secondary: #55596b;
+  --ink-tertiary: #8b90a3; /* muted — csak meta-szöveg */
 
-  --border-subtle: #e2e4ec;
-  --edge-highlight: rgba(255, 255, 255, 0.9);
+  --border-subtle: #e4e6ee; /* kártya-él (Master) */
+  --border-soft: #e7e9f0; /* belső elválasztók */
+  --border-row: #f2f3f7; /* sor-elválasztók */
 
-  --action-primary: #8458b3; /* lila — csak döntési pontokon */
+  --action-primary: #8458b3; /* accent / active */
   --action-hover: #9b6bce;
-  --action-deep: #7a4fb0; /* a lila mélyebb tónusa (aktív/gradiens-alsó, gombok) */
+  --action-deep: #7a4fb0; /* linkek / aktív szöveg (Master kéttónusú lila) */
   --action-light: #d0bdf4;
-  --info-sky: #a0d2eb;
+  --accent-fill: #ede6f7; /* aktív nav-elem / kiemelt háttér */
+  --accent-tint: #f3eefa; /* accent-kártya háttér */
+  --accent-deeptext: #6c43a0; /* accent-kártyán nagy szám */
 
   --status-done: #3e9e6e;
+  --status-done-text: #2e8b5e; /* zöld SZÖVEG világos alapon (Master) */
   --status-active: #8458b3;
   --status-gate: #b4801e;
-  --status-pivot: #2e77a8;
-  --status-error: #c0455a;
+  --status-gate-text: #9a6a12; /* borostyán SZÖVEG világos alapon */
+  --status-pivot: #2e77a8; /* source / info */
+  --status-error: #c0455a; /* stalled / high risk */
   --status-locked: #8b90a3;
 
-  /* ── SEMLEGES-LÉPCSŐ (redesign #1) ──
-   * A rétegződéshez — ez adja a „nem fapados" mélységet: kilenc árnyalat
-   * a legvilágosabb csempe-fátyoltól a közepes szürkéig. */
+  /* ── SEMLEGES-LÉPCSŐ ── */
   --neutral-50: #fbfbfd;
   --neutral-100: #eef0f5;
   --neutral-150: #edeef3;
@@ -57,33 +60,36 @@
   --neutral-450: #b4b8c6;
   --neutral-500: #a9aebd;
 
-  /* ── STÁTUSZ-SZÍNEZETT FÁTYOL-RECEPTEK (redesign #1) ──
-   * Halvány háttér jelvényekhez/csempékhez — a státusz-szín ~12%-a. */
+  /* ── STÁTUSZ-FÁTYOL RECEPTEK (halvány hátterek, a Masterből) ── */
   --tint-action: rgba(132, 88, 179, 0.12);
-  --tint-gate: rgba(180, 128, 30, 0.12);
-  --tint-pivot: rgba(46, 119, 168, 0.12);
+  --tint-gate: #fbf3e0; /* borostyán jelvény-háttér */
+  --tint-gate-band: #fbf7ee; /* borostyán sáv-háttér */
+  --tint-gate-border: #ebd9b4;
+  --tint-pivot: #e4eef5; /* kék forrás-jelvény háttér */
   --tint-sky: rgba(160, 210, 235, 0.24);
-  --tint-done: rgba(62, 158, 110, 0.12);
+  --tint-done: #eaf3ee; /* zöld jelvény/pill háttér */
+  --tint-done-band: #eff7f2; /* zöld sáv-háttér */
+  --tint-done-border: #bfe0cc;
+  --tint-done-chip: #e4f1ea; /* zöld mini-tag */
+  --tint-error: #fbecef; /* piros jelvény-háttér */
 
   /* ── TIPÓ ──
-   * display: Hanken Grotesk 34/800 · title: 18/600 · body: 14/400 lh 1.55
-   * metric: JetBrains Mono 22/700 · mono: JetBrains Mono ~12/500
-   * A --font-hanken / --font-jetbrains változókat a next/font tölti be
-   * (layout.tsx), latin + latin-ext subsettel (magyar ékezetek).
+   * display: Hanken Grotesk 34/800 · title: 19/700 · body: 13.5/400
+   * metric: JetBrains Mono 22–30/700 · mono: JetBrains Mono ~11/600
    */
   --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
 
   --type-display-size: 34px;
   --type-display-weight: 800;
-  --type-title-size: 18px;
-  --type-title-weight: 600;
-  --type-body-size: 14px;
+  --type-title-size: 19px;
+  --type-title-weight: 700;
+  --type-body-size: 13.5px;
   --type-body-weight: 400;
   --type-body-leading: 1.55;
   --type-metric-size: 22px;
   --type-metric-weight: 700;
-  --type-mono-size: 12px;
+  --type-mono-size: 11.5px;
   --type-mono-weight: 500;
 
   /* ── TÉR (4px-rács) ── */
@@ -95,34 +101,27 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* ── RADIUS („angular": szögletes alap) ── */
-  --radius-control: 2px;
-  --radius-3: 3px;
-  --radius-tile: 4px;
+  /* ── RADIUS (Master: 4–6px) ── */
+  --radius-control: 4px; /* gombok, inputok, kis kártyák */
+  --radius-3: 3px; /* mini-tagek */
+  --radius-tile: 5px; /* kártyák */
   --radius-5: 5px;
-  --radius-shell: 6px;
+  --radius-shell: 6px; /* nagy konténerek */
   --radius-pill: 999px;
-  --radius-tab-top: 4px 4px 0 0; /* zone-tabs fül-tetők (redesign #1) */
 
   /* ── MOZGÁS ── */
   --motion-fast: 120ms;
   --motion-base: 200ms;
   --motion-gate: 320ms;
-  --motion-ease: cubic-bezier(0, 0, 0.2, 1); /* ease-out */
+  --motion-ease: cubic-bezier(0, 0, 0.2, 1);
 
-  /* ── SZÁRMAZTATOTT RECEPTEK (a v0.4 referencia-HTML-ből) ──
-   * üveg: fátyol + blur(20px) saturate(150%); él: 1px felső fény-él
-   * árnyék: lágy, hűvös szürkéskék (73,77,95) alapú
-   */
-  --blur-glass: blur(20px) saturate(150%);
-  --blur-glass-soft: blur(10px);
-  --shadow-tile: 0 10px 30px rgba(73, 77, 95, 0.1);
-  --shadow-tile-hover: 0 14px 40px rgba(73, 77, 95, 0.14);
-  --shadow-tile-sm: 0 3px 12px rgba(73, 77, 95, 0.08);
-  --shadow-action: 0 3px 8px rgba(132, 88, 179, 0.4);
-  --shadow-action-hover: 0 6px 16px rgba(132, 88, 179, 0.32);
-  --edge-top: inset 0 1px 0 var(--edge-highlight);
-  /* Emelt árnyék a fókusz-módhoz / modalhoz (redesign #1) */
-  --shadow-focus-lift: 0 24px 70px rgba(73, 77, 95, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  /* ── ÁRNYÉK — EGY konzisztens felület-token (Master §09) ──
+   * + accent/CTA változatok a Master mockupjaiból. Blur/üveg NINCS. */
+  --shadow-card: 0 1px 2px rgba(35, 38, 47, 0.05), 0 8px 22px rgba(35, 38, 47, 0.07);
+  --shadow-card-sm: 0 1px 2px rgba(35, 38, 47, 0.04);
+  --shadow-accent: 0 1px 2px rgba(35, 38, 47, 0.05), 0 8px 22px rgba(108, 67, 160, 0.12);
+  --shadow-action: 0 4px 12px rgba(132, 88, 179, 0.3);
+  --shadow-gate-pill: 0 4px 12px rgba(180, 128, 30, 0.3);
+  --shadow-done-pill: 0 4px 12px rgba(62, 158, 110, 0.3);
+  --shadow-shell: 0 1px 2px rgba(35, 38, 47, 0.05), 0 20px 56px rgba(35, 38, 47, 0.12);
 }

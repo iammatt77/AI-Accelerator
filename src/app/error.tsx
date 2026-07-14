@@ -17,7 +17,7 @@ export default function ErrorBoundary({
   const t = useTranslations("errors");
 
   return (
-    <div className="glass-tile mx-auto mt-16 max-w-md p-8 text-center">
+    <div className="surface-card mx-auto mt-16 max-w-md p-8 text-center">
       <h1 className="text-title text-danger">{t("genericTitle")}</h1>
       <p className="mt-2 text-body text-ink-secondary">{t("genericBody")}</p>
       {error.digest && (

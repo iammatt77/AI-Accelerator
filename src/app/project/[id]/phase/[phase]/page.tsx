@@ -144,7 +144,7 @@ export default async function PhasePage({
       {/* ── completed: olvasó nézet + kapu-döntés ── */}
       {state === "completed" && (
         <div className="space-y-6">
-          <section className="glass-tile border-l-2 border-l-done p-4">
+          <section className="surface-card border-l-2 border-l-done p-4">
             <h2 className="flex items-center gap-2 text-body font-semibold text-done">
               <PhaseStateIcon state="completed" size={13} />
               {tGates("completedTitle")}
@@ -179,7 +179,7 @@ export default async function PhasePage({
       {(state === "open" || state === "in_progress" || state === "gate_pending") && (
         <div className="space-y-6">
           {state === "open" && (
-            <section className="glass-tile border-l-2 border-l-active p-4">
+            <section className="surface-card border-l-2 border-l-active p-4">
               <StartPhaseForm projectId={id} phase={phase} />
             </section>
           )}

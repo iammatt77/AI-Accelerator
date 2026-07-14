@@ -10,7 +10,7 @@ export default async function NotFound() {
   ]);
 
   return (
-    <div className="glass-tile mx-auto mt-16 max-w-md p-8 text-center">
+    <div className="surface-card mx-auto mt-16 max-w-md p-8 text-center">
       <p className="font-mono text-metric">404</p>
       <h1 className="mt-2 text-title">{tErrors("notFoundTitle")}</h1>
       <p className="mt-2 text-body text-ink-secondary">{tErrors("notFoundBody")}</p>

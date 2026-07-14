@@ -43,7 +43,7 @@ export default async function RootLayout({
           <div className="flex min-h-dvh">
             {/* Navigációs váz (#4): 3 valós + 3 placeholder szakasz.
                 A nyelvváltó a #3 helyén, az oldalsáv alján marad. */}
-            <aside className="glass-panel flex w-56 shrink-0 flex-col border-r border-line">
+            <aside className="flex w-56 shrink-0 flex-col border-r border-line">
               <div className="px-5 py-6">
                 <Link href="/" className="block">
                   <span className="block text-body font-semibold tracking-tight">

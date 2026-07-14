@@ -41,7 +41,7 @@ export default async function ClientsPage() {
           <li key={client.id}>
             <Link
               href={`/clients/${client.id}`}
-              className="glass-tile glass-tile-interactive block p-4"
+              className="surface-card surface-card-interactive block p-4"
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="font-medium">{client.name}</span>

@@ -195,7 +195,7 @@ export default async function ProjectCockpitPage({
           </div>
 
           {/* Legutóbbi artefaktumok (max 3) + belépő a tárba (#5b) */}
-          <section className="glass-tile p-4">
+          <section className="surface-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
                 {tCockpit("recentArtifacts")}
@@ -235,7 +235,7 @@ export default async function ProjectCockpitPage({
         <div className="space-y-6">
           {/* Aktuális fázis — kapu-checklist kártya */}
           {currentPhase && (
-            <section className="glass-tile p-4">
+            <section className="surface-card p-4">
               <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
                 {tCockpit("gateChecklistTitle")}
               </h2>
@@ -325,7 +325,7 @@ export default async function ProjectCockpitPage({
       {/* A régi „Bemenet & generálás" blokk (#1) kivezetve (#5a) — a munka
           az aktuális fázis munkaterületén folyik; innen CTA vezet oda. */}
       {currentPhase && (
-        <section className="glass-tile border-l-2 border-l-active p-5">
+        <section className="surface-card border-l-2 border-l-active p-5">
           <h2 className="text-body font-semibold">{tCockpit("workspaceCtaTitle")}</h2>
           <p className="mt-1 text-body text-ink-secondary">
             {tCockpit("workspaceCtaBody")}
@@ -362,13 +362,13 @@ function StatChip({
     return (
       <Link
         href={href}
-        className="glass-tile block p-3 text-center transition-colors duration-[var(--motion-base)] hover:bg-sunken"
+        className="surface-card block p-3 text-center transition-colors duration-[var(--motion-base)] hover:bg-sunken"
       >
         {body}
       </Link>
     );
   }
-  return <div className="glass-tile p-3 text-center">{body}</div>;
+  return <div className="surface-card p-3 text-center">{body}</div>;
 }
 
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {

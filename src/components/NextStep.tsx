@@ -56,7 +56,7 @@ export async function NextStepWidget({
     step.kind === "all_done" ? null : step.kind === "no_gate" ? "P6" : step.phase;
 
   return (
-    <section className="glass-tile border-l-2 border-l-active p-4">
+    <section className="surface-card border-l-2 border-l-active p-4">
       <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
         {tCockpit("nextStepTitle")}
       </h2>

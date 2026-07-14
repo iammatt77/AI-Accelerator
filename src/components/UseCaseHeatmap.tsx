@@ -296,7 +296,7 @@ export function WorkbenchHeatmap({
 
   return (
     <>
-      <section className="glass-tile p-4">
+      <section className="surface-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h4 className="text-body font-semibold">{t("title")}</h4>
           <button
@@ -428,11 +428,11 @@ function HeatmapFocus({
       role="dialog"
       aria-modal="true"
       aria-label={t("focusTitle")}
-      className="fixed inset-0 z-50 overflow-auto bg-app/90 p-4 backdrop-blur-sm sm:p-8"
+      className="fixed inset-0 z-50 overflow-auto bg-app/90 p-4 sm:p-8"
     >
       <div
         className="mx-auto max-w-6xl rounded-shell bg-surface p-5 sm:p-6"
-        style={{ boxShadow: "var(--shadow-focus-lift)" }}
+        style={{ boxShadow: "var(--shadow-shell)" }}
       >
         {/* Fejléc */}
         <div className="flex flex-wrap items-start justify-between gap-3">

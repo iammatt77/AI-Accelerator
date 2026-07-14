@@ -28,7 +28,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 //     approved-nél két oszlop (dokumentum · verziók)
 //   → teljes szélességű lábléc (HITL + Back/Approve).
 // A body a KÖZÉPSŐ oszlopban kompakt, görgethető panel (nem kiterített
-// szalag). A felület a rendszer glass-tile receptje; az olvasó/öröklött
+// szalag). A felület a rendszer surface-card receptje; az olvasó/öröklött
 // tartalom süllyesztett (6. törvény). A funkció változatlan: a mező- és
 // státusz-akciók a MEGLÉVŐ server actionök; az approve-blokk a szerveren.
 // ─────────────────────────────────────────────────────────────
@@ -360,7 +360,7 @@ export function ArtifactEditor({
   );
 
   return (
-    <div className="glass-tile overflow-hidden p-0">
+    <div className="surface-card overflow-hidden p-0">
       {/* ── Fejléc: azonosság + státuszlánc + History/Export ── */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line px-5 py-3.5">
         <div className="min-w-0">

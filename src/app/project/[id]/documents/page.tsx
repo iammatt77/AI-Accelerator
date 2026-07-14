@@ -186,7 +186,7 @@ export default async function DocumentsHubPage({
     const latestApproved = versions.find((v) => v.status === "approved") ?? null;
 
     return (
-      <div className="glass-tile px-4 py-3">
+      <div className="surface-card px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="flex min-w-0 flex-wrap items-center gap-2">
             {phase && (
