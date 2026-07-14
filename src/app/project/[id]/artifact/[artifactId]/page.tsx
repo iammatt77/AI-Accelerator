@@ -6,7 +6,6 @@ import {
   getTypeDef,
   missingRequiredFields,
   parseArtifactFields,
-  unconfirmedFields,
 } from "@/lib/artifacts/config";
 import {
   ArtifactEditor,
@@ -146,10 +145,12 @@ export default async function ArtifactEditorPage({
     typeDef && parsedFields
       ? missingRequiredFields(typeDef, parsedFields).map((f) => fieldLabel(f.labelKey))
       : [];
-  const unconfirmedLabels =
-    typeDef && parsedFields
-      ? unconfirmedFields(typeDef, parsedFields).map((f) => fieldLabel(f.labelKey))
-      : [];
+
+  // A HITL-lábléc „Utolsó mentés"-bélyege (tz-biztos, rövid forma).
+  const savedAtLabel = new Date(artifact.updated_at ?? artifact.created_at).toLocaleDateString(
+    dateLocale,
+    { timeZone: "Europe/Budapest", month: "short", day: "numeric" },
+  );
 
   const backHref = typeDef
     ? `/project/${id}/phase/${typeDef.phase}`
@@ -163,21 +164,20 @@ export default async function ArtifactEditorPage({
         </p>
       )}
 
-      {/* v2 ref: egy üveg-konténer — fejléc (azonosság + státuszlánc) → blokkoló
-          → három oszlop (field-map · dokumentum · sources) → HITL-lábléc. */}
+      {/* Master 5 v3: egy tömör konténer — fejléc (azonosság + státuszlánc) →
+          összefoglaló sáv + Szerkesztés/Előnézet váltó → mező-accordion vagy
+          mezőkből komponált előnézet → HITL-lábléc. */}
       <ArtifactEditor
         projectId={id}
         artifactId={artifact.id}
         status={artifact.status}
         isHead={isHead}
         fields={editorFields}
-        filled={done.filled}
         requiredCount={done.required}
         body={artifact.body}
         editable={artifact.status === "draft"}
         sources={sources}
         missingRequiredLabels={missingRequiredLabels}
-        unconfirmedLabels={unconfirmedLabels}
         versions={editorVersions}
         approvedDate={
           artifact.status === "approved"
@@ -195,6 +195,7 @@ export default async function ArtifactEditorPage({
         version={artifact.version}
         inputsCount={sources.length}
         nextVersion={headVersion + 1}
+        savedAtLabel={savedAtLabel}
       />
     </div>
   );

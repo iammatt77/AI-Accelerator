@@ -55,26 +55,23 @@ export function StatusFlow({ status }: { status: ArtifactStatus }) {
         const active = i === idx;
         const future = i > idx;
 
-        // Tömör aktív csomópont (v2): in_review = gate-tónus, approved = done-tónus,
-        // draft = semleges tömör „itt vagy" jelölés.
+        // Tömör aktív csomópont (Master): draft/in_review AKTÍV = tömör
+        // borostyán (#B4801E, fehér, árnyék), approved aktív = tömör zöld;
+        // múlt = zöld fátyol + pipa; jövő = halvány + lakat.
         let cls: string;
         let icon: React.ReactNode;
         if (active && status === "approved") {
-          cls = "border-done bg-done text-white shadow-tile-sm";
+          cls = "border-done bg-done text-white shadow-done-pill";
           icon = <CheckIcon />;
-        } else if (active && status === "in_review") {
-          cls = "border-gate bg-gate text-white shadow-tile-sm";
-          icon = <DotIcon />;
         } else if (active) {
-          // draft aktív
-          cls = "border-ink-secondary bg-ink-secondary text-white shadow-tile-sm";
+          cls = "border-gate bg-gate text-white shadow-gate-pill";
           icon = <DotIcon />;
         } else if (done) {
-          cls = "border-done/40 bg-tint-done text-done";
+          cls = "border-tint-done-border bg-tint-done text-done-text";
           icon = <CheckIcon />;
         } else {
           // jövőbeli — halk, lakat
-          cls = "border-line bg-neutral-150 text-ink-tertiary";
+          cls = "border-neutral-300 bg-neutral-150 text-neutral-450";
           icon = <LockIcon />;
         }
 

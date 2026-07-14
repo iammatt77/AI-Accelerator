@@ -389,11 +389,26 @@
     "fieldRequiredEmpty": "required · empty",
     "fillPrompt": "Fill in: {field}. This field is required before approval.",
     "writeManually": "Write manually",
-    "hitlFooter": "Draft generated from {count} inputs · human review required before approval (HITL)",
+    "hitlFooter": "Last saved: {date} · draft built from {count} raw inputs, human-confirmed (HITL)",
     "approveMissing": "Approve — {count} fields missing",
     "editingLockedNote": "Editing is locked after approval. Changes require a new version (v{next} draft) — the status chain restarts by rule.",
     "openTranscript": "open transcript ↗",
-    "documentsCrumb": "documents"
+    "documentsCrumb": "documents",
+    "requiredTag": "REQUIRED",
+    "optionalTag": "OPTIONAL",
+    "emptyRequiredHint": "Empty — required for approval",
+    "emptyOptionalHint": "Empty — optional",
+    "optionalSection": "OPTIONAL",
+    "finalTag": "final",
+    "summaryReady": "All {n} required fields are complete and confirmed.",
+    "summaryOptional": "{n} optional fields empty: {fields}.",
+    "summaryDraft": "Draft — {done}/{total} required fields done. Missing:",
+    "modeEdit": "Edit",
+    "modePreview": "Preview",
+    "tocTitle": "CONTENTS",
+    "introSection": "Introduction",
+    "deliverableKicker": "DELIVERABLE",
+    "previewEmpty": "Nothing to preview yet — fill in fields in the Edit view."
   },
   "artifacts": {
     "status": {

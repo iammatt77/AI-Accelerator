@@ -9,20 +9,22 @@ import {
   editFieldAction,
 } from "@/app/artifact-actions";
 import type { ArtifactFieldValue } from "@/lib/artifacts/config";
+import { IconCheck } from "@/components/icons";
 import { SubmitButton } from "@/components/SubmitButton";
 
 // ─────────────────────────────────────────────────────────────
-// Dokumentum-mező szekció a szerkesztő KÖZÉPSŐ oszlopában (v2 ref):
-//   fejléc = cím + státusz-szó (✓ kész / kötelező · üres / …)
-//   törzs  = kitöltött → süllyesztett érték-doboz; üres kötelező (draft) →
-//            szaggatott borostyán doboz prompttal + „Kézi kitöltés"
-//   E1-akciók (draft) kompakt sorban. A server actionök a MEGLÉVŐK
-//   (confirm/edit/dismissFieldAction) — csak a megjelenítés a v2 szerinti.
+// Mező-accordion elem (Master 5 v3): egyszerre EGY mező van nyitva, a
+// többi EGYSOROS összefoglaló (státusz + előnézet-részlet). A nyitott
+// mező lila keretes kártya: érték (süllyesztett) / üres kötelező →
+// szaggatott prompt + „Kézi kitöltés"; E1-akciók (confirm/edit/dismiss)
+// a MEGLÉVŐ server actionökkel — csak a megjelenítés v3.
+// FLAG: a per-mező „✦ Javaslat (te erősíted meg)" ÚJ server actiont +
+// LLM-hívást igényelne — nem építjük csendben.
 // ─────────────────────────────────────────────────────────────
 
 const initialState: FormState = { ok: false, error: null };
 
-export function EditorField({
+export function EditorFieldAccordion({
   projectId,
   artifactId,
   fieldKey,
@@ -30,6 +32,8 @@ export function EditorField({
   required,
   field,
   editable,
+  open,
+  onToggle,
 }: {
   projectId: string;
   artifactId: string;
@@ -38,6 +42,8 @@ export function EditorField({
   required: boolean;
   field: ArtifactFieldValue;
   editable: boolean;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const t = useTranslations("editor");
   const tWs = useTranslations("workspace");
@@ -57,116 +63,174 @@ export function EditorField({
   );
 
   const hasValue = Boolean(field.value);
-  const emptyRequired = required && !hasValue;
   const confirmed = field.state === "confirmed" || field.state === "manual";
-  const statusWord = confirmed
-    ? { text: t("fieldComplete"), cls: "text-done" }
-    : field.state === "ai_filled"
-      ? { text: t("fieldAiConfirm"), cls: "text-gate" }
-      : emptyRequired
-        ? { text: t("fieldRequiredEmpty"), cls: "text-gate" }
-        : { text: t("optionalShort"), cls: "text-ink-tertiary" };
+  const emptyRequired = required && !hasValue;
 
-  return (
-    <div id={`fld-${fieldKey}`} className="scroll-mt-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className={`text-body font-bold ${emptyRequired ? "text-gate" : "text-ink"}`}>
+  const statusPill = confirmed ? (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-pill bg-tint-done px-2.5 py-[3px] text-[11px] font-semibold text-done-text">
+      <IconCheck size={8} />
+      {tWs("fieldState.confirmed")}
+    </span>
+  ) : field.state === "ai_filled" ? (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-pill bg-tint-gate px-2.5 py-[3px] text-[11px] font-semibold text-gate-text">
+      <span aria-hidden>•</span>
+      {tWs("fieldState.ai_filled")}
+    </span>
+  ) : null;
+
+  const reqTag = required ? (
+    <span className="shrink-0 rounded-3 bg-tint-gate px-1.5 py-px font-mono text-[9.5px] font-bold text-gate-text">
+      {t("requiredTag")}
+    </span>
+  ) : (
+    <span className="shrink-0 rounded-3 bg-neutral-150 px-1.5 py-px font-mono text-[9.5px] font-semibold text-ink-tertiary">
+      {t("optionalTag")}
+    </span>
+  );
+
+  // ── Csukott egysoros összefoglaló ──
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={false}
+        className={`flex w-full items-center gap-2.5 rounded-shell px-4 py-[13px] text-left ${
+          emptyRequired
+            ? "border-[1.5px] border-dashed border-gate bg-[var(--tint-gate-band)]"
+            : !hasValue
+              ? "border-[1.5px] border-dashed border-neutral-400 bg-soft"
+              : "border border-line bg-surface shadow-card-sm hover:bg-neutral-50"
+        }`}
+      >
+        <span aria-hidden className="shrink-0 text-ink-tertiary">
+          ›
+        </span>
+        <span
+          className={`shrink-0 text-[13.5px] font-bold ${emptyRequired ? "text-gate-text" : !hasValue ? "text-ink-secondary" : ""}`}
+        >
           {label}
         </span>
-        <span className={`font-mono text-mono-sm font-bold ${statusWord.cls}`}>
-          {statusWord.text}
+        {reqTag}
+        <span className="min-w-0 flex-1 truncate text-[12px] text-ink-tertiary">
+          {hasValue ? field.value : emptyRequired ? t("emptyRequiredHint") : t("emptyOptionalHint")}
         </span>
-      </div>
+        {statusPill}
+      </button>
+    );
+  }
 
-      {editing ? (
-        <form action={editFormAction} className="space-y-2">
-          <textarea
-            key={editState.nonce ?? 0}
-            name="value"
-            required
-            rows={3}
-            defaultValue={editState.values?.fieldValue ?? field.value ?? ""}
-            placeholder={tWs("fieldValuePlaceholder")}
-            className="w-full rounded-tile border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
-          />
-          {editState.error && (
-            <p role="alert" className="text-mono-sm text-danger">
-              {editState.error}
+  // ── Nyitott kártya ──
+  return (
+    <div
+      id={`fld-${fieldKey}`}
+      className="scroll-mt-4 overflow-hidden rounded-shell border-[1.5px] border-action-light bg-surface shadow-accent"
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded
+        className="flex w-full items-center gap-2.5 border-b border-neutral-100 bg-context px-4 py-3 text-left"
+      >
+        <span aria-hidden className="shrink-0 rotate-90 text-action">
+          ›
+        </span>
+        <span className="text-[14px] font-bold">{label}</span>
+        {reqTag}
+        <span className="ml-auto" />
+        {statusPill}
+      </button>
+
+      <div className="space-y-3 p-4">
+        {editing ? (
+          <form action={editFormAction} className="space-y-2">
+            <textarea
+              key={editState.nonce ?? 0}
+              name="value"
+              required
+              rows={4}
+              defaultValue={editState.values?.fieldValue ?? field.value ?? ""}
+              placeholder={tWs("fieldValuePlaceholder")}
+              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
+            />
+            {editState.error && (
+              <p role="alert" className="text-mono-sm text-danger">
+                {editState.error}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <SubmitButton variant="secondary" pendingLabel={tWs("savingField")}>
+                {tWs("saveCta")}
+              </SubmitButton>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="rounded-control px-3 py-1.5 text-body text-ink-secondary hover:bg-sunken"
+              >
+                {tWs("cancelCta")}
+              </button>
+            </div>
+          </form>
+        ) : emptyRequired || !hasValue ? (
+          <div
+            className={`flex flex-wrap items-center gap-3 rounded-tile border-[1.5px] border-dashed px-4 py-3.5 ${
+              emptyRequired
+                ? "border-gate bg-[var(--tint-gate-band)]"
+                : "border-neutral-400 bg-soft"
+            }`}
+          >
+            <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink-tertiary">
+              {t("fillPrompt", { field: label })}
             </p>
-          )}
-          <div className="flex gap-2">
-            <SubmitButton variant="secondary" pendingLabel={tWs("savingField")}>
-              {tWs("saveCta")}
-            </SubmitButton>
+            {editable && (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="shrink-0 rounded-control border border-neutral-350 bg-surface px-3 py-1.5 text-[12px] font-semibold hover:bg-neutral-50"
+              >
+                {t("writeManually")}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="card-sunken px-4 py-3.5">
+            <p className="whitespace-pre-wrap text-body text-ink">{field.value}</p>
+            <p className="mt-1.5 font-mono text-mono-sm text-ink-tertiary">
+              {tWs("sourcesLabel")}{" "}
+              {field.source_indices.length > 0
+                ? field.source_indices.map((n) => `[${n}]`).join(" ")
+                : tWs("noSourceMark")}
+            </p>
+          </div>
+        )}
+
+        {editable && !editing && hasValue && (
+          <div className="flex flex-wrap gap-2">
+            {field.state === "ai_filled" && (
+              <form action={confirmAction}>
+                <SubmitButton pendingLabel={tWs("confirming")}>{tWs("confirmCta")}</SubmitButton>
+              </form>
+            )}
             <button
               type="button"
-              onClick={() => setEditing(false)}
-              className="rounded-control px-3 py-1.5 text-body text-ink-secondary hover:bg-sunken"
+              onClick={() => setEditing(true)}
+              className="rounded-control border border-neutral-350 bg-surface px-3 py-1.5 text-body font-medium hover:bg-neutral-50"
             >
-              {tWs("cancelCta")}
+              {tWs("editCta")}
             </button>
-          </div>
-        </form>
-      ) : emptyRequired && editable ? (
-        // v2: szaggatott borostyán üres-kötelező doboz — a hiányzó feltétel a
-        // döntési ponton. („Draft a suggestion" per-mező AI = külön backend, FLAG.)
-        <div className="flex flex-wrap items-center gap-3 rounded-tile border-[1.5px] border-dashed border-gate bg-tint-gate/40 px-4 py-3.5">
-          <p className="min-w-0 flex-1 text-body text-ink-tertiary">
-            {t("fillPrompt", { field: label })}
-          </p>
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="shrink-0 rounded-control border border-line bg-surface px-3 py-1.5 text-body font-semibold shadow-tile-sm hover:bg-sunken"
-          >
-            {t("writeManually")}
-          </button>
-        </div>
-      ) : (
-        // Öröklött/olvasó tartalom → süllyesztett (6. törvény)
-        <div className="card-sunken px-4 py-3.5">
-          {hasValue ? (
-            <p className="whitespace-pre-wrap text-body text-ink">{field.value}</p>
-          ) : (
-            <p className="text-body text-ink-tertiary">{tWs("noValue")}</p>
-          )}
-          <p className="mt-1.5 font-mono text-mono-sm text-ink-tertiary">
-            {tWs("sourcesLabel")}{" "}
-            {field.source_indices.length > 0
-              ? field.source_indices.map((n) => `[${n}]`).join(" ")
-              : tWs("noSourceMark")}
-          </p>
-        </div>
-      )}
-
-      {editable && !editing && !emptyRequired && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {field.state === "ai_filled" && (
-            <form action={confirmAction}>
-              <SubmitButton pendingLabel={tWs("confirming")}>{tWs("confirmCta")}</SubmitButton>
-            </form>
-          )}
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm hover:bg-sunken"
-          >
-            {tWs("editCta")}
-          </button>
-          {field.state !== "missing" && (
             <form action={dismissAction}>
               <SubmitButton variant="ghost" pendingLabel={tWs("dismissing")}>
                 {tWs("dismissCta")}
               </SubmitButton>
             </form>
-          )}
-        </div>
-      )}
-      {(confirmState.error || dismissState.error) && (
-        <p role="alert" className="mt-1 text-mono-sm text-danger">
-          {confirmState.error ?? dismissState.error}
-        </p>
-      )}
+          </div>
+        )}
+        {(confirmState.error || dismissState.error) && (
+          <p role="alert" className="text-mono-sm text-danger">
+            {confirmState.error ?? dismissState.error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -389,11 +389,26 @@
     "fieldRequiredEmpty": "kötelező · üres",
     "fillPrompt": "Töltsd ki: {field}. Ez a mező kötelező a jóváhagyáshoz.",
     "writeManually": "Kézi kitöltés",
-    "hitlFooter": "A draft {count} bemenetből készült · emberi jóváhagyás kell a lezárás előtt (HITL)",
+    "hitlFooter": "Utolsó mentés: {date} · a draft {count} nyers inputból készült, emberi megerősítéssel (HITL)",
     "approveMissing": "Jóváhagyás — {count} mező hiányzik",
     "editingLockedNote": "A jóváhagyás után a szerkesztés zárolt. A módosítás új verziót (v{next} draft) igényel — a státuszlánc szabály szerint újraindul.",
     "openTranscript": "átirat megnyitása ↗",
-    "documentsCrumb": "dokumentumok"
+    "documentsCrumb": "dokumentumok",
+    "requiredTag": "KÖTELEZŐ",
+    "optionalTag": "OPCIONÁLIS",
+    "emptyRequiredHint": "Üres — kötelező a jóváhagyáshoz",
+    "emptyOptionalHint": "Üres — opcionális",
+    "optionalSection": "OPCIONÁLIS",
+    "finalTag": "végleges",
+    "summaryReady": "Mind a {n} kötelező mező kész és megerősítve.",
+    "summaryOptional": "{n} opcionális mező üres: {fields}.",
+    "summaryDraft": "Draft — {done}/{total} kötelező mező kész. Hiányzik:",
+    "modeEdit": "Szerkesztés",
+    "modePreview": "Előnézet",
+    "tocTitle": "TARTALOM",
+    "introSection": "Bevezető",
+    "deliverableKicker": "LESZÁLLÍTANDÓ",
+    "previewEmpty": "Még nincs megjeleníthető tartalom — tölts ki mezőket a Szerkesztés nézetben."
   },
   "artifacts": {
     "status": {
