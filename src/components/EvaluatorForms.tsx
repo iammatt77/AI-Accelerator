@@ -48,13 +48,12 @@ function ErrorAlert({ error }: { error: string | null }) {
 
 // ── Jelvény-alap: ikon + szöveg, tónus szerint ───────────────
 
-type BadgeTone = "done" | "gate" | "danger" | "neutral" | "quiet";
+type BadgeTone = "done" | "gate" | "danger" | "quiet";
 
 const TONE_STYLE: Record<BadgeTone, string> = {
   done: "border-done/40 text-done",
   gate: "border-gate/50 text-gate",
   danger: "border-danger/40 text-danger",
-  neutral: "border-line text-ink-secondary",
   quiet: "border-line text-ink-tertiary",
 };
 
@@ -90,12 +89,6 @@ function BadgeIcon({ tone }: { tone: BadgeTone }) {
           <path d="M8 6.5v3M8 11.5v.6" strokeWidth={1.6} />
         </svg>
       );
-    case "neutral":
-      return (
-        <svg {...common}>
-          <circle cx="8" cy="8" r="5.5" />
-        </svg>
-      );
     case "quiet":
       return (
         <svg {...common} strokeDasharray="2.5 2.5">
@@ -108,7 +101,7 @@ function BadgeIcon({ tone }: { tone: BadgeTone }) {
 function EvaluatorBadge({ tone, label }: { tone: BadgeTone; label: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-pill border bg-surface px-2 py-0.5 text-mono-sm ${TONE_STYLE[tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-pill border bg-surface px-2 py-0.5 font-sans text-mono-sm ${TONE_STYLE[tone]}`}
     >
       <BadgeIcon tone={tone} />
       {label}
@@ -222,6 +215,14 @@ export function AiSuitabilityPanel({
     saveAiSuitabilityAction.bind(null, projectId, useCaseId),
     initialState,
   );
+  // Kontrollált selectek: a React 19 a server action után reseteli az
+  // űrlapot — hibaágon a kiválasztott válaszok különben elvesznének
+  // (ugyanaz a védelem, mint az AiActPanel-en).
+  const [answers, setAnswers] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      SUITABILITY_CRITERIA.map((k) => [k, current?.criteria[k] ?? ""]),
+    ),
+  );
 
   return (
     <PanelShell title={t("suitabilityTitle")} lead={t("suitabilityLead")}>
@@ -234,7 +235,10 @@ export function AiSuitabilityPanel({
             <span className="min-w-0">{t(`criteria.${key}`)}</span>
             <select
               name={key}
-              defaultValue={current?.criteria[key] ?? ""}
+              value={answers[key]}
+              onChange={(e) =>
+                setAnswers((prev) => ({ ...prev, [key]: e.target.value }))
+              }
               className={`${selectClass} shrink-0`}
             >
               <option value="">{t("answer.unset")}</option>
@@ -249,7 +253,7 @@ export function AiSuitabilityPanel({
           name="note"
           rows={2}
           maxLength={NOTE_MAX_LENGTH}
-          defaultValue={current?.note ?? ""}
+          defaultValue={state.values?.fieldValue ?? current?.note ?? ""}
           placeholder={t("noteOptional")}
           className={noteClass}
         />
@@ -279,6 +283,12 @@ export function DataReadinessPanel({
     saveDataReadinessAction.bind(null, projectId, useCaseId),
     initialState,
   );
+  // Kontrollált selectek — l. AiSuitabilityPanel kommentje.
+  const [grades, setGrades] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      READINESS_DIMENSIONS.map((k) => [k, current?.dimensions[k] ?? ""]),
+    ),
+  );
 
   return (
     <PanelShell title={t("readinessTitle")} lead={t("readinessLead")}>
@@ -291,7 +301,10 @@ export function DataReadinessPanel({
             <span className="min-w-0">{t(`dimensions.${key}`)}</span>
             <select
               name={key}
-              defaultValue={current?.dimensions[key] ?? ""}
+              value={grades[key]}
+              onChange={(e) =>
+                setGrades((prev) => ({ ...prev, [key]: e.target.value }))
+              }
               className={`${selectClass} shrink-0`}
             >
               <option value="">{t("answer.unset")}</option>
@@ -306,7 +319,7 @@ export function DataReadinessPanel({
           name="note"
           rows={2}
           maxLength={NOTE_MAX_LENGTH}
-          defaultValue={current?.note ?? ""}
+          defaultValue={state.values?.fieldValue ?? current?.note ?? ""}
           placeholder={t("noteOptional")}
           className={noteClass}
         />

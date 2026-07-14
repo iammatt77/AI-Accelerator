@@ -84,19 +84,21 @@ export async function saveAiSuitabilityAction(
 ): Promise<FormState> {
   const tErrors = await getTranslations("errors");
   const nonce = Date.now();
+  // Hibaágon a beírt jegyzet visszaáll (FormState-minta, fieldValue kulcson).
+  const values = { fieldValue: String(formData.get("note") ?? "") };
 
   const criteria: AiSuitability["criteria"] = {};
   for (const key of SUITABILITY_CRITERIA) {
     const raw = String(formData.get(key) ?? "").trim();
     if (raw === "") continue; // megválaszolatlan kritérium kihagyható
     if (!SUITABILITY_ANSWER_SET.has(raw)) {
-      return { ok: false, error: tErrors("evaluatorInvalid"), nonce };
+      return { ok: false, error: tErrors("evaluatorInvalid"), values, nonce };
     }
     criteria[key] = raw as SuitabilityAnswer;
   }
   const note = optionalNote(formData.get("note"));
   if (note === "too_long") {
-    return { ok: false, error: tErrors("noteTooLong"), nonce };
+    return { ok: false, error: tErrors("noteTooLong"), values, nonce };
   }
 
   const supabase = createServiceSupabaseClient();
@@ -105,10 +107,10 @@ export async function saveAiSuitabilityAction(
     note,
   });
   if (result.error) {
-    return { ok: false, error: tErrors("entitySaveFailed", { message: result.error }), nonce };
+    return { ok: false, error: tErrors("entitySaveFailed", { message: result.error }), values, nonce };
   }
   if (result.notConfirmed) {
-    return { ok: false, error: tErrors("entityNotConfirmed"), nonce };
+    return { ok: false, error: tErrors("entityNotConfirmed"), values, nonce };
   }
   revalidateWorkspace(projectId);
   return { ok: true, error: null, nonce };
@@ -126,19 +128,20 @@ export async function saveDataReadinessAction(
 ): Promise<FormState> {
   const tErrors = await getTranslations("errors");
   const nonce = Date.now();
+  const values = { fieldValue: String(formData.get("note") ?? "") };
 
   const dimensions: DataReadiness["dimensions"] = {};
   for (const key of READINESS_DIMENSIONS) {
     const raw = String(formData.get(key) ?? "").trim();
     if (raw === "") continue;
     if (!READINESS_GRADE_SET.has(raw)) {
-      return { ok: false, error: tErrors("evaluatorInvalid"), nonce };
+      return { ok: false, error: tErrors("evaluatorInvalid"), values, nonce };
     }
     dimensions[key] = raw as ReadinessGrade;
   }
   const note = optionalNote(formData.get("note"));
   if (note === "too_long") {
-    return { ok: false, error: tErrors("noteTooLong"), nonce };
+    return { ok: false, error: tErrors("noteTooLong"), values, nonce };
   }
   const readiness: DataReadiness = { dimensions, note };
   // A spec tárolt alakja a levelt is tartalmazza; olvasáskor ÚJRA számoljuk
@@ -154,10 +157,10 @@ export async function saveDataReadinessAction(
     stored as DataReadiness,
   );
   if (result.error) {
-    return { ok: false, error: tErrors("entitySaveFailed", { message: result.error }), nonce };
+    return { ok: false, error: tErrors("entitySaveFailed", { message: result.error }), values, nonce };
   }
   if (result.notConfirmed) {
-    return { ok: false, error: tErrors("entityNotConfirmed"), nonce };
+    return { ok: false, error: tErrors("entityNotConfirmed"), values, nonce };
   }
   revalidateWorkspace(projectId);
   return { ok: true, error: null, nonce };
@@ -175,6 +178,7 @@ export async function saveAiActAction(
 ): Promise<FormState> {
   const tErrors = await getTranslations("errors");
   const nonce = Date.now();
+  const values = { fieldValue: String(formData.get("note") ?? "") };
 
   const answers: AiActAssessment["answers"] = {};
   for (const key of AI_ACT_QUESTIONS) {
@@ -186,25 +190,20 @@ export async function saveAiActAction(
 
   const confirmedRaw = String(formData.get("confirmedCategory") ?? "").trim();
   if (confirmedRaw !== "" && !AI_ACT_CATEGORY_SET.has(confirmedRaw)) {
-    return { ok: false, error: tErrors("evaluatorInvalid"), nonce };
+    return { ok: false, error: tErrors("evaluatorInvalid"), values, nonce };
   }
   // E1: a megerősítés emberi aktus — üres = még nincs megerősítve.
   const confirmed_category = (confirmedRaw || null) as AiActCategory | null;
 
   const note = optionalNote(formData.get("note"));
   if (note === "too_long") {
-    return { ok: false, error: tErrors("noteTooLong"), nonce };
+    return { ok: false, error: tErrors("noteTooLong"), values, nonce };
   }
   // Poka-yoke (spec F3): tiltott vagy nagy kockázatú JAVASLATNÁL (és
   // megerősítésnél) a megjegyzés KÖTELEZŐ — auto-kizárás viszont NINCS,
   // a döntés az emberé.
   if ((isAiActWarnCategory(suggested) || isAiActWarnCategory(confirmed_category)) && !note) {
-    return {
-      ok: false,
-      error: tErrors("aiActNoteRequired"),
-      values: { fieldValue: note ?? "" },
-      nonce,
-    };
+    return { ok: false, error: tErrors("aiActNoteRequired"), values, nonce };
   }
 
   const supabase = createServiceSupabaseClient();
@@ -215,10 +214,10 @@ export async function saveAiActAction(
     note,
   });
   if (result.error) {
-    return { ok: false, error: tErrors("entitySaveFailed", { message: result.error }), nonce };
+    return { ok: false, error: tErrors("entitySaveFailed", { message: result.error }), values, nonce };
   }
   if (result.notConfirmed) {
-    return { ok: false, error: tErrors("entityNotConfirmed"), nonce };
+    return { ok: false, error: tErrors("entityNotConfirmed"), values, nonce };
   }
   revalidateWorkspace(projectId);
   return { ok: true, error: null, nonce };

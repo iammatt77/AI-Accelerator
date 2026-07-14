@@ -111,10 +111,12 @@ function Heatmap({
 
   return (
     <div>
+      {/* role="group": a pontok interaktívak — a role="img" az AT elől
+          ellapítaná őket (review-lelet) */}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
-        role="img"
+        role="group"
         aria-label={t("ariaLabel")}
       >
         {/* Kvadráns-hátterek: a Quick win sáv halvány lila tintát kap */}
@@ -265,7 +267,10 @@ function Heatmap({
                   {i + 1}.
                 </span>
                 <span className="min-w-0 truncate">{p.title}</span>
-                <span className="ml-auto shrink-0 font-mono text-mono-sm text-ink-tertiary">
+                <span
+                  className="ml-auto shrink-0 font-mono text-mono-sm text-ink-tertiary"
+                  title={`${tEnt("scoreValueLabel")}: ${p.value}/5 · ${tEnt("scoreFeasibilityLabel")}: ${p.feasibility}/5`}
+                >
                   {p.value}/{p.feasibility}
                 </span>
               </button>
@@ -316,11 +321,11 @@ export function UseCaseViews({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-1 rounded-tile border border-line bg-sunken p-1" role="tablist">
+      {/* Toggle-gombpár aria-pressed-del (a csonka tabs-ARIA helyett) */}
+      <div className="flex items-center gap-1 rounded-tile border border-line bg-sunken p-1">
         <button
           type="button"
-          role="tab"
-          aria-selected={view === "list"}
+          aria-pressed={view === "list"}
           onClick={() => setView("list")}
           className={tabClass(view === "list")}
         >
@@ -328,8 +333,7 @@ export function UseCaseViews({
         </button>
         <button
           type="button"
-          role="tab"
-          aria-selected={view === "map"}
+          aria-pressed={view === "map"}
           onClick={() => setView("map")}
           className={tabClass(view === "map")}
         >
