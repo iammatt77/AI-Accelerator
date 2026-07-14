@@ -7,7 +7,7 @@ import type { ArtifactStatus } from "@/lib/db/types";
 // (tömör kitöltés + árnyék), a múltbeli lépések zöld pipával, a jövőbeli
 // lakattal halkak. A tömör kitöltés a v2 terv (locked spec): az aktív
 // in_review a --status-gate (#B4801E), az approved a --status-done (#3E9E6E)
-// tömör tónusa fehér szöveggel. A tényleges akciók a StatusChain-ben (footer).
+// tömör tónusa fehér szöveggel. A tényleges akciók a szerkesztő láblécében.
 // ─────────────────────────────────────────────────────────────
 
 const ORDER: ArtifactStatus[] = ["draft", "in_review", "approved"];

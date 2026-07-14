@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
@@ -11,7 +10,7 @@ import {
 } from "@/lib/artifacts/config";
 import {
   ArtifactEditor,
-  type EditorField,
+  type EditorFieldData,
   type EditorSource,
   type EditorVersion,
 } from "@/components/ArtifactEditor";
@@ -90,13 +89,12 @@ export default async function ArtifactEditorPage({
     }));
   }
 
-  const [locale, tEditor, tArtifacts, tTypes, tFields, tHub] = await Promise.all([
+  const [locale, tEditor, tArtifacts, tTypes, tFields] = await Promise.all([
     getLocale(),
     getTranslations("editor"),
     getTranslations("artifacts"),
     getTranslations("artifactTypes"),
     getTranslations("fields"),
-    getTranslations("hub"),
   ]);
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   const typeName = typeDef
@@ -130,7 +128,7 @@ export default async function ArtifactEditorPage({
   }));
 
   const parsedFields = typeDef ? parseArtifactFields(typeDef, artifact.fields) : null;
-  const editorFields: EditorField[] =
+  const editorFields: EditorFieldData[] =
     typeDef && parsedFields
       ? typeDef.fields.map((fieldDef) => ({
           key: fieldDef.key,
@@ -159,37 +157,14 @@ export default async function ArtifactEditorPage({
 
   return (
     <div className="space-y-4">
-      {/* Fejléc — dokumentum-identitás (a státusz-folyam a szerkesztőben) */}
-      <div>
-        <Link
-          href={backHref}
-          className="text-mono-sm text-ink-tertiary hover:text-ink-secondary hover:underline"
-        >
-          ← {project.name}
-          {typeDef ? ` · ${typeDef.phase} · ${tHub("documentsShort")}` : ""}
-        </Link>
-        <h1 className="mt-1 flex flex-wrap items-baseline gap-2 text-title">
-          {typeName}
-          <span className="font-mono text-body text-ink-tertiary">v{artifact.version}</span>
-        </h1>
-        <p className="mt-0.5 text-mono-sm text-ink-tertiary">
-          {tEditor("updatedAt", {
-            date: new Date(artifact.updated_at ?? artifact.created_at).toLocaleString(
-              dateLocale,
-              { timeZone: "Europe/Budapest" },
-            ),
-          })}
-        </p>
-      </div>
-
       {!typeDef && (
         <p className="rounded-tile border border-dashed border-line px-3 py-2 text-body text-ink-tertiary">
           {tEditor("noTypeDef", { type: artifact.type })}
         </p>
       )}
 
-      {/* Redesign #1: három-panel szerkesztő (FIELD MAP · dokumentum · SOURCES/
-          VERSIONS) + státusz-folyam + blokkoló-sáv. A funkció változatlan. */}
+      {/* v2 ref: egy üveg-konténer — fejléc (azonosság + státuszlánc) → blokkoló
+          → három oszlop (field-map · dokumentum · sources) → HITL-lábléc. */}
       <ArtifactEditor
         projectId={id}
         artifactId={artifact.id}
@@ -214,6 +189,12 @@ export default async function ArtifactEditorPage({
         }
         phaseHref={backHref}
         exportHref={`/project/${id}/artifact/${artifact.id}/export`}
+        clientName={project.name}
+        phaseLabel={typeDef ? typeDef.phase : ""}
+        typeName={typeName}
+        version={artifact.version}
+        inputsCount={sources.length}
+        nextVersion={headVersion + 1}
       />
     </div>
   );

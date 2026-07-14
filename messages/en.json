@@ -274,7 +274,17 @@
     "fieldsSectionTitle": "Fields",
     "versionsTitle": "Versions",
     "sourcesCountLabel": "{sources} sources · {citations} citations in draft",
-    "compareVersions": "Compare any two versions · diff opens in overlay."
+    "compareVersions": "Compare any two versions · diff opens in overlay.",
+    "fieldComplete": "✓ complete",
+    "fieldAiConfirm": "AI · to confirm",
+    "fieldRequiredEmpty": "required · empty",
+    "fillPrompt": "Fill in: {field}. This field is required before approval.",
+    "writeManually": "Write manually",
+    "hitlFooter": "Draft generated from {count} inputs · human review required before approval (HITL)",
+    "approveMissing": "Approve — {count} fields missing",
+    "editingLockedNote": "Editing is locked after approval. Changes require a new version (v{next} draft) — the status chain restarts by rule.",
+    "openTranscript": "open transcript ↗",
+    "documentsCrumb": "documents"
   },
   "artifacts": {
     "status": {

@@ -274,7 +274,17 @@
     "fieldsSectionTitle": "Mezők",
     "versionsTitle": "Verziók",
     "sourcesCountLabel": "{sources} forrás · {citations} citáció a draftban",
-    "compareVersions": "Bármely két verzió összevethető · a diff overlayben nyílik."
+    "compareVersions": "Bármely két verzió összevethető · a diff overlayben nyílik.",
+    "fieldComplete": "✓ kész",
+    "fieldAiConfirm": "AI · megerősítendő",
+    "fieldRequiredEmpty": "kötelező · üres",
+    "fillPrompt": "Töltsd ki: {field}. Ez a mező kötelező a jóváhagyáshoz.",
+    "writeManually": "Kézi kitöltés",
+    "hitlFooter": "A draft {count} bemenetből készült · emberi jóváhagyás kell a lezárás előtt (HITL)",
+    "approveMissing": "Jóváhagyás — {count} mező hiányzik",
+    "editingLockedNote": "A jóváhagyás után a szerkesztés zárolt. A módosítás új verziót (v{next} draft) igényel — a státuszlánc szabály szerint újraindul.",
+    "openTranscript": "átirat megnyitása ↗",
+    "documentsCrumb": "dokumentumok"
   },
   "artifacts": {
     "status": {
