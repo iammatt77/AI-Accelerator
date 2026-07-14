@@ -281,8 +281,10 @@ export async function PhaseWorkspace({
                 {t("completeness", done)} · {t("versionsCount", { count: versions.length })}
               </p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-pill bg-neutral-200">
+                {/* Teljesség = információ, nem döntési pont → semleges kitöltés
+                    (törvény 3: a lila a döntéseknek van fenntartva). */}
                 <div
-                  className="h-full rounded-pill bg-action"
+                  className="h-full rounded-pill bg-ink-secondary"
                   style={{
                     width: `${done.required > 0 ? Math.round((done.filled / done.required) * 100) : 0}%`,
                   }}
@@ -444,7 +446,7 @@ export async function PhaseWorkspace({
 
   const workbenchPanel = isP1 ? (
     <div className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         {/* Bal: entitás-munka */}
         <div className="space-y-5">
           {/* Fájdalompontok */}
@@ -625,7 +627,7 @@ export async function PhaseWorkspace({
     phaseTypes.length === 0 ? (
       <p className="glass-tile p-4 text-body text-ink-tertiary">{t("noTypesForPhase")}</p>
     ) : (
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {phaseTypes.map((typeDef) => (
           <OutputCard key={typeDef.key} typeDef={typeDef} />
         ))}
@@ -773,12 +775,16 @@ export async function PhaseWorkspace({
                   : "border-gate/50 bg-tint-gate text-gate"
               }`}
             >
-              <span aria-hidden>◇</span>
+              {/* Törvény 4: nem csak szín — a készenlétet ikon is jelöli
+                  (✓ kész / ◇ vár) a szám-pár mellett. */}
+              <span aria-hidden>{gateReady ? "✓" : "◇"}</span>
               {tGates("zoneGate")} {satisfiedCount}/{criteria.length}
             </span>
           )}
-          <span className="inline-flex items-center gap-1.5 rounded-control border border-action/30 bg-tint-action px-3 py-1.5 text-body font-medium text-action-deep">
-            {t("nextLabel")} {nextHint}
+          {/* „Next" = navigációs útmutató (nem döntési pont) → semleges chip;
+              a lila a döntés-gomboknak marad (törvény 3). */}
+          <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-neutral-100 px-3 py-1.5 text-body font-medium text-ink-secondary">
+            <span className="text-ink-tertiary">{t("nextLabel")}</span> {nextHint}
           </span>
         </div>
       </div>

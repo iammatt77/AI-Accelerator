@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 // ─────────────────────────────────────────────────────────────
@@ -101,9 +101,14 @@ function spreadPoints(points: HeatmapPoint[]): (HeatmapPoint & { x: number; y: n
 function Heatmap({
   points,
   onSelect,
+  interactive = true,
 }: {
   points: HeatmapPoint[];
   onSelect: (id: string) => void;
+  /** Interaktív pontok (workbench-előnézet): fókuszálható gombok a globális
+   *  2px lila fókuszgyűrűvel. A fókusz-módban false → a pontok csak megjelenítő
+   *  elemek (role="img"), nem kap billentyűzet-fókuszt egy no-op gomb. */
+  interactive?: boolean;
 }) {
   const t = useTranslations("entities.heatmap");
   const tEnt = useTranslations("entities");
@@ -169,16 +174,22 @@ function Heatmap({
             <g
               key={p.id}
               transform={`translate(${p.x} ${p.y})`}
-              onClick={() => onSelect(p.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelect(p.id);
-                }
-              }}
-              tabIndex={0}
-              className="cursor-pointer focus:outline-none focus-visible:opacity-80"
-              role="button"
+              {...(interactive
+                ? {
+                    onClick: () => onSelect(p.id),
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelect(p.id);
+                      }
+                    },
+                    tabIndex: 0,
+                    role: "button",
+                    // A globális :focus-visible 2px lila gyűrű marad (törvény 5);
+                    // az opacity csak kiegészítő jelzés.
+                    className: "cursor-pointer focus-visible:opacity-80",
+                  }
+                : { role: "img" })}
               aria-label={`${i + 1}. ${p.title}`}
             >
               <title>
@@ -253,16 +264,13 @@ function Heatmap({
         </span>
       </div>
 
-      {/* Számozott jegyzék: a pont-számok feloldása, kattintható fókusz */}
+      {/* Számozott jegyzék: a pont-számok feloldása. Interaktív módban
+          kattintható (a kártyához görget); fókusz-módban statikus referencia. */}
       {placed.length > 0 && (
         <ol className="mt-2 space-y-1">
-          {placed.map((p, i) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(p.id)}
-                className="flex w-full items-center gap-2 rounded-control px-2 py-1 text-left text-body hover:bg-sunken"
-              >
+          {placed.map((p, i) => {
+            const rowInner = (
+              <>
                 <span className="w-5 shrink-0 font-mono text-mono-sm text-ink-tertiary">
                   {i + 1}.
                 </span>
@@ -273,12 +281,31 @@ function Heatmap({
                 >
                   {p.value}/{p.feasibility}
                 </span>
-              </button>
-            </li>
-          ))}
+              </>
+            );
+            return (
+              <li key={p.id}>
+                {interactive ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(p.id)}
+                    className="flex w-full items-center gap-2 rounded-control px-2 py-1 text-left text-body hover:bg-sunken"
+                  >
+                    {rowInner}
+                  </button>
+                ) : (
+                  <div className="flex w-full items-center gap-2 rounded-control px-2 py-1 text-left text-body">
+                    {rowInner}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ol>
       )}
-      <p className="mt-1 text-mono-sm text-ink-tertiary">{t("clickHint")}</p>
+      {interactive && (
+        <p className="mt-1 text-mono-sm text-ink-tertiary">{t("clickHint")}</p>
+      )}
     </div>
   );
 }
@@ -407,18 +434,53 @@ function HeatmapFocus({
   const [onlyShortlist, setOnlyShortlist] = useState(false);
   const shortlistIds = new Set(shortlist.map((s) => s.id));
   const shown = onlyShortlist ? points.filter((p) => shortlistIds.has(p.id)) : points;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Escape zárja a fókuszt.
+  // Modal-akadálymentesség (review-lelet): Escape zár + kezdő-fókusz a
+  // zárógombra + fókusz-csapda (Tab nem szökik a háttérbe) + fókusz-
+  // visszaállítás a megnyitó elemre záráskor — az aria-modal ígéretét tartja.
   useEffect(() => {
+    const prevFocus = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onExit();
+      if (e.key === "Escape") {
+        onExit();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = dialogRef.current;
+      if (!root) return;
+      const list = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute("disabled"));
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl && !root.contains(activeEl)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && activeEl === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && activeEl === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      prevFocus?.focus?.();
+    };
   }, [onExit]);
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label={t("focusTitle")}
@@ -456,6 +518,7 @@ function HeatmapFocus({
               </button>
             </div>
             <button
+              ref={closeBtnRef}
               type="button"
               onClick={onExit}
               className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm hover:bg-sunken"
@@ -465,14 +528,16 @@ function HeatmapFocus({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div>
             {shown.length === 0 ? (
               <p className="rounded-tile border border-dashed border-line px-3 py-10 text-center text-body text-ink-tertiary">
                 {t("empty")}
               </p>
             ) : (
-              <Heatmap points={shown} onSelect={() => {}} />
+              // Fókusz-mód: prezentációs (read-only) térkép — a pontok nem
+              // fókuszálható no-op gombok (review-lelet).
+              <Heatmap points={shown} onSelect={() => {}} interactive={false} />
             )}
           </div>
           <div className="space-y-4">
@@ -508,105 +573,6 @@ function HeatmapFocus({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/**
- * Nézet-váltó: lista ⇄ hőtérkép. A lista maga a szerver-oldalon renderelt
- * kártya-sor (children) — a váltó csak megjelenít/elrejt. Pontra kattintva
- * lista-nézetre vált és a kártyához görget (fókusz-kiemeléssel).
- */
-export function UseCaseViews({
-  points,
-  unscored,
-  children,
-}: {
-  points: HeatmapPoint[];
-  unscored: UnscoredItem[];
-  children: React.ReactNode;
-}) {
-  const t = useTranslations("entities.heatmap");
-  const [view, setView] = useState<"list" | "map">("list");
-
-  const focusCard = (id: string) => {
-    setView("list");
-    // A lista-nézet renderelése után görgetünk + kiemelünk.
-    window.setTimeout(() => {
-      const el = document.getElementById(`uc-${id}`);
-      if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", "ring-active");
-      window.setTimeout(() => el.classList.remove("ring-2", "ring-active"), 2400);
-    }, 60);
-  };
-
-  const tabClass = (active: boolean) =>
-    `rounded-control px-3 py-1.5 text-body font-medium transition-colors duration-[var(--motion-base)] ${
-      active
-        ? "border border-line bg-surface shadow-tile-sm"
-        : "text-ink-secondary hover:bg-sunken"
-    }`;
-
-  return (
-    <div className="space-y-3">
-      {/* Toggle-gombpár aria-pressed-del (a csonka tabs-ARIA helyett) */}
-      <div className="flex items-center gap-1 rounded-tile border border-line bg-sunken p-1">
-        <button
-          type="button"
-          aria-pressed={view === "list"}
-          onClick={() => setView("list")}
-          className={tabClass(view === "list")}
-        >
-          {t("viewList")}
-        </button>
-        <button
-          type="button"
-          aria-pressed={view === "map"}
-          onClick={() => setView("map")}
-          className={tabClass(view === "map")}
-        >
-          {t("viewHeatmap")}
-        </button>
-      </div>
-
-      {view === "list" ? (
-        <div className="space-y-2">{children}</div>
-      ) : (
-        <div className="space-y-3">
-          {points.length === 0 ? (
-            // Üres állapot (1c minta): halk, keretezett, cselekvésre mutat
-            <p className="rounded-tile border border-dashed border-line px-3 py-4 text-center text-body text-ink-tertiary">
-              {t("empty")}
-            </p>
-          ) : (
-            <Heatmap points={points} onSelect={focusCard} />
-          )}
-          {unscored.length > 0 && (
-            <div className="rounded-tile border border-line bg-surface p-3">
-              <h5 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
-                {t("unscoredTitle")}
-              </h5>
-              <ul className="mt-1.5 space-y-1">
-                {unscored.map((u) => (
-                  <li key={u.id}>
-                    <button
-                      type="button"
-                      onClick={() => focusCard(u.id)}
-                      className="flex w-full items-center justify-between gap-2 rounded-control px-2 py-1 text-left text-body hover:bg-sunken"
-                    >
-                      <span className="min-w-0 truncate">{u.title}</span>
-                      <span className="shrink-0 text-mono-sm text-ink-tertiary">
-                        {t("unscoredHint")}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

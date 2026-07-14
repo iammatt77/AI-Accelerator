@@ -154,9 +154,10 @@ export function ArtifactEditor({
             {t("historyLabel", { count: versions.length })}
           </span>
           {status === "approved" && (
+            // Export = segédművelet (nem döntési pont) → semleges gomb (törvény 3).
             <a
               href={exportHref}
-              className="rounded-control border border-action/40 bg-action px-3 py-1.5 text-body font-medium text-white shadow-action transition-colors duration-[var(--motion-base)] hover:bg-action-hover"
+              className="rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
             >
               {t("exportPdf")}
             </a>
@@ -193,9 +194,11 @@ export function ArtifactEditor({
             <span aria-hidden>✓</span>{" "}
             {approvedDate ? t("approvedOn", { date: approvedDate }) : t("approvedTitle")}
           </span>
+          {/* Kapuhoz-navigáció (a döntés maga a kapu-fülön dől el) → semleges
+              gomb; a lila a valódi döntés-gomboknak marad (törvény 3). */}
           <Link
             href={phaseHref}
-            className="rounded-control border border-action/40 bg-action px-3 py-1.5 text-body font-medium text-white shadow-action transition-colors duration-[var(--motion-base)] hover:bg-action-hover"
+            className="rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
           >
             {t("goToGate")} →
           </Link>
@@ -206,8 +209,9 @@ export function ArtifactEditor({
             {tWs("completeness", { filled, required: requiredCount })}
           </span>
           <div className="h-1.5 flex-1 overflow-hidden rounded-pill bg-neutral-200">
+            {/* Teljesség = információ → semleges kitöltés (törvény 3). */}
             <div
-              className="h-full rounded-pill bg-action"
+              className="h-full rounded-pill bg-ink-secondary"
               style={{
                 width: `${requiredCount > 0 ? Math.round((filled / requiredCount) * 100) : 0}%`,
               }}
@@ -216,8 +220,20 @@ export function ArtifactEditor({
         </div>
       )}
 
+      {/* Nem-blokkoló emlékeztető (a redesign előtt a StatusChain mutatta):
+          review alatt a kitöltött, de meg nem erősített (ai_filled) mezők —
+          approve előtt érdemes megerősíteni. NEM blokkol (törvény 4: ikon+szöveg). */}
+      {status === "in_review" && unconfirmedLabels.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-tile border border-gate/40 bg-surface px-4 py-2 text-body text-gate">
+          <span className="font-medium">
+            <span aria-hidden>•</span> {tChain("unconfirmedWarnTitle")}
+          </span>
+          <span className="text-ink-secondary">{unconfirmedLabels.join(", ")}</span>
+        </div>
+      )}
+
       {/* ── Három panel ── */}
-      <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)_250px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[200px_minmax(0,1fr)_250px]">
         {/* FIELD MAP */}
         <aside className="glass-tile h-fit p-3 lg:sticky lg:top-4">
           <h2 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">

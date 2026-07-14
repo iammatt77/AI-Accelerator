@@ -66,9 +66,9 @@ export function PainSummary({
   state: EntityState;
 }) {
   return (
-    <span className="flex min-w-0 flex-1 items-center gap-2.5">
+    <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
       <span className="shrink-0 font-mono text-mono-sm text-ink-tertiary">{code}</span>
-      <span className="min-w-0 flex-1 truncate text-body font-medium">{title}</span>
+      <span className="min-w-0 flex-1 basis-40 truncate text-body font-medium">{title}</span>
       <SourceChips indices={sourceIndices} />
       <StatusChip state={state} />
     </span>
@@ -80,7 +80,7 @@ function RiskChip({ level }: { level: Level }) {
   if (!level) return <span className="font-mono text-mono-sm text-ink-tertiary">—</span>;
   const cls =
     level === "high"
-      ? "bg-tint-action/0 border-danger/40 text-danger"
+      ? "border-danger/40 text-danger"
       : level === "medium"
         ? "border-gate/50 text-gate"
         : "border-done/40 text-done";
@@ -115,9 +115,9 @@ export function UseCaseSummary({
   const t = useTranslations("entities");
   const scored = scoreValue !== null && scoreFeasibility !== null;
   return (
-    <span className="flex min-w-0 flex-1 items-center gap-2.5">
+    <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
       <span className="shrink-0 font-mono text-mono-sm text-ink-tertiary">{code}</span>
-      <span className="min-w-0 flex-1 truncate text-body font-medium">{title}</span>
+      <span className="min-w-0 flex-1 basis-40 truncate text-body font-medium">{title}</span>
       {scored && (
         <span className="shrink-0 font-mono text-mono-sm text-ink-secondary">
           {t("scoreShortValue")} {scoreValue} · {t("scoreShortFeas")} {scoreFeasibility}

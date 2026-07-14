@@ -167,6 +167,10 @@ export function PainPointProposalCard({
     initialState,
   );
 
+  // Beágyazott (DrillRow-részlet) javaslatnál a fejléc-sor már hordozza a
+  // confirm/dismiss inline akciókat → a kártya nem ismétli meg őket.
+  const headerHasDecision = Boolean(embedded) && painPoint.state === "ai_suggested";
+
   return (
     <div
       className={
@@ -254,7 +258,10 @@ export function PainPointProposalCard({
 
       {!editing && (
         <div className="mt-2 flex flex-wrap gap-2">
-          {painPoint.state === "ai_suggested" && (
+          {/* Beágyazott javaslatnál a confirm/dismiss a DrillRow fejlécében
+              (InlinePainActions) él — itt nem ismételjük (review-lelet:
+              duplikált gombok). A „Szerkeszt" a részletnézet sajátja marad. */}
+          {painPoint.state === "ai_suggested" && !headerHasDecision && (
             <form action={confirmAction}>
               {/* Megerősítés = döntési pont → lila (törvény 3) */}
               <SubmitButton pendingLabel={tWs("confirming")}>
@@ -269,54 +276,16 @@ export function PainPointProposalCard({
           >
             {tWs("editCta")}
           </button>
-          <form action={rejectAction}>
-            <SubmitButton variant="ghost" pendingLabel={tWs("dismissing")}>
-              {tWs("dismissCta")}
-            </SubmitButton>
-          </form>
+          {!headerHasDecision && (
+            <form action={rejectAction}>
+              <SubmitButton variant="ghost" pendingLabel={tWs("dismissing")}>
+                {tWs("dismissCta")}
+              </SubmitButton>
+            </form>
+          )}
         </div>
       )}
     </div>
-  );
-}
-
-// ── Fájdalompont: megerősített sor (táblázat-nézet) ──────────
-
-export function PainPointConfirmedRow({
-  projectId,
-  painPoint,
-}: {
-  projectId: string;
-  painPoint: PainPointCardData;
-}) {
-  const tWs = useTranslations("workspace");
-  const [rejectState, rejectAction] = useActionState(
-    rejectPainPointAction.bind(null, projectId, painPoint.id),
-    initialState,
-  );
-
-  return (
-    <li className="card-sunken px-3 py-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="min-w-0 text-body font-medium">{painPoint.title}</span>
-        <span className="flex shrink-0 items-center gap-2">
-          <SeverityPill level={painPoint.severity} />
-          <EntityStateBadge state={painPoint.state} />
-        </span>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-        <SourceMarks indices={painPoint.sourceIndices} />
-        <form action={rejectAction}>
-          <button
-            type="submit"
-            className="rounded-control px-2 py-0.5 text-mono-sm text-ink-tertiary hover:bg-sunken hover:text-ink-secondary"
-          >
-            {tWs("dismissCta")}
-          </button>
-        </form>
-      </div>
-      <ErrorAlert error={rejectState.error} />
-    </li>
   );
 }
 

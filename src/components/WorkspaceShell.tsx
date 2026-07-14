@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 // ─────────────────────────────────────────────────────────────
@@ -31,6 +31,21 @@ export function WorkspaceTabs({
   defaultTab: string;
 }) {
   const [active, setActive] = useState(defaultTab);
+  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Roving fül-billentyűzet (WAI-ARIA tabs): nyilak/Home/End léptet + fókuszál.
+  const onKeyNav = (e: React.KeyboardEvent, index: number) => {
+    const last = tabs.length - 1;
+    let next = -1;
+    if (e.key === "ArrowRight") next = index === last ? 0 : index + 1;
+    else if (e.key === "ArrowLeft") next = index === 0 ? last : index - 1;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = last;
+    if (next < 0) return;
+    e.preventDefault();
+    setActive(tabs[next].key);
+    btnRefs.current[next]?.focus();
+  };
 
   return (
     <div>
@@ -39,15 +54,22 @@ export function WorkspaceTabs({
         role="tablist"
         className="flex flex-wrap items-end gap-1 border-b border-line"
       >
-        {tabs.map((tab) => {
+        {tabs.map((tab, i) => {
           const on = active === tab.key;
           return (
             <button
               key={tab.key}
+              ref={(el) => {
+                btnRefs.current[i] = el;
+              }}
               type="button"
               role="tab"
+              id={`ws-tab-${tab.key}`}
               aria-selected={on}
+              aria-controls={`ws-panel-${tab.key}`}
+              tabIndex={on ? 0 : -1}
               onClick={() => setActive(tab.key)}
+              onKeyDown={(e) => onKeyNav(e, i)}
               className={`-mb-px flex items-center gap-2 rounded-[var(--radius-tab-top)] border-b-2 px-4 py-2.5 text-body font-medium transition-colors duration-[var(--motion-base)] ${
                 on
                   ? "border-b-action text-ink"
@@ -61,12 +83,14 @@ export function WorkspaceTabs({
               )}
               {tab.label}
               {tab.badge && (
+                // Jelvény = puszta számláló (nem döntési pont) → semleges, nem
+                // lila (törvény 3); az aktív fület a lila aláhúzás jelöli.
                 <span
                   className={`rounded-pill px-2 py-0.5 font-mono text-mono-sm ${
                     tab.gate
                       ? "bg-tint-gate text-gate"
                       : on
-                        ? "bg-tint-action text-action-deep"
+                        ? "bg-neutral-200 text-ink-secondary"
                         : "bg-neutral-150 text-ink-tertiary"
                   }`}
                 >
@@ -81,7 +105,14 @@ export function WorkspaceTabs({
       {/* Panelek — mind renderelve, az inaktív rejtve (kliens-állapot megmarad) */}
       <div className="pt-4">
         {tabs.map((tab) => (
-          <div key={tab.key} role="tabpanel" hidden={active !== tab.key}>
+          <div
+            key={tab.key}
+            id={`ws-panel-${tab.key}`}
+            role="tabpanel"
+            aria-labelledby={`ws-tab-${tab.key}`}
+            tabIndex={0}
+            hidden={active !== tab.key}
+          >
             {panels[tab.key]}
           </div>
         ))}
