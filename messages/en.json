@@ -501,7 +501,9 @@
     "aiActNoteRequired": "A note is required for a prohibited or high-risk classification.",
     "noteTooLong": "The note can be at most 2000 characters.",
     "stakeholderExtractNoResult": "The extraction found no stakeholders in the sources. Add one manually or expand the input.",
-    "stakeholderNameRequired": "The stakeholder name is required."
+    "stakeholderNameRequired": "The stakeholder name is required.",
+    "benefitNoBasis": "The sources give no concrete basis to estimate the inputs. Fill in manually.",
+    "pilotNoBasis": "The sources give no concrete basis for the success definition. Fill in manually."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",

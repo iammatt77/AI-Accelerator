@@ -501,7 +501,9 @@
     "aiActNoteRequired": "Tiltott vagy nagy kockázatú besorolásnál a megjegyzés kötelező.",
     "noteTooLong": "A jegyzet legfeljebb 2000 karakter lehet.",
     "stakeholderExtractNoResult": "A kivonatolás nem talált stakeholdert a forrásokban. Adj hozzá kézzel, vagy bővítsd a bemenetet.",
-    "stakeholderNameRequired": "A stakeholder neve kötelező."
+    "stakeholderNameRequired": "A stakeholder neve kötelező.",
+    "benefitNoBasis": "A forrásokból nincs elég konkrét alap a bemenetek becsléséhez. Töltsd ki kézzel.",
+    "pilotNoBasis": "A forrásokból nincs elég konkrét alap a sikerdefinícióhoz. Töltsd ki kézzel."
   },
   "empty": {
     "noProjects": "Még nincs projekt. Hozz létre egyet a Projektek oldalon.",
