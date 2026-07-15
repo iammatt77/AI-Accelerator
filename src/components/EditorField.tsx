@@ -34,6 +34,7 @@ export function EditorFieldAccordion({
   editable,
   open,
   onToggle,
+  customBody,
 }: {
   projectId: string;
   artifactId: string;
@@ -44,6 +45,9 @@ export function EditorFieldAccordion({
   editable: boolean;
   open: boolean;
   onToggle: () => void;
+  /** P2 (#9): strukturált mező-törzs (kalkulátor / sikerdefiníció) a sima
+   *  textarea helyett — a nyitott kártya body-jában. */
+  customBody?: React.ReactNode;
 }) {
   const t = useTranslations("editor");
   const tWs = useTranslations("workspace");
@@ -141,6 +145,9 @@ export function EditorFieldAccordion({
         {statusPill}
       </button>
 
+      {customBody ? (
+        <div className="p-4">{customBody}</div>
+      ) : (
       <div className="space-y-3 p-4">
         {editing ? (
           <form action={editFormAction} className="space-y-2">
@@ -231,6 +238,7 @@ export function EditorFieldAccordion({
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }

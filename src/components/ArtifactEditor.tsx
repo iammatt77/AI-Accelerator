@@ -92,6 +92,7 @@ export function ArtifactEditor({
   inputsCount,
   nextVersion,
   savedAtLabel,
+  structuredFields,
 }: {
   projectId: string;
   artifactId: string;
@@ -114,6 +115,9 @@ export function ArtifactEditor({
   inputsCount: number;
   nextVersion: number;
   savedAtLabel: string;
+  /** P2 (#9): mező-kulcs → strukturált törzs (kalkulátor / sikerdefiníció),
+   *  a sima textarea helyett a nyitott accordion-mezőben. */
+  structuredFields?: Record<string, React.ReactNode>;
 }) {
   const t = useTranslations("editor");
   const tChain = useTranslations("chain");
@@ -449,6 +453,7 @@ export function ArtifactEditor({
                 editable={editable}
                 open={openField === f.key}
                 onToggle={() => setOpenField(openField === f.key ? null : f.key)}
+                customBody={structuredFields?.[f.key]}
               />
             ))}
 

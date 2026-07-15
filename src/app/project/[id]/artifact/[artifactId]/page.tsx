@@ -4,15 +4,19 @@ import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import {
   completeness,
   getTypeDef,
+  isFilled,
   missingRequiredFields,
   parseArtifactFields,
 } from "@/lib/artifacts/config";
+import { parseBenefitCalc, parsePilotSuccess } from "@/lib/artifacts/p2";
 import {
   ArtifactEditor,
   type EditorFieldData,
   type EditorSource,
   type EditorVersion,
 } from "@/components/ArtifactEditor";
+import { BenefitCalculator } from "@/components/BenefitCalculator";
+import { PilotSuccessDefinition } from "@/components/PilotSuccessDefinition";
 import type { ArtifactRow, InputItemRow, ProjectRow } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +99,7 @@ export default async function ArtifactEditorPage({
     getTranslations("artifactTypes"),
     getTranslations("fields"),
   ]);
+  const tP2 = await getTranslations("p2");
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   const typeName = typeDef
     ? tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""))
@@ -141,6 +146,47 @@ export default async function ArtifactEditorPage({
       ? completeness(typeDef, parsedFields)
       : { filled: 0, required: 0 };
   const fieldLabel = (labelKey: string) => tFields(labelKey.replace(/^fields\./, ""));
+  // ── P2-mélység (#9): strukturált mező-törzs a haszon-kalkulátorhoz és a
+  // pilot sikerdefinícióhoz. A pilotnál a baseline + döntési szabály mezők
+  // beolvadnak a „Sikerdefiníció" blokkba (kiszűrve az editor-listából; a
+  // savePilot a value-szinkronnal tartja kitöltöttként). Más típus érintetlen. ──
+  const isBenefit = typeDef?.key === "Business case";
+  const isPilot = typeDef?.key === "Pilot-terv";
+  const structuredFields: Record<string, React.ReactNode> = {};
+  let displayFields = editorFields;
+  if (isBenefit) {
+    structuredFields["haszon_szamitas"] = (
+      <BenefitCalculator
+        projectId={id}
+        artifactId={artifact.id}
+        calc={parseBenefitCalc(artifact.benefit_calc)}
+        editable={artifact.status === "draft"}
+      />
+    );
+  }
+  if (isPilot) {
+    displayFields = editorFields
+      .filter((f) => f.key !== "baseline" && f.key !== "dontesi_szabaly")
+      .map((f) =>
+        f.key === "szamszeru_kuszob" ? { ...f, label: tP2("pilotTitle") } : f,
+      );
+    structuredFields["szamszeru_kuszob"] = (
+      <PilotSuccessDefinition
+        projectId={id}
+        artifactId={artifact.id}
+        pilot={parsePilotSuccess(artifact.pilot_success)}
+        editable={artifact.status === "draft"}
+      />
+    );
+  }
+  // Az editor fejléc-számlálója és a hiányzó-címkék a MEGJELENÍTETT mezőkből
+  // (a P2-nél a subsumált mezők egyetlen Sikerdefiníció-sorrá olvadnak).
+  const editorRequiredCount = displayFields.filter((f) => f.required).length;
+  const editorMissingLabels = displayFields
+    .filter((f) => f.required && !isFilled(f.field))
+    .map((f) => f.label);
+  const useP2 = isBenefit || isPilot;
+
   const missingRequiredLabels =
     typeDef && parsedFields
       ? missingRequiredFields(typeDef, parsedFields).map((f) => fieldLabel(f.labelKey))
@@ -172,13 +218,14 @@ export default async function ArtifactEditorPage({
         artifactId={artifact.id}
         status={artifact.status}
         isHead={isHead}
-        fields={editorFields}
-        requiredCount={done.required}
+        fields={displayFields}
+        requiredCount={useP2 ? editorRequiredCount : done.required}
         body={artifact.body}
         editable={artifact.status === "draft"}
         sources={sources}
-        missingRequiredLabels={missingRequiredLabels}
+        missingRequiredLabels={useP2 ? editorMissingLabels : missingRequiredLabels}
         versions={editorVersions}
+        structuredFields={structuredFields}
         approvedDate={
           artifact.status === "approved"
             ? new Date(artifact.updated_at ?? artifact.created_at).toLocaleDateString(
