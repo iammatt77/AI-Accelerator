@@ -499,7 +499,9 @@
     "entitySourcedNoExtract": "This document is entity-sourced — its fields are filled from the confirmed use cases by the “Shortlist document from entities” action; free-text extraction cannot run on it.",
     "evaluatorInvalid": "Invalid assessment value — refresh the page and try again.",
     "aiActNoteRequired": "A note is required for a prohibited or high-risk classification.",
-    "noteTooLong": "The note can be at most 2000 characters."
+    "noteTooLong": "The note can be at most 2000 characters.",
+    "stakeholderExtractNoResult": "The extraction found no stakeholders in the sources. Add one manually or expand the input.",
+    "stakeholderNameRequired": "The stakeholder name is required."
   },
   "empty": {
     "noProjects": "No projects yet. Create one on the Projects page.",
