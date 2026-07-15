@@ -53,6 +53,22 @@ delete from input_items
       'd0000000-0000-4000-8000-000000000003'
     );
 
+-- #8: a demo-projekt stakeholder-kötései + stakeholderei törlődnek. A
+-- pain_point_stakeholders sorok a FK-cascade miatt a pain_points/stakeholders
+-- törlésekor is elmennének, de itt EXPLICIT is töröljük (idempotens,
+-- sorrend-független). Az input_items.stakeholder_source_id a FK „on delete
+-- set null" miatt magától null-ra áll a stakeholderek törlésekor.
+delete from pain_point_stakeholders
+  where pain_point_id in (
+    select id from pain_points where project_id = 'b0000000-0000-4000-8000-000000000001'
+  )
+  or stakeholder_id in (
+    select id from stakeholders where project_id = 'b0000000-0000-4000-8000-000000000001'
+  );
+
+delete from stakeholders
+  where project_id = 'b0000000-0000-4000-8000-000000000001';
+
 -- #7a: a demo-projekt P1-entitásai törlődnek (a seed nem tartalmaz
 -- entitást — az alapállapot az üres Fájdalompontok/Use case-ek szekció).
 delete from use_cases
