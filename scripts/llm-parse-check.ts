@@ -12,8 +12,10 @@
  */
 
 import {
+  parseBenefitSuggestion,
   parseExtractResult,
   parsePainPointsResult,
+  parsePilotSuggestion,
   parseStakeholdersResult,
   parseUseCasesResult,
   type LlmSource,
@@ -297,6 +299,41 @@ const skWithStrategy = parseStakeholdersResult(
   SK_SOURCES,
 );
 check("SK: communication_strategy a válaszban → a parse NEM olvassa ki (kizárólag manuális)", skWithStrategy.length === 1 && !("communication_strategy" in skWithStrategy[0]));
+
+// ── #9: P2-javaslat parse — c-minta, a fék/döntési szabály SOHA ──
+
+console.log("\n── parseBenefitSuggestion / parsePilotSuggestion (#9) ──\n");
+
+const P2_SOURCES: LlmSource[] = [
+  { index: 1, title: "Kickoff", text: "4 fő operátor, egyenként napi 2 órát tölt kézi kereséssel." },
+  { index: 2, title: "AHT", text: "A jelenlegi átlagos kezelési idő 15 perc." },
+];
+const bcValid = parseBenefitSuggestion(
+  `{ "felszabadult_kapacitas_ora_ho": 168, "oradij_ft": 6500, "source_indices": [1] }`,
+  P2_SOURCES,
+);
+check("BC: érvényes bemenetek 168 / 6500 + citáció", bcValid.felszabadult_kapacitas_ora_ho === 168 && bcValid.oradij_ft === 6500 && JSON.stringify(bcValid.source_indices) === "[1]");
+const bcStr = parseBenefitSuggestion(`{ "felszabadult_kapacitas_ora_ho": "168", "oradij_ft": "6 500" }`, P2_SOURCES);
+check("BC: string-koerció (\"168\", \"6 500\") → szám", bcStr.felszabadult_kapacitas_ora_ho === 168 && bcStr.oradij_ft === 6500);
+const bcNoBasis = parseBenefitSuggestion(`{ "felszabadult_kapacitas_ora_ho": null, "oradij_ft": null }`, P2_SOURCES);
+check("BC: alap nélkül → null (nem tippel)", bcNoBasis.felszabadult_kapacitas_ora_ho === null && bcNoBasis.oradij_ft === null);
+const bcFek = parseBenefitSuggestion(`{ "felszabadult_kapacitas_ora_ho": 168, "realizalhato_szazalek": 40 }`, P2_SOURCES);
+check("BC: a modell mégis ad féket → a parse NEM olvassa ki (nincs a shape-ben)", !("realizalhato_szazalek" in bcFek));
+const bcNeg = parseBenefitSuggestion(`{ "oradij_ft": -100 }`, P2_SOURCES);
+check("BC: nem-pozitív érték → null", bcNeg.oradij_ft === null);
+
+const plValid = parsePilotSuggestion(
+  `{ "meresi_metrika": "AHT", "baseline_ertek": 15, "baseline_egyseg": "perc", "kuszob_ertek": 10, "kuszob_egyseg": "perc", "hipotezis": "AHT csökken", "source_indices": [1, 2] }`,
+  P2_SOURCES,
+);
+check("PL: érvényes baseline 15 / küszöb 10 / metrika / hipotézis", plValid.baseline_ertek === 15 && plValid.kuszob_ertek === 10 && plValid.meresi_metrika === "AHT" && plValid.hipotezis === "AHT csökken");
+const plRule = parsePilotSuggestion(
+  `{ "kuszob_ertek": 10, "dontesi_szabaly": { "scale_feltetel": "x" }, "scale_feltetel": "y" }`,
+  P2_SOURCES,
+);
+check("PL: a modell mégis ad döntési szabályt → a parse NEM olvassa ki (nincs a shape-ben)", !("dontesi_szabaly" in plRule) && !("scale_feltetel" in plRule));
+const plNoBasis = parsePilotSuggestion(`{ "baseline_ertek": null, "kuszob_ertek": null }`, P2_SOURCES);
+check("PL: alap nélkül → null", plNoBasis.baseline_ertek === null && plNoBasis.kuszob_ertek === null);
 
 console.log(failures === 0 ? "\nPARSE-CHECK: MINDEN PASS" : `\nPARSE-CHECK: ${failures} FAIL`);
 process.exit(failures === 0 ? 0 : 1);

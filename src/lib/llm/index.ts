@@ -2,13 +2,17 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { resolveTemplate, type ArtifactTypeDef } from "@/lib/artifacts/config";
 import {
+  parseBenefitSuggestion,
   parseExtractResult,
   parsePainPointsResult,
+  parsePilotSuggestion,
   parseStakeholdersResult,
   parseUseCasesResult,
+  type BenefitSuggestion,
   type ExtractResult,
   type LlmSource,
   type PainPointProposal,
+  type PilotSuggestion,
   type StakeholderProposal,
   type UseCaseProposal,
 } from "./parse";
@@ -23,6 +27,8 @@ export type {
   PainPointProposal,
   StakeholderProposal,
   UseCaseProposal,
+  BenefitSuggestion,
+  PilotSuggestion,
 } from "./parse";
 
 // ─────────────────────────────────────────────────────────────
@@ -334,6 +340,89 @@ export async function extractStakeholders(
   return parseStakeholdersResult(textFromMessage(message), sources);
 }
 
+// ── suggestBenefitInputs / suggestPilotDefinition: P2-mélység (#9) ──
+
+/**
+ * A Business case haszon-kalkulátor BEMENET-javaslata (#9, E1 első fele): a
+ * P1-outputból / a forrásokból javasol felszabadult kapacitást és óradíjat —
+ * c-minta: CSAK ha konkrét alap van (pl. „4 fő, napi 2 óra"); ha nincs, a mező
+ * null (a modell nem tippel). A „fék" (realizálható %) SOHA nem javasolt —
+ * kizárólag emberi döntés (a rendszerprompt is tiltja).
+ */
+export async function suggestBenefitInputs(
+  sources: LlmSource[],
+): Promise<BenefitSuggestion> {
+  if (isMock()) {
+    return mockSuggestBenefit(sources);
+  }
+  const system = [
+    "Business case haszon-elemző vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A forrásokból KIZÁRÓLAG a felszabaduló kapacitást (óra/hó) és a terhelt",
+    "óradíjat (Ft/óra) becsülöd, ha van rá KONKRÉT alap a forrásban (pl. létszám,",
+    "napi óraszám, munkanapok, bérszint). Ha nincs alap, a mező null — TILOS tippelni.",
+    "A realizálható %-ot (a „féket”) SOHA nem adod meg — az kizárólag emberi",
+    "üzleti ítélet. KIZÁRÓLAG érvényes JSON-t adsz vissza.",
+    "A source_indices csak olyan forrás sorszáma, amelyből a becslés származik.",
+  ].join(" ");
+  const userPrompt = [
+    "Becsüld a haszon-kalkulátor bemeneteit a forrásokból.",
+    "",
+    "── Számozott források ──",
+    renderSources(sources),
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    `{ "felszabadult_kapacitas_ora_ho": <szám vagy null>, "oradij_ft": <szám vagy null>, "source_indices": [1] }`,
+    "A realizálható %-ot NE add meg. Csak JSON-t adj vissza.",
+  ].join("\n");
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 1000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseBenefitSuggestion(textFromMessage(message), sources);
+}
+
+/**
+ * A Pilot-terv sikerdefiníció MÉRHETŐ részének javaslata (#9): mérési metrika,
+ * baseline, siker-küszöb, hipotézis — c-minta, alap nélkül null. A döntési
+ * szabály (scale/pivot/stop) SOHA nem javasolt — emberi ítélet.
+ */
+export async function suggestPilotDefinition(
+  sources: LlmSource[],
+): Promise<PilotSuggestion> {
+  if (isMock()) {
+    return mockSuggestPilot(sources);
+  }
+  const system = [
+    "Pilot-tervező vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A forrásokból javaslod a mérhető sikerdefiníciót: a mérési metrikát, a",
+    "baseline (kiinduló) értéket egységgel, a siker-küszöböt egységgel, és a",
+    "tesztelt hipotézist — CSAK ha van rá konkrét alap; ha nincs, a mező null",
+    "(nem tippelsz). A döntési szabályt (scale/pivot/stop) SOHA nem adod meg —",
+    "az kizárólag emberi ítélet. KIZÁRÓLAG érvényes JSON-t adsz vissza.",
+  ].join(" ");
+  const userPrompt = [
+    "Javasold a pilot mérhető sikerdefinícióját a forrásokból.",
+    "",
+    "── Számozott források ──",
+    renderSources(sources),
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    `{ "meresi_metrika": "<metrika vagy null>", "baseline_ertek": <szám vagy null>, "baseline_egyseg": "<egység vagy null>", "kuszob_ertek": <szám vagy null>, "kuszob_egyseg": "<egység vagy null>", "hipotezis": "<hipotézis vagy null>", "source_indices": [1] }`,
+    "A scale/pivot/stop döntési szabályt NE add meg. Csak JSON-t adj vissza.",
+  ].join("\n");
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 1500,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parsePilotSuggestion(textFromMessage(message), sources);
+}
+
 // ── generateBody: megerősített mezők + sablon → md body ──────
 
 export interface ConfirmedField {
@@ -563,6 +652,51 @@ function mockExtractStakeholders(sources: LlmSource[]): StakeholderProposal[] {
       source_indices: cite([1]),
     },
   ];
+}
+
+// P2 haszon-kalkulátor bemenet-fixture (#9): a c-minta demonstrálása. Ha van
+// használható forrás (nem triviálisan rövid), a kapacitást és az óradíjat
+// javasolja (a referencia 168 ó/hó · 6 500 Ft/óra értékeivel); ha MINDEN
+// forrás rövid (<40 kar.), üres javaslat (nincs alap → az AI nem tippel,
+// negatív teszt). A féket SOHA nem adja (nincs is a shape-ben).
+function mockSuggestBenefit(sources: LlmSource[]): BenefitSuggestion {
+  if (sources.every((s) => s.text.trim().length < 40)) {
+    return { felszabadult_kapacitas_ora_ho: null, oradij_ft: null, source_indices: [] };
+  }
+  const valid = new Set(sources.map((s) => s.index));
+  return {
+    felszabadult_kapacitas_ora_ho: 168,
+    oradij_ft: 6500,
+    source_indices: [1].filter((n) => valid.has(n)),
+  };
+}
+
+// P2 pilot sikerdefiníció-fixture (#9): metrika + baseline + küszöb +
+// hipotézis a referencia szerint (AHT 15 → <10 perc). A scale/pivot/stop
+// döntési szabályt SOHA nem adja (emberi ítélet). Rövid források → üres.
+function mockSuggestPilot(sources: LlmSource[]): PilotSuggestion {
+  if (sources.every((s) => s.text.trim().length < 40)) {
+    return {
+      meresi_metrika: null,
+      baseline_ertek: null,
+      baseline_egyseg: null,
+      kuszob_ertek: null,
+      kuszob_egyseg: null,
+      hipotezis: null,
+      source_indices: [],
+    };
+  }
+  const valid = new Set(sources.map((s) => s.index));
+  return {
+    meresi_metrika: "AHT — átlagos kezelési idő",
+    baseline_ertek: 15,
+    baseline_egyseg: "perc",
+    kuszob_ertek: 10,
+    kuszob_egyseg: "perc",
+    hipotezis:
+      "Ha az AI-asszisztens előszűr és válasz-javaslatot ad, az AHT 15 → 10 perc alá csökken.",
+    source_indices: [1, 2].filter((n) => valid.has(n)),
+  };
 }
 
 function mockGenerateBody(

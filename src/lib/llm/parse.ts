@@ -46,6 +46,27 @@ export interface UseCaseProposal {
   source_indices: number[];
 }
 
+/** AI-javaslat a Business case haszon-kalkulátor BEMENETEIRE (#9). A „fék"
+ *  (realizálható %) SOHA nem szerepel — az kizárólag emberi döntés. */
+export interface BenefitSuggestion {
+  felszabadult_kapacitas_ora_ho: number | null;
+  oradij_ft: number | null;
+  source_indices: number[];
+}
+
+/** AI-javaslat a Pilot-terv sikerdefiníció MÉRHETŐ részére (#9): metrika,
+ *  baseline, küszöb, hipotézis. A scale/pivot/stop feltételek SOHA nem
+ *  szerepelnek — azok kizárólag emberi ítéletek. */
+export interface PilotSuggestion {
+  meresi_metrika: string | null;
+  baseline_ertek: number | null;
+  baseline_egyseg: string | null;
+  kuszob_ertek: number | null;
+  kuszob_egyseg: string | null;
+  hipotezis: string | null;
+  source_indices: number[];
+}
+
 /** AI-javasolt stakeholder (charter/interjú-kivonatolás nyers javaslata, #8).
  *  A score (influence/impact) csak akkor van kitöltve, ha a forrás konkrét
  *  alapot ad rá — egyébként null (a modell nem tippel). A communication_strategy
@@ -248,6 +269,65 @@ export function parseUseCasesResult(
     });
   }
   return result;
+}
+
+/** Pozitív szám vagy null (a #9 c-mintája): a modell CSAK akkor adhat értéket,
+ *  ha van rá alap; a nem numerikus / nem-pozitív / hiányzó érték null (a modell
+ *  nem tippel). String-koerció a "168"-alakú válaszokhoz. */
+function optionalNumber(raw: unknown): number | null {
+  const n = typeof raw === "string" ? Number(raw.trim().replace(/\s/g, "")) : raw;
+  if (typeof n !== "number" || !Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+/**
+ * Business case haszon-kalkulátor BEMENET-javaslat feldolgozása (#9). CSAK a
+ * felszabadult kapacitás és az óradíj — a „fék" (realizálható %) SOHA nem
+ * kerül a javaslatba (nincs is a shape-ben). Alap nélkül a mező null (nem
+ * tippel). A rossz citáció nem dobja el a javaslatot (a #6-fix elve).
+ */
+export function parseBenefitSuggestion(
+  raw: string,
+  sources: LlmSource[],
+): BenefitSuggestion {
+  const parsed = parseJsonLoose(raw);
+  const o =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  const validIndices = new Set(sources.map((s) => s.index));
+  return {
+    felszabadult_kapacitas_ora_ho: optionalNumber(o.felszabadult_kapacitas_ora_ho),
+    oradij_ft: optionalNumber(o.oradij_ft),
+    source_indices: normalizeIndices(o.source_indices, validIndices),
+  };
+}
+
+/**
+ * Pilot sikerdefiníció MÉRHETŐ rész javaslatának feldolgozása (#9): metrika,
+ * baseline, küszöb, hipotézis. A döntési szabály (scale/pivot/stop) SOHA nem
+ * kerül a javaslatba (nincs is a shape-ben) — emberi ítélet. Alap nélkül a
+ * mező null.
+ */
+export function parsePilotSuggestion(
+  raw: string,
+  sources: LlmSource[],
+): PilotSuggestion {
+  const parsed = parseJsonLoose(raw);
+  const o =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  const validIndices = new Set(sources.map((s) => s.index));
+  return {
+    meresi_metrika: optionalText(o.meresi_metrika),
+    baseline_ertek: optionalNumber(o.baseline_ertek),
+    baseline_egyseg: optionalText(o.baseline_egyseg),
+    kuszob_ertek: optionalNumber(o.kuszob_ertek),
+    kuszob_egyseg: optionalText(o.kuszob_egyseg),
+    hipotezis: optionalText(o.hipotezis),
+    source_indices: normalizeIndices(o.source_indices, validIndices),
+  };
 }
 
 /** 1–5 egész score vagy null (a #8 c-mintája): a modell CSAK akkor adhat
