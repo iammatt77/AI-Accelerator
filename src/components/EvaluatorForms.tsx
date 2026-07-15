@@ -215,9 +215,6 @@ export function AiSuitabilityPanel({
     saveAiSuitabilityAction.bind(null, projectId, useCaseId),
     initialState,
   );
-  // Kontrollált selectek: a React 19 a server action után reseteli az
-  // űrlapot — hibaágon a kiválasztott válaszok különben elvesznének
-  // (ugyanaz a védelem, mint az AiActPanel-en).
   const [answers, setAnswers] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       SUITABILITY_CRITERIA.map((k) => [k, current?.criteria[k] ?? ""]),
@@ -233,9 +230,16 @@ export function AiSuitabilityPanel({
             className="flex items-center justify-between gap-3 text-body"
           >
             <span className="min-w-0">{t(`criteria.${key}`)}</span>
+            {/* BUGFIX (#7b, l. DataReadinessPanel): a React-19 `<form action>`
+                mentés után requestFormReset-tel törli a DOM-mezőket; a
+                KONTROLLÁLT select value-ja (változatlanul is) nem íródik
+                vissza → a mező üresre esik. NEM-kontrollált `defaultValue` +
+                nonce-kulcs: a reset a defaultValue-ra (= `answers`) áll
+                vissza, a nonce-remount újraolvassa. */}
             <select
+              key={`s${state.nonce ?? 0}`}
               name={key}
-              value={answers[key]}
+              defaultValue={answers[key]}
               onChange={(e) =>
                 setAnswers((prev) => ({ ...prev, [key]: e.target.value }))
               }
@@ -283,7 +287,6 @@ export function DataReadinessPanel({
     saveDataReadinessAction.bind(null, projectId, useCaseId),
     initialState,
   );
-  // Kontrollált selectek — l. AiSuitabilityPanel kommentje.
   const [grades, setGrades] = useState<Record<string, string>>(() =>
     Object.fromEntries(READINESS_DIMENSIONS.map((k) => [k, current?.dimensions[k] ?? ""])),
   );
@@ -360,10 +363,6 @@ export function AiActPanel({
   );
   // Élő javaslat-tükör: a checkbox-válaszokból azonnal látszik a javaslat
   // (a mérvadó javaslatot a szerver számítja ugyanazzal a szabállyal).
-  // KONTROLLÁLT inputok: a React 19 a server action után reseteli az
-  // űrlapot — a hibaágon (pl. hiányzó kötelező megjegyzés) a bejelölt
-  // válaszok különben elvesznének, és a második mentés HAMIS javaslatot
-  // tárolna (walkthrough-lelet).
   const [answers, setAnswers] = useState<Partial<Record<AiActQuestion, boolean>>>(
     current?.answers ?? {},
   );
@@ -384,10 +383,16 @@ export function AiActPanel({
       <form action={formAction} className="space-y-2">
         {AI_ACT_QUESTIONS.map((key) => (
           <label key={key} className="flex items-start gap-2 text-body">
+            {/* BUGFIX (#7b, l. DataReadinessPanel): a mentés utáni
+                requestFormReset a KONTROLLÁLT checkbox `checked`-jét is
+                törli (változatlan esetben React nem írja vissza) → a
+                bejelölt válasz „eltűnik". NEM-kontrollált `defaultChecked` +
+                nonce-kulcs ugyanazzal a mintával. */}
             <input
+              key={`c${state.nonce ?? 0}-${key}`}
               type="checkbox"
               name={key}
-              checked={answers[key] ?? false}
+              defaultChecked={answers[key] ?? false}
               onChange={(e) =>
                 setAnswers((prev) => ({ ...prev, [key]: e.target.checked }))
               }
@@ -417,9 +422,12 @@ export function AiActPanel({
         {/* E1: a besorolást az EMBER erősíti meg */}
         <label className="flex items-center justify-between gap-3 text-body">
           <span>{t("confirmedLabel")}</span>
+          {/* BUGFIX (#7b, l. DataReadinessPanel): ugyanaz a form-reset
+              minta — nem-kontrollált defaultValue + nonce-kulcs. */}
           <select
+            key={`cc${state.nonce ?? 0}`}
             name="confirmedCategory"
-            value={confirmedCat}
+            defaultValue={confirmedCat}
             onChange={(e) => setConfirmedCat(e.target.value)}
             className={`${selectClass} shrink-0`}
           >
