@@ -155,11 +155,18 @@ export default async function ArtifactEditorPage({
   const structuredFields: Record<string, React.ReactNode> = {};
   let displayFields = editorFields;
   if (isBenefit) {
+    // A `key` a perzisztált strukturált adat aláírása: suggest/save után a
+    // revalidate új prop-ot ad, de a kliens useState-je nem frissül magától —
+    // az aláírás-váltás remountot kényszerít, így a mentett/javasolt értékek
+    // láthatóvá válnak. Gépelés (nincs szerver-kör) nem változtatja az aláírást,
+    // így a beírt érték nem vész el.
+    const benefitCalc = parseBenefitCalc(artifact.benefit_calc);
     structuredFields["haszon_szamitas"] = (
       <BenefitCalculator
+        key={`bc-${JSON.stringify(benefitCalc)}`}
         projectId={id}
         artifactId={artifact.id}
-        calc={parseBenefitCalc(artifact.benefit_calc)}
+        calc={benefitCalc}
         editable={artifact.status === "draft"}
       />
     );
@@ -170,11 +177,13 @@ export default async function ArtifactEditorPage({
       .map((f) =>
         f.key === "szamszeru_kuszob" ? { ...f, label: tP2("pilotTitle") } : f,
       );
+    const pilotSuccess = parsePilotSuccess(artifact.pilot_success);
     structuredFields["szamszeru_kuszob"] = (
       <PilotSuccessDefinition
+        key={`pt-${JSON.stringify(pilotSuccess)}`}
         projectId={id}
         artifactId={artifact.id}
-        pilot={parsePilotSuccess(artifact.pilot_success)}
+        pilot={pilotSuccess}
         editable={artifact.status === "draft"}
       />
     );

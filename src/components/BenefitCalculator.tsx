@@ -68,15 +68,12 @@ export function BenefitCalculator({
   const anyInput = num(kap) !== null || num(dij) !== null;
 
   return (
-    <form action={saveAction} className="space-y-0">
-      {/* hidden mezők a mentéshez */}
-      <input type="hidden" name="kapacitas" value={kap} />
-      <input type="hidden" name="oradij" value={dij} />
-      <input type="hidden" name="fek" value={fekSet ? String(fek) : ""} />
-      <input type="hidden" name="bevezetes" value={bev} />
-      <input type="hidden" name="uzemeltetes" value={uzem} />
-
-      {/* üres állapot vezető + AI-javaslat gomb */}
+    // A javaslat- és a mentés-form TESTVÉR (nem egymásba ágyazott): a beágyazott
+    // <form> érvénytelen HTML — a böngésző eldobja a belső formot, így a
+    // „Bemenetek javaslata" gomb a külső (mentés) formot indítaná. Ezért a
+    // kalkulátor törzse egy sima <div>, benne két különálló form.
+    <div className="space-y-0">
+      {/* üres állapot vezető + AI-javaslat gomb (önálló form) */}
       {!anyInput && (
         <p className="mb-3 text-[12.5px] leading-relaxed text-ink-secondary">{t("emptyLead")}</p>
       )}
@@ -93,6 +90,15 @@ export function BenefitCalculator({
           {suggestState.notice}
         </p>
       )}
+
+      {/* mentés-form: rejtett mezők + STAGE-ek + lábléc */}
+      <form action={saveAction} className="space-y-0">
+      {/* hidden mezők a mentéshez */}
+      <input type="hidden" name="kapacitas" value={kap} />
+      <input type="hidden" name="oradij" value={dij} />
+      <input type="hidden" name="fek" value={fekSet ? String(fek) : ""} />
+      <input type="hidden" name="bevezetes" value={bev} />
+      <input type="hidden" name="uzemeltetes" value={uzem} />
 
       {/* STAGE 1 · BEMENETEK */}
       <StageHeader label={t("stage1")} hint={t("stage1Hint")} />
@@ -265,7 +271,8 @@ export function BenefitCalculator({
           )}
         </div>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }
 

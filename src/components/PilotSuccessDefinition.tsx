@@ -59,16 +59,10 @@ export function PilotSuccessDefinition({
   const filled = kuszNum !== null && branchDone === 3;
 
   return (
-    <form action={saveAction} className="space-y-0">
-      <input type="hidden" name="metrika" value={metrika} />
-      <input type="hidden" name="baseline_ertek" value={baseV} />
-      <input type="hidden" name="baseline_egyseg" value={baseU} />
-      <input type="hidden" name="kuszob_ertek" value={kuszV} />
-      <input type="hidden" name="kuszob_egyseg" value={kuszU} />
-      <input type="hidden" name="scale_feltetel" value={scale} />
-      <input type="hidden" name="pivot_feltetel" value={pivot} />
-      <input type="hidden" name="stop_feltetel" value={stop} />
-
+    // A javaslat- és a mentés-form TESTVÉR (nem egymásba ágyazott): a beágyazott
+    // <form> érvénytelen HTML, a böngésző eldobná a belső formot, így az
+    // AI-javaslat gomb a mentés-formot indítaná. Ezért sima <div> + két form.
+    <div className="space-y-0">
       {/* poka-yoke figyelmeztetés, amíg nincs kész */}
       {!filled && (
         <div className="mb-3 flex items-start gap-2.5 rounded-tile border border-[#F0E3C2] bg-[#FDF6E7] px-3 py-2.5">
@@ -96,6 +90,17 @@ export function PilotSuccessDefinition({
           {suggestState.notice}
         </p>
       )}
+
+      {/* mentés-form: rejtett mezők + mérés + döntési szabály + lábléc */}
+      <form action={saveAction} className="space-y-0">
+      <input type="hidden" name="metrika" value={metrika} />
+      <input type="hidden" name="baseline_ertek" value={baseV} />
+      <input type="hidden" name="baseline_egyseg" value={baseU} />
+      <input type="hidden" name="kuszob_ertek" value={kuszV} />
+      <input type="hidden" name="kuszob_egyseg" value={kuszU} />
+      <input type="hidden" name="scale_feltetel" value={scale} />
+      <input type="hidden" name="pivot_feltetel" value={pivot} />
+      <input type="hidden" name="stop_feltetel" value={stop} />
 
       {/* MÉRÉS · baseline → küszöb */}
       <div className="mb-2.5 flex items-center gap-2">
@@ -207,7 +212,8 @@ export function PilotSuccessDefinition({
           )}
         </div>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }
 

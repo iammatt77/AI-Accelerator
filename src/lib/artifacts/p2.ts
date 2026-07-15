@@ -113,8 +113,12 @@ export function computeBenefit(b: BenefitCalc): BenefitDerived {
   };
 }
 
+// Csak pozitív, véges szám marad meg — a 0 / negatív / nem-szám null lesz.
+// Ez a beírás-oldallal (p2-actions parseNum, a komponens num()) egyező kontraktus:
+// a haszon-lánc minden tagja (kapacitás, óradíj, fék%, költségek) és a pilot
+// baseline/küszöb pozitív; a 0/rossz érték „nem számolható" (nem dob, nem tölt ki).
 function numOrNull(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
   return null;
 }
 
