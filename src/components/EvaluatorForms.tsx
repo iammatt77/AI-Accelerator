@@ -285,9 +285,7 @@ export function DataReadinessPanel({
   );
   // Kontrollált selectek — l. AiSuitabilityPanel kommentje.
   const [grades, setGrades] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      READINESS_DIMENSIONS.map((k) => [k, current?.dimensions[k] ?? ""]),
-    ),
+    Object.fromEntries(READINESS_DIMENSIONS.map((k) => [k, current?.dimensions[k] ?? ""])),
   );
 
   return (
@@ -299,18 +297,29 @@ export function DataReadinessPanel({
             className="flex items-center justify-between gap-3 text-body"
           >
             <span className="min-w-0">{t(`dimensions.${key}`)}</span>
+            {/* BUGFIX (#7b): a React-19 `<form action>` mentés UTÁN alaphelyzetbe
+                állítja (requestFormReset) a DOM-mezőket. A KONTROLLÁLT select
+                value-ját (változatlan strong→strong) React nem írja vissza a
+                resetelt DOM-ra → a mező „eltűnik" (üresre esik) frissítésig. A
+                megoldás a MŰKÖDŐ textarea-minta: NEM-kontrollált `defaultValue` +
+                nonce-kulcs. A reset a nem-kontrollált mezőt a defaultValue-ra
+                állítja vissza (= a `grades`-ben őrzött választás), a nonce-remount
+                pedig újraolvassa. Az onChange a `grades`-t frissíti (hibaágon és
+                a remounton is megőrzött választás). */}
             <select
+              key={`g${state.nonce ?? 0}`}
               name={key}
-              value={grades[key]}
+              defaultValue={grades[key]}
               onChange={(e) =>
                 setGrades((prev) => ({ ...prev, [key]: e.target.value }))
               }
               className={`${selectClass} shrink-0`}
             >
+              {/* Sorrend: legjobb elöl (erős → részleges → gyenge) */}
               <option value="">{t("answer.unset")}</option>
-              <option value="weak">{t("grade.weak")}</option>
-              <option value="partial">{t("grade.partial")}</option>
               <option value="strong">{t("grade.strong")}</option>
+              <option value="partial">{t("grade.partial")}</option>
+              <option value="weak">{t("grade.weak")}</option>
             </select>
           </label>
         ))}

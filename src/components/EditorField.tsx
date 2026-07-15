@@ -35,6 +35,7 @@ export function EditorFieldAccordion({
   open,
   onToggle,
   customBody,
+  renderCitations,
 }: {
   projectId: string;
   artifactId: string;
@@ -48,6 +49,9 @@ export function EditorFieldAccordion({
   /** P2 (#9): strukturált mező-törzs (kalkulátor / sikerdefiníció) a sima
    *  textarea helyett — a nyitott kártya body-jában. */
   customBody?: React.ReactNode;
+  /** Citáció-javító: a [n] jelölőket kattinthatóvá tevő renderelő (a mező
+   *  értékében ÉS a „Források:" sorban) — a szerkesztő forrás-panelre ugrik. */
+  renderCitations?: (text: string) => React.ReactNode;
 }) {
   const t = useTranslations("editor");
   const tWs = useTranslations("workspace");
@@ -201,11 +205,15 @@ export function EditorFieldAccordion({
           </div>
         ) : (
           <div className="card-sunken px-4 py-3.5">
-            <p className="whitespace-pre-wrap text-body text-ink">{field.value}</p>
+            <p className="whitespace-pre-wrap text-body text-ink">
+              {renderCitations ? renderCitations(field.value ?? "") : field.value}
+            </p>
             <p className="mt-1.5 font-mono text-mono-sm text-ink-tertiary">
               {tWs("sourcesLabel")}{" "}
               {field.source_indices.length > 0
-                ? field.source_indices.map((n) => `[${n}]`).join(" ")
+                ? renderCitations
+                  ? renderCitations(field.source_indices.map((n) => `[${n}]`).join(" "))
+                  : field.source_indices.map((n) => `[${n}]`).join(" ")
                 : tWs("noSourceMark")}
             </p>
           </div>

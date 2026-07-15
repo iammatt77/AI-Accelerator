@@ -131,6 +131,11 @@ export function ArtifactEditor({
   const [activeSource, setActiveSource] = useState<number | null>(null);
   const [editingBody, setEditingBody] = useState(false);
   const sourceRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const editorRef = useRef<HTMLDivElement>(null);
+  // Fordított irány (forrás → doksi): egy forrásra kattintva a rá hivatkozó
+  // [n] jelölők felvillannak. A `flash` egy nonce-olt cél; a useEffect a
+  // renderelés után DOM-lekérdezéssel villantja + odagördíti őket.
+  const [flash, setFlash] = useState<{ n: number; k: number } | null>(null);
 
   const [saveState, saveAction] = useActionState(
     saveArtifactBody.bind(null, projectId, artifactId),
@@ -184,6 +189,50 @@ export function ArtifactEditor({
     }, 60);
   };
 
+  // Forrás → doksi: a forrás-kártyát kiemeljük, kinyitjuk a hivatkozó mezőt
+  // (edit-módban, egy-nyitott accordion) + a body-t, majd villantunk (useEffect).
+  const flashCitations = (n: number) => {
+    setActiveSource(n);
+    if (mode === "edit") {
+      // a hivatkozó mező: inline [n] az értékben VAGY mező-szintű forrás-index
+      // (a „Források:" sor is kattintható [n]-t renderel) → nyíljon ki.
+      const refField = fields.find(
+        (f) => (f.field.value ?? "").includes(`[${n}]`) || f.field.source_indices.includes(n),
+      );
+      if (refField) setOpenField(refField.key);
+      if (body.includes(`[${n}]`)) setBodyOpen(true);
+    }
+    setFlash((prev) => ({ n, k: (prev?.k ?? 0) + 1 }));
+  };
+
+  useEffect(() => {
+    if (!flash) return;
+    const { n } = flash;
+    const id = window.setTimeout(() => {
+      const root = editorRef.current;
+      if (!root) return;
+      const els = Array.from(root.querySelectorAll<HTMLElement>(`[data-cite="${n}"]`));
+      if (els.length === 0) return;
+      // az első felvillanó hely legfelülre (a többi kilóghat lefelé)
+      els[0].scrollIntoView({ behavior: "smooth", block: "start" });
+      for (const el of els) {
+        el.animate(
+          [
+            { boxShadow: "0 0 0 0 rgba(46,119,168,0)", backgroundColor: "rgba(46,119,168,0.34)" },
+            {
+              boxShadow: "0 0 0 5px rgba(46,119,168,0.28)",
+              backgroundColor: "rgba(46,119,168,0.34)",
+              offset: 0.35,
+            },
+            { boxShadow: "0 0 0 0 rgba(46,119,168,0)", backgroundColor: "rgba(46,119,168,0)" },
+          ],
+          { duration: 1150, easing: "ease-out" },
+        );
+      }
+    }, 90);
+    return () => window.clearTimeout(id);
+  }, [flash]);
+
   const renderWithCitations = (text: string) =>
     text.split(/(\[\d+\])/g).map((part, i) => {
       const m = part.match(/^\[(\d+)\]$/);
@@ -193,6 +242,7 @@ export function ArtifactEditor({
           <button
             key={i}
             type="button"
+            data-cite={n}
             onClick={() => jumpToSource(n)}
             className="mx-0.5 inline-flex items-center rounded-3 bg-tint-pivot px-1.5 align-baseline font-mono text-[11px] text-pivot hover:underline"
           >
@@ -257,14 +307,19 @@ export function ArtifactEditor({
           {sources.map((s) => {
             const cited = activeSource === s.index;
             return (
-              <div
+              <button
                 key={s.index}
+                type="button"
+                title={t("sourceTileHint")}
+                onClick={() => flashCitations(s.index)}
                 ref={(el) => {
                   if (el) sourceRefs.current.set(s.index, el);
                   else sourceRefs.current.delete(s.index);
                 }}
-                className={`rounded-control bg-surface p-[11px_13px] ${
-                  cited ? "border-[1.5px] border-pivot shadow-card-sm" : "border border-line-soft"
+                className={`w-full rounded-control bg-surface p-[11px_13px] text-left ${
+                  cited
+                    ? "border-[1.5px] border-pivot shadow-card-sm"
+                    : "border border-line-soft hover:border-pivot/50 hover:bg-neutral-50"
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -285,7 +340,53 @@ export function ArtifactEditor({
                 >
                   {cited ? `„${s.text}”` : s.text}
                 </p>
-              </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </aside>
+  );
+
+  // ── Kompakt források-panel (előnézet / kész-doksi) ──
+  // A tár kész-doksi nézetében (approved → preview) és a draft-előnézetben is
+  // ott a forrás-panel, hogy a [n] mindkét irányban működjön: [n] → csempe
+  // kiemelés, csempe → doksi [n]-felvillanás. Kompakt: [n] + rövid cím.
+  const compactSources = (
+    <aside className="border-t border-line-soft bg-soft p-4 lg:border-l lg:border-t-0">
+      <div className="mb-2.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-ink-tertiary">
+        {t("sourcesCountLabel", { sources: sources.length, citations: citationCount })}
+      </div>
+      {sources.length === 0 ? (
+        <p className="text-body text-ink-tertiary">{t("noSources")}</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {sources.map((s) => {
+            const cited = activeSource === s.index;
+            return (
+              <button
+                key={s.index}
+                type="button"
+                title={t("sourceTileHint")}
+                onClick={() => flashCitations(s.index)}
+                ref={(el) => {
+                  if (el) sourceRefs.current.set(s.index, el);
+                  else sourceRefs.current.delete(s.index);
+                }}
+                className={`flex w-full items-center gap-2 rounded-control bg-surface px-2.5 py-2 text-left ${
+                  cited
+                    ? "border-[1.5px] border-pivot shadow-card-sm"
+                    : "border border-line-soft hover:border-pivot/50 hover:bg-neutral-50"
+                }`}
+              >
+                <span className="shrink-0 font-mono text-[10.5px] font-bold text-pivot">
+                  [{s.index}]
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{s.title}</span>
+                {s.date && (
+                  <span className="shrink-0 font-mono text-[9px] text-ink-tertiary">{s.date}</span>
+                )}
+              </button>
             );
           })}
         </div>
@@ -327,7 +428,10 @@ export function ArtifactEditor({
   const filledFields = fields.filter((f) => f.field.value);
 
   return (
-    <div className="overflow-hidden rounded-shell border border-line bg-neutral-50 shadow-shell">
+    <div
+      ref={editorRef}
+      className="overflow-hidden rounded-shell border border-line bg-neutral-50 shadow-shell"
+    >
       {/* ── Fejléc ── */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line-soft bg-surface px-6 py-3.5">
         <div className="min-w-0">
@@ -454,6 +558,7 @@ export function ArtifactEditor({
                 open={openField === f.key}
                 onToggle={() => setOpenField(openField === f.key ? null : f.key)}
                 customBody={structuredFields?.[f.key]}
+                renderCitations={renderWithCitations}
               />
             ))}
 
@@ -532,8 +637,14 @@ export function ArtifactEditor({
           {status === "approved" ? versionsRail : sourcesRail}
         </div>
       ) : (
-        /* ── Előnézet: a mezőkből komponált dokumentum ── */
-        <div className="grid grid-cols-1 lg:grid-cols-[200px_minmax(0,1fr)]">
+        /* ── Előnézet: a mezőkből komponált dokumentum + kompakt források ── */
+        <div
+          className={`grid grid-cols-1 ${
+            sources.length > 0
+              ? "lg:grid-cols-[184px_minmax(0,1fr)_236px]"
+              : "lg:grid-cols-[200px_minmax(0,1fr)]"
+          }`}
+        >
           <aside className="border-b border-line-soft bg-soft p-4 lg:border-b-0 lg:border-r">
             <div className="px-1.5 pb-2 font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-ink-tertiary">
               {t("tocTitle")}
@@ -586,6 +697,7 @@ export function ArtifactEditor({
               <p className="mt-5 text-body text-ink-tertiary">{t("previewEmpty")}</p>
             )}
           </div>
+          {sources.length > 0 && compactSources}
         </div>
       )}
 
