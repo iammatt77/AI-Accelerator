@@ -51,6 +51,10 @@ export interface ArtifactRow {
   source_input_ids: string[];
   /** Strukturált mezők jsonb (0003) — defenzív parse: parseArtifactFields. */
   fields: unknown;
+  /** P2 haszon-kalkulátor jsonb (0007, #9) — defenzív parse: parseBenefitCalc. */
+  benefit_calc: unknown;
+  /** P2 pilot sikerdefiníció jsonb (0007, #9) — defenzív parse: parsePilotSuccess. */
+  pilot_success: unknown;
   updated_at: string;
   created_at: string;
 }
