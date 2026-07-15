@@ -7,6 +7,7 @@ import { PHASE_IDS, type PhaseId } from "@/lib/phases/config";
 import { completeness, getTypeDef, parseArtifactFields, typesForPhase } from "@/lib/artifacts/config";
 import { criterionLabel } from "@/lib/phases/criterion-label";
 import { StatusPill } from "@/components/StatusPill";
+import { FieldStateBadge } from "@/components/FieldStateBadge";
 import { IconCheck, IconLock } from "@/components/icons";
 import type {
   ArtifactRow,
@@ -15,6 +16,7 @@ import type {
   InputItemRow,
   PainPointRow,
   ProjectRow,
+  StakeholderRow,
   UseCaseRow,
 } from "@/lib/db/types";
 
@@ -46,7 +48,7 @@ export default async function ProjectCockpitPage({
   if (!projectData) notFound();
   const project = projectData as ProjectWithClient;
 
-  const [board, artRes, inRes, ppRes, ucRes, decRes] = await Promise.all([
+  const [board, artRes, inRes, ppRes, ucRes, decRes, skRes] = await Promise.all([
     loadPhaseBoard(supabase, id),
     supabase
       .from("artifacts")
@@ -61,14 +63,25 @@ export default async function ProjectCockpitPage({
       .select("*")
       .eq("project_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("stakeholders")
+      .select("id, name, title, state")
+      .eq("project_id", id)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true }),
   ]);
   const artifacts = (artRes.data ?? []) as ArtifactRow[];
   const inputs = (inRes.data ?? []) as Pick<InputItemRow, "id" | "type" | "created_at">[];
   const pains = (ppRes.data ?? []) as Pick<PainPointRow, "id" | "state">[];
   const ucs = (ucRes.data ?? []) as Pick<UseCaseRow, "id" | "state" | "list_status">[];
   const decisions = (decRes.data ?? []) as DecisionRow[];
+  const stakeholders = (skRes.data ?? []) as Pick<
+    StakeholderRow,
+    "id" | "name" | "title" | "state"
+  >[];
+  const stakeholdersVisible = stakeholders.filter((s) => s.state !== "rejected");
 
-  const [locale, t, tClients, tArtifacts, tTypes, tPhases, tCriteria, tEmpty] =
+  const [locale, t, tClients, tArtifacts, tTypes, tPhases, tCriteria, tEmpty, tSt, tEnt] =
     await Promise.all([
       getLocale(),
       getTranslations("cockpit"),
@@ -78,6 +91,8 @@ export default async function ProjectCockpitPage({
       getTranslations("phases"),
       getTranslations("criteria"),
       getTranslations("empty"),
+      getTranslations("stakeholders"),
+      getTranslations("entities"),
     ]);
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   const tz = { timeZone: "Europe/Budapest" } as const;
@@ -492,6 +507,47 @@ export default async function ProjectCockpitPage({
               </div>
             </section>
           )}
+
+          {/* Stakeholderek (#8) — kattintásra a dedikált nézet */}
+          <section className="overflow-hidden rounded-shell border border-line bg-surface shadow-card">
+            <div className="border-b border-neutral-100 px-4 py-3">
+              <h2 className="text-[13px] font-semibold">{tSt("cockpitTitle")}</h2>
+              <p className="mt-0.5 font-mono text-[11px] text-ink-tertiary">{tSt("cockpitLead")}</p>
+            </div>
+            {stakeholdersVisible.length === 0 ? (
+              <p className="px-4 py-3 text-body text-ink-tertiary">{tSt("cockpitEmpty")}</p>
+            ) : (
+              stakeholdersVisible.map((s, i) => (
+                <Link
+                  key={s.id}
+                  href={`/project/${id}/stakeholder/${s.id}`}
+                  className={`flex items-center gap-2.5 px-4 py-[11px] hover:bg-neutral-50 ${
+                    i > 0 ? "border-t border-line-row" : ""
+                  }`}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold">{s.name}</span>
+                    <span className="block truncate font-mono text-[11px] text-ink-tertiary">
+                      {s.title ?? tSt("noTitle")}
+                    </span>
+                  </span>
+                  <FieldStateBadge
+                    state={
+                      s.state === "ai_suggested"
+                        ? "ai_filled"
+                        : s.state === "confirmed"
+                          ? "confirmed"
+                          : "manual"
+                    }
+                    label={tEnt(`state.${s.state}`)}
+                  />
+                  <span aria-hidden className="shrink-0 text-ink-tertiary">
+                    ›
+                  </span>
+                </Link>
+              ))
+            )}
+          </section>
 
           {/* Dátumozott aktivitás */}
           <section className="rounded-shell border border-line bg-surface p-4 shadow-card">
