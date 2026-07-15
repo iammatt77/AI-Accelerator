@@ -44,6 +44,13 @@ delete from artifacts
 update artifacts set status = 'approved', version = 1
   where id = 'e0000000-0000-4000-8000-000000000001';
 
+-- #9: a P2 strukturált adat (benefit_calc / pilot_success) az artefaktumon él
+-- — a fenti „nem-seedelt artefaktum" törlés a P2 Business case / Pilot-terv
+-- draftokat egészben eltávolítja, így a jsonb is velük megy. Defenzív reset a
+-- fennmaradó (seedelt charter) sorra is, hogy az alapállapot mindig üres {}.
+update artifacts set benefit_calc = '{}', pilot_success = '{}'
+  where project_id = 'b0000000-0000-4000-8000-000000000001';
+
 -- Nem-seedelt bemenetek törlése (a ① zónában felvett teszt-inputok).
 delete from input_items
   where project_id = 'b0000000-0000-4000-8000-000000000001'
