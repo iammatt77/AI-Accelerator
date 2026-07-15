@@ -4,10 +4,12 @@ import { resolveTemplate, type ArtifactTypeDef } from "@/lib/artifacts/config";
 import {
   parseExtractResult,
   parsePainPointsResult,
+  parseStakeholdersResult,
   parseUseCasesResult,
   type ExtractResult,
   type LlmSource,
   type PainPointProposal,
+  type StakeholderProposal,
   type UseCaseProposal,
 } from "./parse";
 
@@ -19,6 +21,7 @@ export type {
   ExtractedField,
   ExtractResult,
   PainPointProposal,
+  StakeholderProposal,
   UseCaseProposal,
 } from "./parse";
 
@@ -269,6 +272,68 @@ export async function deriveUseCases(
   return parseUseCasesResult(textFromMessage(message), sources, painPoints.length);
 }
 
+// ── extractStakeholders: charter/interjú → stakeholder-javaslatok (#8) ──
+
+/**
+ * Stakeholder-kivonatolás (E1 első fele): a számozott forrásokból (charter
+ * „stakeholderek" mező, interjú-inputok) stakeholder-JAVASLATOKAT ad (név +
+ * titulus + forrás-indexek + opcionális influence/impact score). Minden
+ * javaslat ai_suggested-ként landol — a megerősítés emberi lépés.
+ *
+ * SCORE (c-minta): az influence/impact score CSAK akkor szerepel, ha a forrás
+ * konkrét befolyás/hatás-alapot ad rá; ha nincs alap, a mező KIMARAD (null
+ * lesz) — a modell nem tippel score-t alap nélkül.
+ *
+ * A communication_strategy SOHA nem szerepel a kivonatolt válaszban —
+ * kizárólag manuális mező (a rendszerprompt is tiltja).
+ */
+export async function extractStakeholders(
+  sources: LlmSource[],
+): Promise<StakeholderProposal[]> {
+  if (isMock()) {
+    return mockExtractStakeholders(sources);
+  }
+
+  const system = [
+    "Stakeholder-azonosító vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A megadott számozott forrásokból (Projekt-charter, interjúk, jegyzetek)",
+    "a projektben érintett stakeholdereket (személyek, szerepkörök) azonosítasz.",
+    "KIZÁRÓLAG érvényes JSON-tömböt adsz vissza, preambulum és magyarázat nélkül.",
+    "SZIGORÚ SZABÁLY: csak olyan stakeholdert adhatsz vissza, aki a forrásokban",
+    "TÉNYLEGESEN szerepel. TILOS kitalálni, általánosítani vagy általános tudásból",
+    "pótolni. Ha a források nem tartalmaznak stakeholdert, üres tömböt adsz vissza",
+    "— az üres tömb a KÍVÁNT viselkedés ilyenkor, nem hiba.",
+    "SCORE-SZABÁLY: az influence_score (befolyás) és impact_score (érintettség)",
+    "1–5 egész, és CSAK akkor szerepeljen, ha a forrás konkrét alapot ad rá",
+    "(befolyás/hatás-utalás). Ha nincs ilyen alap, HAGYD KI a mezőt — tilos",
+    "tippelni. A source_indices csak olyan forrás sorszáma lehet, amelyből a",
+    "stakeholder ténylegesen származik.",
+    "A kommunikációs stratégiát SOHA ne add meg — az kizárólag emberi, manuális mező.",
+    "A kimenet magyarul készül.",
+  ].join(" ");
+
+  const userPrompt = [
+    "Azonosítsd a forrásokban megjelenő stakeholdereket (érintett személyek, szerepkörök).",
+    "",
+    "── Számozott források ──",
+    renderSources(sources),
+    "",
+    "Add vissza pontosan ebben a JSON-alakban (tömb, elemenként):",
+    `[{ "name": "<név vagy szerepkör>", "title": "<titulus/szerep vagy null>", "influence_score": 1-5 (csak ha van alap, egyébként hagyd ki), "impact_score": 1-5 (csak ha van alap, egyébként hagyd ki), "source_indices": [1] }]`,
+    "Csak JSON-t adj vissza. A communication_strategy mezőt NE add meg.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 4000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  return parseStakeholdersResult(textFromMessage(message), sources);
+}
+
 // ── generateBody: megerősített mezők + sablon → md body ──────
 
 export interface ConfirmedField {
@@ -458,6 +523,46 @@ function mockDeriveUseCases(
   ];
   // A parse-kontraktus tükrözése: ref nélkül nincs javaslat.
   return proposals.filter((p) => p.pain_point_refs.length > 0);
+}
+
+// Stakeholder-fixture (#8): 3 determinisztikus javaslat. A c-minta
+// demonstrálása: az első KETTŐ score-ral jön (a forrás befolyás/hatás-alapot
+// ad), a HARMADIK szándékosan score NÉLKÜL (nincs alap → null marad, a modell
+// nem tippel — negatív teszt (a)). A communication_strategy SEHOL nem szerepel
+// (negatív teszt (b): kizárólag manuális). A 0-találat ág (→ látható notice)
+// is determinisztikus: ha MINDEN forrás triviálisan rövid (<40 karakter), a
+// fixture üres listát ad.
+function mockExtractStakeholders(sources: LlmSource[]): StakeholderProposal[] {
+  if (sources.every((s) => s.text.trim().length < 40)) {
+    return [];
+  }
+  const validIndices = new Set(sources.map((s) => s.index));
+  const cite = (indices: number[]) => indices.filter((n) => validIndices.has(n));
+  return [
+    {
+      name: "Üzemvezető",
+      title: "Panaszkezelési folyamatgazda",
+      influence_score: 5,
+      impact_score: 4,
+      source_indices: cite([1]),
+    },
+    {
+      name: "Ügyintézői csapat",
+      title: "Panasz-válaszadók",
+      influence_score: 2,
+      impact_score: 5,
+      source_indices: cite([1, 2]),
+    },
+    {
+      // Score NÉLKÜL: a forrás csak megemlíti, de nincs befolyás/hatás-alap
+      // → influence/impact null (a modell nem tippel — c-minta, (a) teszt).
+      name: "Vezetőség",
+      title: "Riport-fogadó",
+      influence_score: null,
+      impact_score: null,
+      source_indices: cite([1]),
+    },
+  ];
 }
 
 function mockGenerateBody(

@@ -14,6 +14,7 @@
 import {
   parseExtractResult,
   parsePainPointsResult,
+  parseStakeholdersResult,
   parseUseCasesResult,
   type LlmSource,
 } from "../src/lib/llm/parse";
@@ -244,6 +245,58 @@ check("UC: rossz CITÁCIÓ [9] → javaslat MARAD, citáció üres (a #6-fix elv
 const ucWrapped = parseUseCasesResult(`{ "use_cases": ${UC("[1]", "[1]")} }`, SOURCES, 1);
 check("UC: objektum-burok {use_cases: […]} → 2 javaslat", ucWrapped.length === 2);
 check("UC: üres tömb → 0 javaslat (→ UX-notice)", parseUseCasesResult("[]", SOURCES, 3).length === 0);
+
+// ── #8: stakeholder-parse — score c-minta + hallucináció-tiltás ──
+
+console.log("\n── parseStakeholdersResult (#8) — stakeholder-javaslatok ──\n");
+
+const SK_SOURCES: LlmSource[] = [
+  { index: 1, title: "Charter", text: "Az üzemvezető a folyamatgazda, erős befolyással." },
+  { index: 2, title: "Interjú", text: "Az ügyintézők a napi munkát végzik." },
+];
+const skScored = parseStakeholdersResult(
+  `[ { "name": "Üzemvezető", "title": "Folyamatgazda", "influence_score": 5, "impact_score": 4, "source_indices": [1] } ]`,
+  SK_SOURCES,
+);
+check("SK: érvényes score 5/4 megmarad", skScored.length === 1 && skScored[0].influence_score === 5 && skScored[0].impact_score === 4);
+const skNoScore = parseStakeholdersResult(
+  `[ { "name": "Vezetőség", "title": "Riport-fogadó", "source_indices": [1] } ]`,
+  SK_SOURCES,
+);
+check("SK: score nélkül → influence/impact null (c-minta, nem tippel)", skNoScore.length === 1 && skNoScore[0].influence_score === null && skNoScore[0].impact_score === null);
+const skOobScore = parseStakeholdersResult(
+  `[ { "name": "X", "influence_score": 9, "impact_score": 0, "source_indices": [1] } ]`,
+  SK_SOURCES,
+);
+check("SK: tartományon kívüli score (9/0) → null (a modell nem tippelhet)", skOobScore[0].influence_score === null && skOobScore[0].impact_score === null);
+const skStrScore = parseStakeholdersResult(
+  `[ { "name": "Y", "influence_score": "3", "source_indices": ["1"] } ]`,
+  SK_SOURCES,
+);
+check("SK: string score \"3\" → koerció 3; string index \"1\" → citáció helyreáll", skStrScore[0].influence_score === 3 && JSON.stringify(skStrScore[0].source_indices) === "[1]");
+const skBadCite = parseStakeholdersResult(
+  `[ { "name": "Z", "influence_score": 4, "source_indices": [9] } ]`,
+  SK_SOURCES,
+);
+check("SK: rossz CITÁCIÓ [9] → javaslat MARAD, citáció üres (a #6-fix elve)", skBadCite.length === 1 && skBadCite[0].source_indices.length === 0);
+const skNoName = parseStakeholdersResult(
+  `[ { "title": "cím van, név nincs" }, { "name": "Valós", "source_indices": [1] } ]`,
+  SK_SOURCES,
+);
+check("SK: név nélküli elem kiesik, a valódi marad", skNoName.length === 1 && skNoName[0].name === "Valós");
+const skWrapped = parseStakeholdersResult(
+  `{ "stakeholders": [ { "name": "A", "source_indices": [2] } ] }`,
+  SK_SOURCES,
+);
+check("SK: objektum-burok {stakeholders: […]} → 1 javaslat", skWrapped.length === 1);
+check("SK: üres tömb → 0 javaslat (→ UX-notice)", parseStakeholdersResult("[]", SK_SOURCES).length === 0);
+// A communication_strategy SOHA nem kerül a javaslatba (nincs is a típusban) —
+// a parse még ha a modell adna is ilyet, nem olvassa ki.
+const skWithStrategy = parseStakeholdersResult(
+  `[ { "name": "A", "communication_strategy": "heti egyeztetés", "source_indices": [1] } ]`,
+  SK_SOURCES,
+);
+check("SK: communication_strategy a válaszban → a parse NEM olvassa ki (kizárólag manuális)", skWithStrategy.length === 1 && !("communication_strategy" in skWithStrategy[0]));
 
 console.log(failures === 0 ? "\nPARSE-CHECK: MINDEN PASS" : `\nPARSE-CHECK: ${failures} FAIL`);
 process.exit(failures === 0 ? 0 : 1);

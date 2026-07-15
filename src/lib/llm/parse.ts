@@ -46,6 +46,18 @@ export interface UseCaseProposal {
   source_indices: number[];
 }
 
+/** AI-javasolt stakeholder (charter/interjú-kivonatolás nyers javaslata, #8).
+ *  A score (influence/impact) csak akkor van kitöltve, ha a forrás konkrét
+ *  alapot ad rá — egyébként null (a modell nem tippel). A communication_strategy
+ *  SOHA nem szerepel a kivonatolt javaslatban (kizárólag manuális mező). */
+export interface StakeholderProposal {
+  name: string;
+  title: string | null;
+  influence_score: number | null;
+  impact_score: number | null;
+  source_indices: number[];
+}
+
 /** Eltávolítja az esetleges ```json ... ``` kódkerítést. */
 export function stripCodeFences(text: string): string {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -233,6 +245,50 @@ export function parseUseCasesResult(
       description: optionalText(obj.description),
       pain_point_refs,
       source_indices: normalizeIndices(obj.source_indices, validSourceIndices),
+    });
+  }
+  return result;
+}
+
+/** 1–5 egész score vagy null (a #8 c-mintája): a modell CSAK akkor adhat
+ *  score-t, ha van rá alap; a tartományon kívüli / nem numerikus / hiányzó
+ *  érték null lesz (a modell nem tippel — a null a KÍVÁNT viselkedés). A
+ *  string-koerció a "4"-alakú válaszokat is fogadja (parse-robusztusság). */
+function optionalScore(raw: unknown): number | null {
+  const n = typeof raw === "string" ? Number(raw.trim()) : raw;
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > 5) return null;
+  return n;
+}
+
+/**
+ * Stakeholder-javaslatok feldolgozása (#8). A fájdalompont-parse elveivel:
+ * a név nélküli elem kiesik (nincs identitása), de a VALÓS javaslatot rossz/
+ * hiányzó forrás-index miatt SOSEM dobjuk el — a hamis citáció lekerül róla,
+ * a döntés az emberé (E1).
+ *
+ * Score (c-minta): az influence/impact score csak akkor marad a javaslaton,
+ * ha érvényes 1–5 egész — a hiányzó vagy tartományon kívüli érték null lesz
+ * (a modell nem tippelhet score-t alap nélkül). A communication_strategy-t
+ * a parse SOSEM olvassa ki — az kizárólag manuális mező.
+ */
+export function parseStakeholdersResult(
+  raw: string,
+  sources: LlmSource[],
+): StakeholderProposal[] {
+  const items = looseArray(parseJsonLoose(raw), "stakeholders");
+  const validIndices = new Set(sources.map((s) => s.index));
+  const result: StakeholderProposal[] = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const obj = item as Record<string, unknown>;
+    const name = optionalText(obj.name);
+    if (!name) continue;
+    result.push({
+      name,
+      title: optionalText(obj.title),
+      influence_score: optionalScore(obj.influence_score),
+      impact_score: optionalScore(obj.impact_score),
+      source_indices: normalizeIndices(obj.source_indices, validIndices),
     });
   }
   return result;
