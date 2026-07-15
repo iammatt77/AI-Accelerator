@@ -36,6 +36,8 @@ export interface InputItemRow {
   raw_text: string;
   /** A munkaterület fázisa, ahol a bemenet érkezett (0003; régi sorok: null). */
   phase: string | null;
+  /** Melyik stakeholdertől jött az input (0006, #8); null = nem köthető. */
+  stakeholder_source_id: string | null;
   created_at: string;
 }
 
@@ -97,4 +99,29 @@ export interface DecisionRow {
   kind: string;
   note: string | null;
   created_at: string;
+}
+
+/** Stakeholder-entitás (0006, #8). Ügyfélhez ÉS projekthez kötve; az E1-lánc
+ *  a pain_points/use_cases mintáját követi. A score (influence/impact) null,
+ *  ha a forrás nem ad rá alapot (a modell nem tippel — c-minta). A
+ *  communication_strategy KIZÁRÓLAG manuális (sosem AI-előtöltött). */
+export interface StakeholderRow {
+  id: string;
+  client_id: string;
+  project_id: string;
+  name: string;
+  title: string | null;
+  influence_score: number | null;
+  impact_score: number | null;
+  communication_strategy: string | null;
+  source_input_ids: string[];
+  state: EntityState;
+  created_at: string;
+  updated_at: string;
+}
+
+/** pain_points ↔ stakeholders many-to-many kötőtábla sora (0006). */
+export interface PainPointStakeholderRow {
+  pain_point_id: string;
+  stakeholder_id: string;
 }
