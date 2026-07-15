@@ -19,6 +19,8 @@ import type {
   ArtifactRow,
   InputItemRow,
   PainPointRow,
+  PainPointStakeholderRow,
+  StakeholderRow,
   UseCaseRow,
 } from "@/lib/db/types";
 import {
@@ -43,6 +45,14 @@ import {
   PainSummary,
   UseCaseSummary,
 } from "@/components/EntitySummaries";
+import {
+  AddStakeholderForm,
+  ExtractStakeholdersForm,
+  PainStakeholderBinder,
+  StakeholderConfirmedRow,
+  StakeholderProposalCard,
+  type StakeholderCardData,
+} from "@/components/StakeholderForms";
 import { WorkbenchHeatmap } from "@/components/UseCaseHeatmap";
 import {
   aiActWarnFor,
@@ -87,7 +97,7 @@ export async function PhaseWorkspace({
   clientName: string;
   phaseName: string;
 }) {
-  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty, tEnt, tCriteria] =
+  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty, tEnt, tCriteria, tSt] =
     await Promise.all([
       getLocale(),
       getTranslations("workspace"),
@@ -98,6 +108,7 @@ export async function PhaseWorkspace({
       getTranslations("empty"),
       getTranslations("entities"),
       getTranslations("criteria"),
+      getTranslations("stakeholders"),
     ]);
   const typeName = (typeDef: ArtifactTypeDef) =>
     tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""));
@@ -132,9 +143,9 @@ export async function PhaseWorkspace({
   const latestOfType = (typeDef: ArtifactTypeDef) =>
     artifactsOfType(typeDef)[0] ?? null;
 
-  // ── P1 entitások (#7a/#7b) ──────────────────────────────────
+  // ── P1 entitások (#7a/#7b/#8) ───────────────────────────────
   const isP1 = phase === "P1";
-  const [{ data: painData }, { data: useCaseData }] = isP1
+  const [{ data: painData }, { data: useCaseData }, { data: stakeholderData }] = isP1
     ? await Promise.all([
         supabase
           .from("pain_points")
@@ -148,17 +159,61 @@ export async function PhaseWorkspace({
           .eq("project_id", projectId)
           .order("created_at", { ascending: true })
           .order("id", { ascending: true }),
+        supabase
+          .from("stakeholders")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true }),
       ])
-    : [{ data: [] as PainPointRow[] }, { data: [] as UseCaseRow[] }];
+    : [
+        { data: [] as PainPointRow[] },
+        { data: [] as UseCaseRow[] },
+        { data: [] as StakeholderRow[] },
+      ];
   const allPains = (painData ?? []) as PainPointRow[];
   const useCases = ((useCaseData ?? []) as UseCaseRow[]).filter(
     (u) => u.state !== "rejected",
   );
+  const allStakeholders = (stakeholderData ?? []) as StakeholderRow[];
 
+  // Fájdalompont ↔ stakeholder kötések (a kötőtáblán nincs project_id, ezért
+  // a projekt fájdalompont-id-ira szűrünk). Térkép: pain-id → stakeholder-id-k.
+  const painStakeholderMap = new Map<string, string[]>();
+  if (isP1 && allPains.length > 0) {
+    const { data: ppsData } = await supabase
+      .from("pain_point_stakeholders")
+      .select("*")
+      .in(
+        "pain_point_id",
+        allPains.map((p) => p.id),
+      );
+    for (const row of (ppsData ?? []) as PainPointStakeholderRow[]) {
+      const list = painStakeholderMap.get(row.pain_point_id) ?? [];
+      list.push(row.stakeholder_id);
+      painStakeholderMap.set(row.pain_point_id, list);
+    }
+  }
   const inputPos = new Map(inputs.map((row, i) => [row.id, i + 1]));
   const toIndices = (ids: string[]) =>
     ids.map((id) => inputPos.get(id)).filter((n): n is number => typeof n === "number");
   const painTitleById = new Map(allPains.map((p) => [p.id, p.title]));
+
+  // Megerősített stakeholderek (a kötés csak ezekre mutathat) + kártya-adat.
+  const stakeholderProposals = allStakeholders.filter((s) => s.state === "ai_suggested");
+  const stakeholderConfirmed = allStakeholders.filter(
+    (s) => s.state === "confirmed" || s.state === "manual",
+  );
+  const toStakeholderCard = (s: StakeholderRow): StakeholderCardData => ({
+    id: s.id,
+    name: s.name,
+    title: s.title,
+    influenceScore: s.influence_score,
+    impactScore: s.impact_score,
+    state: s.state,
+    sourceIndices: toIndices(s.source_input_ids),
+  });
+  const stakeholderBindOptions = stakeholderConfirmed.map((s) => ({ id: s.id, name: s.name }));
 
   const toPainCard = (p: PainPointRow): PainPointCardData => ({
     id: p.id,
@@ -169,6 +224,20 @@ export async function PhaseWorkspace({
     state: p.state,
     sourceIndices: toIndices(p.source_input_ids),
   });
+  // Fájdalompont-részlet: a kártya + a stakeholder-kötés (many-to-many, #8).
+  const renderPainDetail = (p: PainPointRow) => (
+    <div className="space-y-3">
+      <PainPointProposalCard projectId={projectId} painPoint={toPainCard(p)} embedded />
+      <div className="border-t border-line pt-3">
+        <PainStakeholderBinder
+          projectId={projectId}
+          painPointId={p.id}
+          options={stakeholderBindOptions}
+          boundIds={painStakeholderMap.get(p.id) ?? []}
+        />
+      </div>
+    </div>
+  );
   const toUseCaseCard = (u: UseCaseRow): UseCaseCardData => ({
     id: u.id,
     title: u.title,
@@ -493,13 +562,7 @@ export async function PhaseWorkspace({
                         />
                       }
                       actions={<InlinePainActions projectId={projectId} painPointId={p.id} />}
-                      detail={
-                        <PainPointProposalCard
-                          projectId={projectId}
-                          painPoint={toPainCard(p)}
-                          embedded
-                        />
-                      }
+                      detail={renderPainDetail(p)}
                     />
                   ))}
                 </ShowMore>
@@ -524,13 +587,7 @@ export async function PhaseWorkspace({
                           state={p.state}
                         />
                       }
-                      detail={
-                        <PainPointProposalCard
-                          projectId={projectId}
-                          painPoint={toPainCard(p)}
-                          embedded
-                        />
-                      }
+                      detail={renderPainDetail(p)}
                     />
                   ))}
                 </CollapsedGroup>
@@ -596,6 +653,59 @@ export async function PhaseWorkspace({
                 projectId={projectId}
                 painOptions={painConfirmed.map((p) => ({ id: p.id, title: p.title }))}
               />
+            </div>
+          </section>
+
+          {/* Stakeholderek (#8): kivonatolás → E1-javaslatok → megerősített
+              sorok a dedikált nézetre mutató linkkel */}
+          <section className="surface-card p-4">
+            <h4 className="text-body font-semibold">
+              {tSt("sectionTitle")}{" "}
+              <span className="font-mono text-mono-sm font-normal text-ink-tertiary">
+                {allStakeholders.filter((s) => s.state !== "rejected").length} ·{" "}
+                {stakeholderConfirmed.length} {tSt("confirmedShort")}
+              </span>
+            </h4>
+            <p className="mt-1 text-mono-sm text-ink-tertiary">{tSt("lead")}</p>
+            <div className="mt-3">
+              <ExtractStakeholdersForm projectId={projectId} />
+            </div>
+
+            {stakeholderProposals.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <h5 className="text-mono-sm font-medium uppercase tracking-wide text-gate">
+                  {tSt("needsConfirmationHeading", { n: stakeholderProposals.length })}
+                </h5>
+                {stakeholderProposals.map((s) => (
+                  <StakeholderProposalCard
+                    key={s.id}
+                    projectId={projectId}
+                    stakeholder={toStakeholderCard(s)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {stakeholderConfirmed.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                <h5 className="text-mono-sm font-medium uppercase tracking-wide text-ink-tertiary">
+                  {tSt("confirmedHeading")}
+                </h5>
+                {stakeholderConfirmed.map((s) => (
+                  <StakeholderConfirmedRow
+                    key={s.id}
+                    projectId={projectId}
+                    stakeholder={toStakeholderCard(s)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {stakeholderProposals.length === 0 && stakeholderConfirmed.length === 0 && (
+              <p className="mt-3 text-body text-ink-tertiary">{tSt("noStakeholders")}</p>
+            )}
+            <div className="mt-3">
+              <AddStakeholderForm projectId={projectId} />
             </div>
           </section>
         </div>
