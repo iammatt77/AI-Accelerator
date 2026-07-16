@@ -918,7 +918,77 @@
     "cockpitLead": "A projekt megerősített és javasolt stakeholderei.",
     "cockpitEmpty": "Még nincs stakeholder — a P1 munkafelületen kivonatolható vagy kézzel felvehető.",
     "crumb": "stakeholderek",
-    "notFound": "A stakeholder nem található."
+    "notFound": "A stakeholder nem található.",
+    "editProfileCta": "Profil szerkesztése",
+    "nameLabel": "Név",
+    "titleLabel": "Titulus",
+    "savingProfile": "Mentés…",
+    "saveProfileCta": "Profil mentése",
+    "cancelEdit": "Mégse",
+    "matrixTitle": "Befolyás × érintettség",
+    "editScoreCta": "score szerkesztése",
+    "axisInfluence": "Befolyás",
+    "axisImpact": "Érintettség",
+    "scoreNeeded": "score szükséges",
+    "verdictLabel": "Ajánlott kezelés",
+    "verdictNeedsScore": "A verdikthez pontszám kell — töltsd ki a Befolyás és az Érintettség score-t a mátrix fölött.",
+    "humanOnlyTag": "Csak emberi · AI nem tölti",
+    "recordedTag": "rögzítve",
+    "editStrategyCta": "Szerkesztés",
+    "strategyUpdated": "frissítve: {date} · a tanácsadó rögzítette",
+    "unifiedSourcesTitle": "Tőle jövő információ · forrás-hozzárendelés",
+    "assignedCount": "{n} hozzárendelve",
+    "unifiedSourcesHint": "Rendeld hozzá, mely bemenet jött ettől a stakeholdertől — javaslat, megerősíthető; nincs kényszer.",
+    "filterAll": "Mind",
+    "filterAssigned": "Hozzárendelve",
+    "filterUnassigned": "Nincs hozzárendelve",
+    "noSourcesInFilter": "Nincs forrás ebben a szűrőben.",
+    "bindPainCta": "+ fájdalompont kötése",
+    "bindPickTitle": "Válassz kötendő fájdalompontot",
+    "noUnboundPains": "Minden aktív fájdalompont kötve van.",
+    "bindThisPainCta": "Kötés",
+    "bindNeedsConfirm": "Előbb erősítsd meg a stakeholdert a fájdalompont-kötéshez.",
+    "quadrant": {
+      "manage_closely": {
+        "label": "SZOROSAN KEZELD"
+      },
+      "keep_satisfied": {
+        "label": "TARTSD ELÉGEDETTEN"
+      },
+      "keep_informed": {
+        "label": "TARTSD INFORMÁLTAN"
+      },
+      "monitor": {
+        "label": "MONITOROZD"
+      }
+    },
+    "verdict": {
+      "manage_closely": {
+        "tag": "KULCSSZEREPLŐ",
+        "title": "Szorosan kezeld — a kételyeit korán rendezd.",
+        "body": "Magas befolyás és magas érintettség: a döntéshez elengedhetetlen a támogatása. Vond be korán, oszd meg a terveket, és rendezd az aggályait, mielőtt eszkalálódnak."
+      },
+      "keep_satisfied": {
+        "tag": "DÖNTÉSHOZÓ",
+        "title": "Tartsd elégedetten — ne terheld túl a részletekkel.",
+        "body": "Magas befolyás, alacsonyabb érintettség: a jóváhagyása kell, de a napi részletek nem érdeklik. Tömör, döntés-fókuszú tájékoztatás; kérj explicit jóváhagyást a kulcspontokon."
+      },
+      "keep_informed": {
+        "tag": "ÉRINTETT",
+        "title": "Tartsd informáltan — a mindennapi hatás nála csapódik le.",
+        "body": "Alacsonyabb befolyás, magas érintettség: a változás közvetlenül érinti. Rendszeres tájékoztatás, visszajelzés-gyűjtés; a támogatása segíti a bevezetést."
+      },
+      "monitor": {
+        "tag": "MEGFIGYELENDŐ",
+        "title": "Monitorozd — most alacsony prioritás.",
+        "body": "Alacsony befolyás és alacsony érintettség: elég a minimális, időszakos tájékoztatás. Figyeld, nem változik-e a szerepe a projekt előrehaladtával."
+      }
+    },
+    "risk": {
+      "low": "alacsony",
+      "medium": "közepes",
+      "high": "magas"
+    }
   },
   "p2": {
     "title": "Haszon-számítás",

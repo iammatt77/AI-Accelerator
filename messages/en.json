@@ -918,7 +918,77 @@
     "cockpitLead": "The project's confirmed and suggested stakeholders.",
     "cockpitEmpty": "No stakeholders yet — extract or add them on the P1 workspace.",
     "crumb": "stakeholders",
-    "notFound": "Stakeholder not found."
+    "notFound": "Stakeholder not found.",
+    "editProfileCta": "Edit profile",
+    "nameLabel": "Name",
+    "titleLabel": "Title",
+    "savingProfile": "Saving…",
+    "saveProfileCta": "Save profile",
+    "cancelEdit": "Cancel",
+    "matrixTitle": "Influence × exposure",
+    "editScoreCta": "edit score",
+    "axisInfluence": "Influence",
+    "axisImpact": "Exposure",
+    "scoreNeeded": "score needed",
+    "verdictLabel": "Recommended handling",
+    "verdictNeedsScore": "The verdict needs scores — set the Influence and Exposure score above the matrix.",
+    "humanOnlyTag": "Human only · AI never fills",
+    "recordedTag": "recorded",
+    "editStrategyCta": "Edit",
+    "strategyUpdated": "updated: {date} · recorded by the consultant",
+    "unifiedSourcesTitle": "Information from them · source assignment",
+    "assignedCount": "{n} assigned",
+    "unifiedSourcesHint": "Assign which inputs came from this stakeholder — a suggestion, confirmable; no obligation.",
+    "filterAll": "All",
+    "filterAssigned": "Assigned",
+    "filterUnassigned": "Not assigned",
+    "noSourcesInFilter": "No sources in this filter.",
+    "bindPainCta": "+ bind pain point",
+    "bindPickTitle": "Pick a pain point to bind",
+    "noUnboundPains": "All active pain points are bound.",
+    "bindThisPainCta": "Bind",
+    "bindNeedsConfirm": "Confirm the stakeholder first to bind pain points.",
+    "quadrant": {
+      "manage_closely": {
+        "label": "MANAGE CLOSELY"
+      },
+      "keep_satisfied": {
+        "label": "KEEP SATISFIED"
+      },
+      "keep_informed": {
+        "label": "KEEP INFORMED"
+      },
+      "monitor": {
+        "label": "MONITOR"
+      }
+    },
+    "verdict": {
+      "manage_closely": {
+        "tag": "KEY PLAYER",
+        "title": "Manage closely — resolve concerns early.",
+        "body": "High influence and high exposure: their support is essential to the decision. Engage early, share plans, and address concerns before they escalate."
+      },
+      "keep_satisfied": {
+        "tag": "DECISION MAKER",
+        "title": "Keep satisfied — don't overload with detail.",
+        "body": "High influence, lower exposure: you need their sign-off but not their attention to daily detail. Keep it concise and decision-focused; get explicit approval at key points."
+      },
+      "keep_informed": {
+        "tag": "AFFECTED",
+        "title": "Keep informed — the day-to-day impact lands here.",
+        "body": "Lower influence, high exposure: the change affects them directly. Update regularly and gather feedback; their buy-in helps adoption."
+      },
+      "monitor": {
+        "tag": "MONITOR",
+        "title": "Monitor — low priority for now.",
+        "body": "Low influence and low exposure: minimal, periodic updates are enough. Watch for their role changing as the project progresses."
+      }
+    },
+    "risk": {
+      "low": "low",
+      "medium": "medium",
+      "high": "high"
+    }
   },
   "p2": {
     "title": "Benefit calculation",

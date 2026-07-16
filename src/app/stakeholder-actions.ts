@@ -502,3 +502,74 @@ export async function setPainStakeholdersAction(
   revalidateWorkspace(projectId);
   return { ok: true, error: null };
 }
+
+// ── Fájdalompont-kötés a STAKEHOLDER OLDALÁRÓL (a dedikált lap „+ kötés"/
+// „feloldás" belépője). Ugyanaz az M:N tábla és ugyanazok az őrök, mint a
+// pain-oldali setPainStakeholdersAction-nél — csak egyetlen sort állít
+// (idempotens), a pain-oldali csere-akció érintetlen. Nincs új adatmodell. ──
+export async function togglePainBindAction(
+  projectId: string,
+  stakeholderId: string,
+  painPointId: string,
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  if (!UUID_RE.test(stakeholderId) || !UUID_RE.test(painPointId)) {
+    return { ok: false, error: tErrors("entityNotEditable") };
+  }
+  const bind = formData.get("bind") === "1";
+  const supabase = createServiceSupabaseClient();
+
+  // A stakeholder a projekthez tartozik ÉS emberi kontrollon átment
+  // (confirmed/manual) — tamperelt form ne kössön meg nem erősített sort.
+  const { data: sh } = await supabase
+    .from("stakeholders")
+    .select("id")
+    .eq("id", stakeholderId)
+    .eq("project_id", projectId)
+    .in("state", ["confirmed", "manual"])
+    .maybeSingle();
+  if (!sh) {
+    return { ok: false, error: tErrors("entityNotEditable") };
+  }
+  // A fájdalompont a projekthez tartozik-e.
+  const { data: pain } = await supabase
+    .from("pain_points")
+    .select("id")
+    .eq("id", painPointId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (!pain) {
+    return { ok: false, error: tErrors("entityNotEditable") };
+  }
+
+  if (bind) {
+    // Idempotens: csak ha még nincs ilyen kötés.
+    const { data: existing } = await supabase
+      .from("pain_point_stakeholders")
+      .select("pain_point_id")
+      .eq("pain_point_id", painPointId)
+      .eq("stakeholder_id", stakeholderId)
+      .maybeSingle();
+    if (!existing) {
+      const { error } = await supabase
+        .from("pain_point_stakeholders")
+        .insert({ pain_point_id: painPointId, stakeholder_id: stakeholderId });
+      if (error) {
+        return { ok: false, error: tErrors("entitySaveFailed", { message: errMessage(error) }) };
+      }
+    }
+  } else {
+    const { error } = await supabase
+      .from("pain_point_stakeholders")
+      .delete()
+      .eq("pain_point_id", painPointId)
+      .eq("stakeholder_id", stakeholderId);
+    if (error) {
+      return { ok: false, error: tErrors("entitySaveFailed", { message: errMessage(error) }) };
+    }
+  }
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null };
+}
