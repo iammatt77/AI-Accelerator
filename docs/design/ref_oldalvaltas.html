@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#ECEEF4; }
+  a { color:#7A4FB0; text-decoration:none; }
+  a:hover { color:#8458B3; text-decoration:underline; }
+  @keyframes aiconPageIn { from{opacity:0;transform:translateY(10px);filter:blur(3px);} to{opacity:1;transform:translateY(0);filter:blur(0);} }
+  @keyframes aiconStagger { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes aiconPushIn { from{opacity:0;transform:translateX(28px);filter:blur(3px);} to{opacity:1;transform:translateX(0);filter:blur(0);} }
+  @keyframes aiconPushBack { from{opacity:0;transform:translateX(-18px);} to{opacity:1;transform:translateX(0);} }
+  @keyframes aiconShimmer { 0%{background-position:180% 0;} 100%{background-position:-80% 0;} }
+  @keyframes aiconBreathe { 0%,100%{opacity:0.35;} 50%{opacity:1;} }
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:40px;padding:64px;align-items:flex-start;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#23262F;background:#ECEEF4;">
+
+  <!-- INTRO -->
+  <div style="max-width:900px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.2em;color:#8458B3;text-transform:uppercase;">AICON · oldalváltás</span>
+      <span style="height:1px;width:56px;background:linear-gradient(90deg,#8458B3,transparent);"></span>
+    </div>
+    <div style="font-size:34px;font-weight:800;letter-spacing:-0.03em;line-height:1.1;">A váltás <span style="color:#8458B3;">ússzon be</span>, ne ugorjon.</div>
+    <div style="font-size:14px;color:#55596B;margin-top:14px;line-height:1.65;max-width:820px;">Menüből vagy kattintással a tartalom ne pattanjon át hirtelen — halkan fadeljen, egy-két pixelt emelkedjen, a sáv a menüben lágyan csússzon az aktív pontra. Munkaeszköznél gyors (~260 ms) és szemet kímélő. <b>Kattints a bal oldali menüpontokra.</b></div>
+  </div>
+
+  <!-- ============ 1a SHELL ============ -->
+  <div id="1a" style="width:1120px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="background:#8458B3;color:#FFFFFF;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px;">1a</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:0.14em;color:#8B90A3;text-transform:uppercase;">Lágy oldalváltás — a menüsáv csúszik, a tartalom beúszik</span>
+    </div>
+    <div data-screen-label="Oldalváltás demó" style="display:flex;background:#FBFBFD;border:1px solid #E4E6EE;border-radius:10px;box-shadow:0 1px 2px rgba(35,38,47,0.05), 0 20px 56px rgba(35,38,47,0.12);overflow:hidden;height:560px;">
+
+      <!-- SIDEBAR with sliding indicator -->
+      <div style="width:214px;flex-shrink:0;background:#FFFFFF;border-right:1px solid #E7E9F0;display:flex;flex-direction:column;padding:20px 14px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:0 6px 18px;">
+          <div style="width:34px;height:34px;border-radius:7px;background:#23262F;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;">A</div>
+          <div><div style="font-size:13px;font-weight:700;">AI Consulting</div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8B90A3;">rendszer · P0–P6</div></div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.14em;color:#B4B8C6;padding:6px 8px 8px;">GLOBÁLIS SZINT</div>
+        <!-- nav track with sliding pill -->
+        <div style="position:relative;">
+          <!-- sliding indicator -->
+          <div style="position:absolute;left:0;right:0;height:38px;background:#EDE6F7;border-radius:6px;transition:transform 0.32s cubic-bezier(0.4,0,0.2,1);transform:translateY({{ pillY }});"></div>
+          <div style="position:relative;display:flex;flex-direction:column;gap:4px;">
+            <div onClick="{{ goCockpit }}" style="display:flex;align-items:center;gap:10px;height:38px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;color:{{ cockpitColor }};font-weight:{{ cockpitWeight }};transition:color 0.25s;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>Vezérlőpult</div>
+            <div onClick="{{ goProjektek }}" style="display:flex;align-items:center;gap:10px;height:38px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;color:{{ projektekColor }};font-weight:{{ projektekWeight }};transition:color 0.25s;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4.5C2 3.7 2.7 3 3.5 3h3L8 4.5h4.5c.8 0 1.5.7 1.5 1.5v6c0 .8-.7 1.5-1.5 1.5h-9C2.7 13.5 2 12.8 2 12z"/></svg>Projektek</div>
+            <div onClick="{{ goUgyfelek }}" style="display:flex;align-items:center;gap:10px;height:38px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;color:{{ ugyfelekColor }};font-weight:{{ ugyfelekWeight }};transition:color 0.25s;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6" cy="5.5" r="2.3"/><path d="M2 13.5c0-2.2 1.8-3.5 4-3.5s4 1.3 4 3.5"/><circle cx="12" cy="6" r="1.8"/></svg>Ügyfelek</div>
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="font-size:11px;color:#B4B8C6;padding:0 8px;line-height:1.5;">Kattints a menüpontok között,<br>vagy egy ügyfél sorába.</div>
+      </div>
+
+      <!-- CONTENT AREA -->
+      <div style="flex:1;min-width:0;position:relative;background:#FBFBFD;overflow:hidden;">
+
+        <!-- COCKPIT PAGE -->
+        <sc-if value="{{ isCockpit }}" hint-placeholder-val="{{ true }}">
+          <div style="height:100%;padding:28px 32px;animation:aiconPageIn 0.32s cubic-bezier(0.2,0,0,1);box-sizing:border-box;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;">GREENTHERM KFT. · ECOSUPPORT AI</div>
+            <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;margin-top:3px;">Cockpit</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:16px;background:#FDF6E7;border:1px solid #F0E3C2;border-left:3px solid #B4801E;border-radius:7px;padding:13px 16px;">
+              <svg width="16" height="16" viewBox="0 0 20 20" style="color:#B4801E;flex-shrink:0;"><path d="M10 2.5 L18 16.5 L2 16.5 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M10 8 L10 12 M10 14 L10 14.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+              <div style="font-size:13.5px;color:#7A5B18;"><b style="color:#23262F;">A P2 kilépő kapu zárva — 0/2 kritérium kész.</b> A haladáshoz a két jóváhagyás kell.</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px;">
+              <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:14px 16px;"><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#2E7050;">11/11</div><div style="font-size:12px;color:#55596B;margin-top:3px;">fájdalompont</div></div>
+              <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:14px 16px;"><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#256087;">8/8</div><div style="font-size:12px;color:#55596B;margin-top:3px;">use case</div></div>
+              <div style="background:#FDFAF1;border:1px solid #F0E3C2;border-radius:8px;padding:14px 16px;"><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#9A6A12;">0/2</div><div style="font-size:12px;color:#7A5B18;margin-top:3px;">kapu · blokkol</div></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- PROJEKTEK PAGE -->
+        <sc-if value="{{ isProjektek }}">
+          <div style="height:100%;padding:28px 32px;animation:aiconPageIn 0.32s cubic-bezier(0.2,0,0,1);box-sizing:border-box;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;">GLOBÁLIS · MINDEN AKTÍV MEGBÍZÁS</div>
+            <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;margin-top:3px;">Projektek</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px;">
+              <div style="display:flex;align-items:center;gap:12px;background:#FFFFFF;border:1px solid #E4E6EE;border-left:3px solid #B4801E;border-radius:8px;padding:13px 16px;"><div style="width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#3E9E6E,#2E7050);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">GT</div><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">EcoSupport AI</div><div style="font-size:11.5px;color:#8B90A3;">GreenTherm Kft. · P2 · kapu 0/2</div></div><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">6,4 M</span></div>
+              <div style="display:flex;align-items:center;gap:12px;background:#FFFFFF;border:1px solid #E4E6EE;border-left:3px solid #3E9E6E;border-radius:8px;padding:13px 16px;"><div style="width:32px;height:32px;border-radius:7px;background:#EDEEF3;color:#55596B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">HL</div><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">Ajánlatadó copilot</div><div style="font-size:11.5px;color:#8B90A3;">Horizont Logistics · P3 · kapu kész</div></div><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">14,8 M</span></div>
+              <div style="display:flex;align-items:center;gap:12px;background:#FFFFFF;border:1px solid #E4E6EE;border-left:3px solid #C0455A;border-radius:8px;padding:13px 16px;"><div style="width:32px;height:32px;border-radius:7px;background:#EDEEF3;color:#55596B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">DF</div><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">Kereslet-előrejelző pilot</div><div style="font-size:11.5px;color:#8B90A3;">Delta Foods · P2 · áll 12 napja</div></div><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">9,7 M</span></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ÜGYFELEK LISTA -->
+        <sc-if value="{{ isUgyfelekList }}">
+          <div style="height:100%;padding:28px 32px;animation:{{ listAnim }};box-sizing:border-box;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;">GLOBÁLIS · ÜGYFÉLPORTFÓLIÓ</div>
+            <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;margin-top:3px;">Ügyfelek</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;">
+              <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:14px 16px;"><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#256087;">4</div><div style="font-size:12px;color:#55596B;margin-top:3px;">szerződött ügyfél</div></div>
+              <div style="background:#FDFAF1;border:1px solid #F0E3C2;border-radius:8px;padding:14px 16px;"><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#9A6A12;">3</div><div style="font-size:12px;color:#7A5B18;margin-top:3px;">figyelmet igényel</div></div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:0.1em;color:#B4B8C6;margin-top:18px;margin-bottom:8px;">KATTINTS EGY SORBA → BETÖLT AZ ŰRLAP</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div onClick="{{ openGT }}" style="display:flex;align-items:center;gap:11px;background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:11px 14px;cursor:pointer;transition:border-color 0.2s,box-shadow 0.2s;" style-hover="border-color:#C9B3E6;box-shadow:0 4px 14px rgba(108,67,160,0.1);"><div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#3E9E6E,#2E7050);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">GT</div><div style="flex:1;"><div style="font-size:13px;font-weight:700;">GreenTherm Kft.</div><div style="font-size:11px;color:#8B90A3;">Épületgépészet · szerződött</div></div><svg width="14" height="14" viewBox="0 0 12 12" style="color:#B4B8C6;"><path d="M4 2.5 L7.5 6 L4 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div onClick="{{ openKN }}" style="display:flex;align-items:center;gap:11px;background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:11px 14px;cursor:pointer;transition:border-color 0.2s,box-shadow 0.2s;" style-hover="border-color:#C9B3E6;box-shadow:0 4px 14px rgba(108,67,160,0.1);"><div style="width:30px;height:30px;border-radius:7px;background:#EDEEF3;color:#55596B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">KN</div><div style="flex:1;"><div style="font-size:13px;font-weight:700;">Kovács Nyomda Kft.</div><div style="font-size:11px;color:#8B90A3;">Nyomdaipar · szerződött</div></div><svg width="14" height="14" viewBox="0 0 12 12" style="color:#B4B8C6;"><path d="M4 2.5 L7.5 6 L4 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ÜGYFÉL-ŰRLAP (drill-in) -->
+        <sc-if value="{{ showClientDetail }}">
+          <div style="height:100%;padding:22px 32px;animation:aiconPushIn 0.34s cubic-bezier(0.2,0,0,1);box-sizing:border-box;overflow:auto;">
+            <div onClick="{{ backToList }}" style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#7A4FB0;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 12 12"><path d="M7.5 2.5 L4 6 L7.5 9.5 M4 6 h5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>Vissza az ügyfelekhez</div>
+            <div style="display:flex;align-items:center;gap:14px;margin-top:16px;">
+              <div style="width:50px;height:50px;border-radius:11px;background:{{ clientMonoBg }};color:{{ clientMonoColor }};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0;">{{ clientMono }}</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;">{{ clientName }}</div><div style="font-size:12.5px;color:#8B90A3;">{{ clientIndustry }}</div></div>
+              <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#256087;background:#E4EEF5;padding:4px 11px;border-radius:999px;"><span style="width:6px;height:6px;border-radius:999px;background:#2E77A8;"></span>{{ clientStatus }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;margin-top:22px;margin-bottom:10px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:0.1em;color:#B4B8C6;">ÜGYFÉL-ŰRLAP</span>
+              <sc-if value="{{ clientLoading }}">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;color:#7A4FB0;"><span style="width:6px;height:6px;border-radius:999px;background:#8458B3;animation:aiconBreathe 1.1s ease-in-out infinite;"></span>adatok betöltése…</span>
+              </sc-if>
+            </div>
+            <!-- SKELETON while loading -->
+            <sc-if value="{{ clientLoading }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div style="background:#FFFFFF;border:1px solid #EEF0F5;border-radius:8px;padding:13px 15px;"><div style="height:8px;width:55%;border-radius:4px;background:linear-gradient(90deg,#EEF0F5,#E0E2EB,#EEF0F5);background-size:220% 100%;animation:aiconShimmer 1.4s ease-in-out infinite;"></div><div style="height:13px;width:82%;border-radius:4px;margin-top:10px;background:linear-gradient(90deg,#EDEEF3,#DDDFE9,#EDEEF3);background-size:220% 100%;animation:aiconShimmer 1.4s ease-in-out infinite;"></div></div>
+                <div style="background:#FFFFFF;border:1px solid #EEF0F5;border-radius:8px;padding:13px 15px;"><div style="height:8px;width:50%;border-radius:4px;background:linear-gradient(90deg,#EEF0F5,#E0E2EB,#EEF0F5);background-size:220% 100%;animation:aiconShimmer 1.4s ease-in-out 0.1s infinite;"></div><div style="height:13px;width:68%;border-radius:4px;margin-top:10px;background:linear-gradient(90deg,#EDEEF3,#DDDFE9,#EDEEF3);background-size:220% 100%;animation:aiconShimmer 1.4s ease-in-out 0.1s infinite;"></div></div>
+                <div style="background:#FFFFFF;border:1px solid #EEF0F5;border-radius:8px;padding:13px 15px;"><div style="height:8px;width:48%;border-radius:4px;background:linear-gradient(90deg,#EEF0F5,#E0E2EB,#EEF0F5);background-size:220% 100%;animation:aiconShimmer 1.4s ease-in-out 0.2s infinite;"></div><div style="height:13px;width:88%;border-radius:4px;margin-top:10px;background:linear-gradient(90deg,#EDEEF3,#DDDFE9,#EDEEF3);background-size:220% 100%;animation:aiconShimmer 1.4s ease-in-out 0.2s infinite;"></div></div>
+                <div style="background:#FFFFFF;border:1px solid #EEF0F5;border-radius:8px;padding:13px 15px;"><div style="height:8px;width:52%;border-radius:4px;background:linear-gradient(90deg,#EEF0F5,#E0E2EB,#EEF0F5);background-size:220% 100%;animation:aiconShimmer 1.4s ease-in-out 0.3s infinite;"></div><div style="height:13px;width:60%;border-radius:4px;margin-top:10px;background:linear-gradient(90deg,#EDEEF3,#DDDFE9,#EDEEF3);background-size:220% 100%;animation:aiconShimmer 1.4s ease-in-out 0.3s infinite;"></div></div>
+              </div>
+            </sc-if>
+            <!-- REAL content when ready -->
+            <sc-if value="{{ clientReady }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;animation:aiconPageIn 0.34s cubic-bezier(0.2,0,0,1);">
+                <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:13px 15px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#8B90A3;">KAPCSOLATTARTÓ</div><div style="font-size:13.5px;font-weight:600;margin-top:4px;">{{ clientContact }}</div></div>
+                <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:13px 15px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#8B90A3;">SZERZŐDÉS ÉRTÉKE</div><div style="font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:700;margin-top:4px;">{{ clientValue }}</div></div>
+                <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:13px 15px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#8B90A3;">AKTÍV PROJEKT</div><div style="font-size:13.5px;font-weight:600;margin-top:4px;">{{ clientProject }}</div></div>
+                <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;padding:13px 15px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#8B90A3;">FÁZIS · KAPU</div><div style="font-size:13.5px;font-weight:600;margin-top:4px;color:#7A4FB0;">{{ clientPhase }}</div></div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="font-size:12.5px;color:#55596B;line-height:1.6;max-width:960px;margin-top:14px;">A menüsáv lila jelölője <b>lecsúszik</b> az aktív pontra (0,32 s, lágy easing), a menüpont szövege színt vált átmenettel, a tartalom pedig <b>beúszik</b>: halvány fade + 10 px emelkedés + egy hajszálnyi blur, ami kiélesedik. Nincs villanás, nincs elugrás — a szem követni tudja, hol jár. Gyors marad, mert munkaeszköz. <b>Ha egy sorba kattintasz</b> (pl. egy ügyfél az Ügyfelek listán), az űrlap nem lateral vált, hanem <b>befelé lép</b>: jobbról úszik be egy hajszálnyi elmosással, a „← Vissza" pedig balra csúsztatva hozza vissza a listát — így érzed a hierarchiát: mélyebbre mentél, nem oldalra. <b>Ha az adat nem érkezik azonnal</b> (lassú lekérés): a navigáció sosem vár rá — az űrlap <b>azonnal befelé lép</b>, a fejléc (amit már tudunk: név, iparág, státusz) rögtön látszik, az adat-mezők helyén pedig <b>skeleton-villódzás</b> jelzi, hogy tölt, majd a valós tartalom lágyan beúszik. Így nincs üres képernyő, nincs „megfagyott" kattintás — a rendszer végig válaszol.
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CLIENTS = {
+  gt: { mono: 'GT', monoBg: 'linear-gradient(135deg,#3E9E6E,#2E7050)', monoColor: '#FFFFFF', name: 'GreenTherm Kft.', industry: 'Épületgépészet, megújuló energia, okosotthon', contact: 'Tóth Zoltán · CEO, szponzor', value: '6,4 M Ft/év', project: 'EcoSupport AI', phase: 'P2 · kilépő kapu 0/2' },
+  kn: { mono: 'KN', monoBg: '#EDEEF3', monoColor: '#55596B', name: 'Kovács Nyomda Kft.', industry: 'Nyomdaipar, csomagolás', contact: 'Kovács Judit · CS-vezető', value: '4,1 M Ft/év', project: 'Panaszkezelő asszisztens', phase: 'P1 · kapu 2/3' }
+};
+class Component extends DCLogic {
+  state = { page: 'cockpit', client: null, dir: 'fwd', loading: false };
+  loadClient(id) {
+    this.setState({ page: 'ugyfelek', client: id, dir: 'fwd', loading: true });
+    clearTimeout(this._load);
+    this._load = setTimeout(() => this.setState({ loading: false }), 1100);
+  }
+  componentWillUnmount() { clearTimeout(this._load); }
+  renderVals() {
+    const p = this.state.page;
+    const idx = { cockpit: 0, projektek: 1, ugyfelek: 2 }[p];
+    const c = this.state.client ? CLIENTS[this.state.client] : null;
+    return {
+      isCockpit: p === 'cockpit',
+      isProjektek: p === 'projektek',
+      isUgyfelekList: p === 'ugyfelek' && !this.state.client,
+      showClientDetail: p === 'ugyfelek' && !!this.state.client,
+      clientLoading: p === 'ugyfelek' && !!this.state.client && this.state.loading,
+      clientReady: p === 'ugyfelek' && !!this.state.client && !this.state.loading,
+      listAnim: (this.state.dir === 'back' ? 'aiconPushBack 0.34s' : 'aiconPageIn 0.32s') + ' cubic-bezier(0.2,0,0,1)',
+      pillY: (idx * 42) + 'px',
+      cockpitColor: p === 'cockpit' ? '#7A4FB0' : '#55596B',
+      projektekColor: p === 'projektek' ? '#7A4FB0' : '#55596B',
+      ugyfelekColor: p === 'ugyfelek' ? '#7A4FB0' : '#55596B',
+      cockpitWeight: p === 'cockpit' ? '700' : '400',
+      projektekWeight: p === 'projektek' ? '700' : '400',
+      ugyfelekWeight: p === 'ugyfelek' ? '700' : '400',
+      clientMono: c ? c.mono : '',
+      clientMonoBg: c ? c.monoBg : '#EDEEF3',
+      clientMonoColor: c ? c.monoColor : '#55596B',
+      clientName: c ? c.name : '',
+      clientIndustry: c ? c.industry : '',
+      clientStatus: 'Szerződött',
+      clientContact: c ? c.contact : '',
+      clientValue: c ? c.value : '',
+      clientProject: c ? c.project : '',
+      clientPhase: c ? c.phase : '',
+      goCockpit: () => { clearTimeout(this._load); this.setState({ page: 'cockpit', client: null, dir: 'fwd', loading: false }); },
+      goProjektek: () => { clearTimeout(this._load); this.setState({ page: 'projektek', client: null, dir: 'fwd', loading: false }); },
+      goUgyfelek: () => { clearTimeout(this._load); this.setState({ page: 'ugyfelek', client: null, dir: 'fwd', loading: false }); },
+      openGT: () => this.loadClient('gt'),
+      openKN: () => this.loadClient('kn'),
+      backToList: () => { clearTimeout(this._load); this.setState({ client: null, dir: 'back', loading: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

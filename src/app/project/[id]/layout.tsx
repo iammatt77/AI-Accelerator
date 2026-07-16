@@ -3,6 +3,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { loadPhaseBoard } from "@/lib/phases/service";
 import { PHASE_IDS, type PhaseId } from "@/lib/phases/config";
 import { ProjectContextNav } from "@/components/ProjectContextNav";
+import { PageTransition } from "@/components/PageTransition";
 import type { ProjectRow } from "@/lib/db/types";
 
 // Projekt-útvonalak kerete (Master ◆ SIDEBAR): a globális sidebar mellett
@@ -66,7 +67,9 @@ export default async function ProjectLayout({
         }}
       />
       <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-[1360px] px-6 py-7">{children}</div>
+        <div className="mx-auto max-w-[1360px] px-6 py-7">
+          <PageTransition initialMotion="push-in">{children}</PageTransition>
+        </div>
       </main>
     </>
   );

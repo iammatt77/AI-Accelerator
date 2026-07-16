@@ -118,6 +118,14 @@
   --motion-gate: 320ms;
   --motion-ease: cubic-bezier(0, 0, 0.2, 1);
 
+  /* ── OLDALVÁLTÁS (AICON Oldalváltás-spec) ──
+   * Csak transform/opacity/filter animálódik (GPU, 60 fps); soha layout. */
+  --ease-enter: cubic-bezier(0.2, 0, 0, 1); /* tartalom be-animációk */
+  --ease-pill: cubic-bezier(0.4, 0, 0.2, 1); /* menü-jelölősáv csúszás */
+  --dur-page: 340ms; /* lap / drill / vissza */
+  --dur-pill: 320ms; /* jelölősáv-csúszás */
+  --dur-shimmer: 1400ms; /* skeleton-villódzás */
+
   /* ── ÁRNYÉK — EGY konzisztens felület-token (Master §09) ──
    * + accent/CTA változatok a Master mockupjaiból. Blur/üveg NINCS. */
   --shadow-card: 0 1px 2px rgba(35, 38, 47, 0.05), 0 8px 22px rgba(35, 38, 47, 0.07);

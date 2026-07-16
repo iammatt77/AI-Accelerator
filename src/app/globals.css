@@ -151,3 +151,56 @@ body {
     border-radius: var(--radius-control);
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+ * Oldalváltás-animációk (AICON Oldalváltás-spec).
+ * Három mozgás: LATERAL (aiconPageIn) · DRILL-IN (aiconPushIn) ·
+ * VISSZA (aiconPushBack). + skeleton-shimmer. Csak transform/opacity/
+ * filter — layout-tulajdonság SOHA. A11Y: prefers-reduced-motion.
+ * ───────────────────────────────────────────────────────────── */
+@keyframes aiconPageIn {
+  from { opacity: 0; transform: translateY(10px); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+@keyframes aiconPushIn {
+  from { opacity: 0; transform: translateX(28px); filter: blur(3px); }
+  to   { opacity: 1; transform: translateX(0);    filter: blur(0); }
+}
+@keyframes aiconPushBack {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes aiconShimmer {
+  0%   { background-position: 180% 0; }
+  100% { background-position: -80% 0; }
+}
+@keyframes aiconBreathe {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+/* A be-animációk osztályai — a PageTransition wrapper ezeket adja. */
+.anim-page-in  { animation: aiconPageIn var(--dur-page) var(--ease-enter); }
+.anim-push-in  { animation: aiconPushIn var(--dur-page) var(--ease-enter); }
+.anim-push-back { animation: aiconPushBack var(--dur-page) var(--ease-enter); }
+
+/* Skeleton-villódzás: világos gradient csúszó pozícióval. A késleltetést a
+ * hívó adja (style="animation-delay:…"), hogy a mezők ne egyszerre villogjanak. */
+.skeleton-bar {
+  background: linear-gradient(90deg, var(--neutral-100), var(--neutral-200), var(--neutral-100));
+  background-size: 220% 100%;
+  animation: aiconShimmer var(--dur-shimmer) ease-in-out infinite;
+  border-radius: 4px;
+}
+.anim-breathe { animation: aiconBreathe 1.1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

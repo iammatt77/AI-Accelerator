@@ -6,7 +6,8 @@
     "creating": "Creating…",
     "saving": "Saving…",
     "processing": "Processing…",
-    "backHome": "Back to projects"
+    "backHome": "Back to projects",
+    "loading": "Loading…"
   },
   "nav": {
     "brandTitle": "AI Consulting",
