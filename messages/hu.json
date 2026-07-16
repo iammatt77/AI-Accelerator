@@ -136,7 +136,34 @@
     "activityGateClosed": "{phase} kapu lezárva",
     "activityArtifact": "{name} v{v} frissült",
     "activityInput": "új nyersanyag érkezett",
-    "metaCharter": "Charter"
+    "metaCharter": "Charter",
+    "attentionTag": "FIGYELEM",
+    "statusBlocked": "A projekt a kapunál áll; a haladáshoz a hiányzó jóváhagyások kellenek.",
+    "statusReady": "A kapu kész a zárásra — utána a(z) {next} nyílik.",
+    "gateFocusKicker": "{phase} kilépő kapu · a teendő",
+    "gateFocusHeadline": "{n} jóváhagyás választ el a(z) {next} fázistól",
+    "gateFocusReady": "A kapu kész a zárásra",
+    "gateReadyCountLabel": "kész",
+    "cs": {
+      "approved": "JÓVÁHAGYVA",
+      "draft": "DRAFT",
+      "in_review": "REVIEW ALATT",
+      "not_started": "NINCS ELKEZDVE",
+      "open": "NYITOTT"
+    },
+    "csSub": {
+      "approved": "Jóváhagyva.",
+      "draft": "Elkészült draft (v{v}) — jóváhagyásra vár.",
+      "inReview": "Review alatt (v{v}) — jóváhagyásra vár.",
+      "notStarted": "Még nincs elkezdve — a kapuhoz kötelező.",
+      "open": "A kapuhoz teljesítendő."
+    },
+    "fieldsMeter": "{filled}/{required} mező",
+    "actionApprove": "Jóváhagyásra",
+    "actionCreate": "Létrehozás",
+    "actionOpen": "Megnyitás",
+    "gateCloseBlockedShort": "Kapu zárása — előbb a(z) {n} kritérium",
+    "blocksGate": "a kaput blokkolja"
   },
   "phases": {
     "p0": {

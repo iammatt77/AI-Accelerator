@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#ECEEF4; }
+  a { color:#7A4FB0; text-decoration:none; }
+  a:hover { color:#8458B3; text-decoration:underline; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:44px;padding:64px;align-items:flex-start;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#23262F;background:#ECEEF4;">
+
+  <!-- INTRO -->
+  <div style="max-width:960px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.2em;color:#8458B3;text-transform:uppercase;">AICON · Cockpit · újratervezés</span>
+      <span style="height:1px;width:56px;background:linear-gradient(90deg,#8458B3,transparent);"></span>
+    </div>
+    <div style="font-size:36px;font-weight:800;letter-spacing:-0.03em;line-height:1.08;">Egy pillantás → <span style="color:#8458B3;">hol tartunk, mi blokkol,<br>mi a teendő.</span></div>
+    <div style="font-size:14px;color:#55596B;margin-top:14px;line-height:1.65;max-width:840px;">A cockpit a projektkövetés helye — a legfontosabb dolgoknak azonnal szemet kell szúrniuk. A jelenlegi lap lapos: a „következő legjobb lépés" és a „kilépő kapu" <b>ugyanazt a két kritériumot mondja el kétszer</b>, a blokkoló nem üt ki, minden azonos súlyú. Az újratervezés: erős státusz-sor felül (hol vagyunk + mi blokkol), a <b>kapu-fókusz</b> egyetlen, cselekvésre kész hőssé olvad (a két kritérium állapota + a teendő), a health-metrikák és a jobb sáv (stakeholderek · napló · ügyfél) alátámasztó szerepbe kerül. Semmi nem vész el.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:20px;">
+      <a href="#1a" style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;padding:7px 13px;border:1px solid #E2E4EC;border-radius:4px;background:#FFFFFF;">1a · Cockpit (teljes)</a>
+    </div>
+  </div>
+
+  <!-- ============ 1a COCKPIT ============ -->
+  <div id="1a" style="width:1480px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="background:#8458B3;color:#FFFFFF;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px;">1a</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:0.14em;color:#8B90A3;text-transform:uppercase;">EcoSupport AI cockpit — státusz-sor · fázis-gerinc · egyesített kapu-fókusz · health · jobb sáv</span>
+    </div>
+
+    <div data-screen-label="8 Cockpit" style="display:flex;background:#FBFBFD;border:1px solid #E4E6EE;border-radius:8px;box-shadow:0 1px 2px rgba(35,38,47,0.05), 0 20px 56px rgba(35,38,47,0.12);overflow:hidden;">
+
+      <!-- GLOBAL SIDEBAR -->
+      <div style="width:214px;flex-shrink:0;background:#FFFFFF;border-right:1px solid #E7E9F0;display:flex;flex-direction:column;padding:20px 14px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:0 6px 18px;">
+          <div style="width:34px;height:34px;border-radius:7px;background:#23262F;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;">A</div>
+          <div><div style="font-size:13px;font-weight:700;">AI Consulting</div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8B90A3;">rendszer · P0–P6</div></div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.14em;color:#B4B8C6;padding:6px 8px 8px;">GLOBÁLIS SZINT</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:5px;font-size:13px;color:#55596B;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>Vezérlőpult</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:5px;font-size:13px;color:#55596B;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6" cy="5.5" r="2.3"/><path d="M2 13.5c0-2.2 1.8-3.5 4-3.5s4 1.3 4 3.5"/><circle cx="12" cy="6" r="1.8"/></svg>Ügyfelek</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:5px;font-size:13px;font-weight:700;color:#7A4FB0;background:#EDE6F7;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4.5C2 3.7 2.7 3 3.5 3h3L8 4.5h4.5c.8 0 1.5.7 1.5 1.5v6c0 .8-.7 1.5-1.5 1.5h-9C2.7 13.5 2 12.8 2 12z"/></svg>Projektek</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:5px;font-size:13px;color:#55596B;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4.5h12v8H2z"/><path d="M2 5l6 4 6-4"/></svg>Beérkező</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:5px;font-size:13px;color:#55596B;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="11" height="11" rx="1.2"/><path d="M5.5 2.5v11"/></svg>Könyvtár</div>
+        </div>
+        <div style="height:1px;background:#EEF0F5;margin:14px 6px;"></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:5px;font-size:13px;color:#55596B;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4"/></svg>Beállítások</div>
+        <div style="flex:1;"></div>
+        <div style="display:flex;gap:6px;padding:0 6px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#FFFFFF;background:#8458B3;padding:4px 9px;border-radius:4px;">HU</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#8B90A3;background:#F1F2F6;padding:4px 9px;border-radius:4px;">EN</span>
+        </div>
+      </div>
+
+      <!-- PROJECT SUBNAV -->
+      <div style="width:222px;flex-shrink:0;background:#FAFAFC;border-right:1px solid #E7E9F0;display:flex;flex-direction:column;padding:22px 14px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.14em;color:#8B90A3;padding:0 8px 12px;">PROJEKTBEN · ECOSUPPORT AI</div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div style="display:flex;align-items:center;padding:8px 10px;border-radius:5px;font-size:13px;font-weight:700;color:#7A4FB0;background:#EDE6F7;">Cockpit</div>
+          <div style="display:flex;align-items:center;padding:8px 10px;border-radius:5px;font-size:13px;color:#55596B;">Fázis-munkafelület<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#7A4FB0;background:#EDE6F7;padding:1px 6px;border-radius:3px;">P2</span></div>
+          <div style="display:flex;align-items:center;padding:8px 10px;border-radius:5px;font-size:13px;color:#55596B;">Dokumentumok<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#8B90A3;background:#EDEEF3;padding:1px 6px;border-radius:999px;">2</span></div>
+          <div style="display:flex;align-items:center;padding:8px 10px;border-radius:5px;font-size:13px;color:#55596B;">Stakeholderek<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#8B90A3;background:#EDEEF3;padding:1px 6px;border-radius:999px;">6</span></div>
+          <div style="display:flex;align-items:center;padding:8px 10px;border-radius:5px;font-size:13px;color:#55596B;">Források<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#8B90A3;background:#EDEEF3;padding:1px 6px;border-radius:999px;">5</span></div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;font-size:12px;color:#8B90A3;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="5.5" width="7" height="5" rx="1"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>P3–P6 fázisok</div>
+      </div>
+
+      <!-- CONTENT -->
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#FBFBFD;">
+
+        <!-- HEADER + STATUS LINE -->
+        <div style="padding:22px 32px 20px;border-bottom:1px solid #E7E9F0;background:#FFFFFF;">
+          <div style="display:flex;align-items:flex-start;gap:16px;">
+            <div style="min-width:0;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;">GreenTherm Kft. · <span style="color:#7A4FB0;">Kis csomag, kivitelezéssel</span></div>
+              <div style="font-size:24px;font-weight:800;letter-spacing:-0.02em;margin-top:3px;">EcoSupport AI</div>
+            </div>
+            <div style="flex:1;"></div>
+            <div style="text-align:right;"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;">1. hét · indult 2026. 07. 14.</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;margin-top:3px;">2 / 7 fázis lezárva</div></div>
+          </div>
+          <!-- big status line -->
+          <div style="display:flex;align-items:center;gap:14px;margin-top:16px;background:#FDF6E7;border:1px solid #F0E3C2;border-left:3px solid #B4801E;border-radius:7px;padding:13px 18px;">
+            <svg width="18" height="18" viewBox="0 0 20 20" style="color:#B4801E;flex-shrink:0;"><path d="M10 2.5 L18 16.5 L2 16.5 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M10 8 L10 12 M10 14 L10 14.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+            <div style="flex:1;"><span style="font-size:15px;font-weight:700;color:#33374A;">A P2 Megoldásterv kilépő kapuja zárva — 0 / 2 kritérium kész.</span><span style="font-size:13.5px;color:#7A5B18;"> A projekt a kapunál áll; a haladáshoz a két jóváhagyás kell.</span></div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#9A6A12;background:#F6E7C4;padding:4px 11px;border-radius:5px;flex-shrink:0;">FIGYELEM</span>
+          </div>
+        </div>
+
+        <div style="padding:22px 32px 30px;display:flex;flex-direction:column;gap:20px;">
+
+          <!-- PHASE SPINE -->
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;color:#8B90A3;">PROJEKT-GERINC · 7 FÁZIS</span><div style="flex:1;height:1px;background:#EEF0F5;"></div></div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
+              <!-- P0 done -->
+              <div style="background:#FFFFFF;border:1px solid #CDE7DA;border-top:3px solid #3E9E6E;border-radius:6px;padding:11px 12px;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#8B90A3;">P0</div>
+                <div style="font-size:13px;font-weight:700;margin-top:3px;">Kickoff</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:#2E8B5E;"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Lezárva</div>
+              </div>
+              <!-- P1 done -->
+              <div style="background:#FFFFFF;border:1px solid #CDE7DA;border-top:3px solid #3E9E6E;border-radius:6px;padding:11px 12px;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#8B90A3;">P1</div>
+                <div style="font-size:13px;font-weight:700;margin-top:3px;">Felmérés</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:#2E8B5E;"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Lezárva</div>
+              </div>
+              <!-- P2 active -->
+              <div style="background:#FAF8FD;border:1.5px solid #8458B3;border-top:3px solid #8458B3;border-radius:6px;padding:11px 12px;box-shadow:0 6px 18px rgba(108,67,160,0.14);">
+                <div style="display:flex;align-items:center;gap:6px;"><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#7A4FB0;">P2</span><span style="font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;color:#FFFFFF;background:#8458B3;padding:1px 5px;border-radius:3px;">AKTÍV</span></div>
+                <div style="font-size:13px;font-weight:800;margin-top:3px;color:#33374A;">Megoldásterv</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:7px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#9A6A12;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="5" width="7" height="5" rx="1"/><path d="M4 5V4a2 2 0 0 1 4 0v1"/></svg>kapu 0/2</div>
+              </div>
+              <!-- P3-P6 locked -->
+              <div style="background:#F7F8FB;border:1px solid #EAECF2;border-top:3px solid #E0E3EC;border-radius:6px;padding:11px 12px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#B4B8C6;">P3</div><div style="font-size:13px;font-weight:700;margin-top:3px;color:#A9AEBD;">Build</div><div style="display:flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:#B4B8C6;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="5" width="7" height="5" rx="1"/><path d="M4 5V4a2 2 0 0 1 4 0v1"/></svg>zárt</div></div>
+              <div style="background:#F7F8FB;border:1px solid #EAECF2;border-top:3px solid #E0E3EC;border-radius:6px;padding:11px 12px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#B4B8C6;">P4</div><div style="font-size:13px;font-weight:700;margin-top:3px;color:#A9AEBD;">Pilot</div><div style="display:flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:#B4B8C6;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="5" width="7" height="5" rx="1"/><path d="M4 5V4a2 2 0 0 1 4 0v1"/></svg>zárt</div></div>
+              <div style="background:#F7F8FB;border:1px solid #EAECF2;border-top:3px solid #E0E3EC;border-radius:6px;padding:11px 12px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#B4B8C6;">P5</div><div style="font-size:13px;font-weight:700;margin-top:3px;color:#A9AEBD;">Adopció</div><div style="display:flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:#B4B8C6;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="5" width="7" height="5" rx="1"/><path d="M4 5V4a2 2 0 0 1 4 0v1"/></svg>zárt</div></div>
+              <div style="background:#F7F8FB;border:1px solid #EAECF2;border-top:3px solid #E0E3EC;border-radius:6px;padding:11px 12px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#B4B8C6;">P6</div><div style="font-size:13px;font-weight:700;margin-top:3px;color:#A9AEBD;">Üzemeltetés</div><div style="display:flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:#B4B8C6;"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="5" width="7" height="5" rx="1"/><path d="M4 5V4a2 2 0 0 1 4 0v1"/></svg>zárt</div></div>
+            </div>
+          </div>
+
+          <!-- MAIN GRID -->
+          <div style="display:grid;grid-template-columns:1fr 372px;gap:20px;align-items:start;">
+
+            <!-- LEFT: focus + health + artifacts -->
+            <div style="display:flex;flex-direction:column;gap:20px;min-width:0;">
+
+              <!-- KAPU-FÓKUSZ (hero, unified gate + action) -->
+              <div style="background:#FFFFFF;border:1.5px solid #C9B3E6;border-radius:8px;box-shadow:0 1px 2px rgba(35,38,47,0.05), 0 10px 30px rgba(108,67,160,0.1);overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #EEF0F5;background:#FAF8FD;">
+                  <span style="width:30px;height:30px;border-radius:7px;background:#8458B3;color:#FFFFFF;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="6.5" rx="1"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg></span>
+                  <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;color:#8B90A3;">P2 KILÉPŐ KAPU · A TEENDŐ</div><div style="font-size:16px;font-weight:800;letter-spacing:-0.01em;margin-top:2px;">2 jóváhagyás választ el a P3-tól</div></div>
+                  <div style="flex:1;"></div>
+                  <div style="text-align:right;"><div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#9A6A12;letter-spacing:-0.02em;">0<span style="font-size:15px;color:#C7A24E;"> / 2</span></div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:#B4801E;">KÉSZ</div></div>
+                </div>
+                <!-- criteria rows (actionable) -->
+                <div style="padding:6px 20px;">
+                  <!-- criterion 1: business case -->
+                  <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #F4F5F8;">
+                    <div style="width:20px;height:20px;border-radius:5px;border:1.5px solid #E0B872;background:#FDFAF1;flex-shrink:0;"></div>
+                    <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;">Business case jóváhagyva</div><div style="font-size:12px;color:#8B90A3;margin-top:1px;">Elkészült draft (v1) — jóváhagyásra vár. <span style="font-family:'JetBrains Mono',monospace;color:#B4801E;">DRAFT</span></div></div>
+                    <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+                      <div style="width:90px;"><div style="height:5px;background:#EFEAF6;border-radius:999px;overflow:hidden;"><div style="width:70%;height:100%;background:#8458B3;"></div></div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8B90A3;margin-top:3px;text-align:right;">5/5 mező kész</div></div>
+                      <div style="background:#8458B3;color:#FFFFFF;font-size:12px;font-weight:600;padding:7px 14px;border-radius:5px;cursor:pointer;">Jóváhagyásra →</div>
+                    </div>
+                  </div>
+                  <!-- criterion 2: pilot -->
+                  <div style="display:flex;align-items:center;gap:14px;padding:14px 0;">
+                    <div style="width:20px;height:20px;border-radius:5px;border:1.5px solid #D3D6E0;background:#FBFBFD;flex-shrink:0;"></div>
+                    <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;">Pilot-terv jóváhagyva</div><div style="font-size:12px;color:#8B90A3;margin-top:1px;">Még nincs elkezdve — a kapuhoz kötelező. <span style="font-family:'JetBrains Mono',monospace;color:#8B90A3;">NINCS ELKEZDVE</span></div></div>
+                    <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+                      <div style="width:90px;"><div style="height:5px;background:#EDEEF3;border-radius:999px;"></div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#B4B8C6;margin-top:3px;text-align:right;">0/6 mező</div></div>
+                      <div style="background:#FFFFFF;color:#33374A;border:1px solid #D3D6E0;font-size:12px;font-weight:600;padding:7px 14px;border-radius:5px;cursor:pointer;">Létrehozás +</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- footer actions -->
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid #EEF0F5;background:#FAFAFC;">
+                  <div style="background:#8458B3;color:#FFFFFF;font-size:13px;font-weight:600;padding:10px 18px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;">A(z) P2 munkafelület megnyitása <svg width="13" height="13" viewBox="0 0 12 12"><path d="M2 6 h7 M6.5 3 L9.5 6 L6.5 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+                  <div style="flex:1;"></div>
+                  <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:#A9AEBD;background:#F1F2F6;border:1px solid #E4E6EE;padding:9px 14px;border-radius:6px;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="5.5" width="7" height="5" rx="1"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>Kapu zárása — előbb a 2 kritérium</div>
+                </div>
+              </div>
+
+              <!-- HEALTH STRIP -->
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;box-shadow:0 1px 2px rgba(35,38,47,0.04);padding:15px 16px;">
+                  <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#2E7050;letter-spacing:-0.02em;">11</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8B90A3;">/ 11</span></div>
+                  <div style="font-size:12px;color:#55596B;margin-top:3px;">fájdalompont megerősítve</div>
+                  <div style="height:4px;background:#EAF3EE;border-radius:999px;margin-top:9px;"><div style="width:100%;height:100%;background:#3E9E6E;border-radius:999px;"></div></div>
+                </div>
+                <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;box-shadow:0 1px 2px rgba(35,38,47,0.04);padding:15px 16px;">
+                  <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#256087;letter-spacing:-0.02em;">8</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8B90A3;">/ 8</span></div>
+                  <div style="font-size:12px;color:#55596B;margin-top:3px;">use case shortlisten · cél 2–3</div>
+                  <div style="height:4px;background:#E4EEF5;border-radius:999px;margin-top:9px;"><div style="width:100%;height:100%;background:#2E77A8;border-radius:999px;"></div></div>
+                </div>
+                <div style="background:#FDFAF1;border:1px solid #F0E3C2;border-radius:8px;box-shadow:0 1px 2px rgba(35,38,47,0.04);padding:15px 16px;">
+                  <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#9A6A12;letter-spacing:-0.02em;">5</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#C7A24E;">/ 5</span></div>
+                  <div style="font-size:12px;color:#7A5B18;margin-top:3px;">riport-készültség · <b>a kaput blokkolja</b></div>
+                  <div style="height:4px;background:#F3E8CE;border-radius:999px;margin-top:9px;"><div style="width:100%;height:100%;background:#B4801E;border-radius:999px;"></div></div>
+                </div>
+              </div>
+
+              <!-- LEGUTÓBBI ARTEFAKTUMOK -->
+              <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;box-shadow:0 1px 2px rgba(35,38,47,0.04);overflow:hidden;">
+                <div style="display:flex;align-items:center;padding:15px 20px 12px;">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;color:#8B90A3;">LEGUTÓBBI ARTEFAKTUMOK</span>
+                  <div style="flex:1;"></div>
+                  <a href="#1a" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#7A4FB0;">Projektdokumentáció tár →</a>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;border-top:1px solid #F4F5F8;">
+                  <div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">Business case</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;margin-top:1px;">P2 · v1 · júl. 15.</div></div>
+                  <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#9A6A12;background:#FBF3E0;padding:4px 11px;border-radius:999px;"><svg width="9" height="9" viewBox="0 0 12 12"><circle cx="6" cy="6" r="2.6" fill="currentColor"></circle></svg>Draft</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;border-top:1px solid #F4F5F8;">
+                  <div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">Priorizált use case-shortlist</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;margin-top:1px;">P1 · v1 · júl. 15.</div></div>
+                  <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#2E8B5E;background:#EAF3EE;padding:4px 11px;border-radius:999px;"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Approved</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;border-top:1px solid #F4F5F8;">
+                  <div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">Felmérési riport</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8B90A3;margin-top:1px;">P1 · v1 · júl. 15.</div></div>
+                  <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#2E8B5E;background:#EAF3EE;padding:4px 11px;border-radius:999px;"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Approved</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT RAIL -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <!-- stakeholders -->
+              <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;box-shadow:0 1px 2px rgba(35,38,47,0.04);overflow:hidden;">
+                <div style="padding:15px 18px 6px;"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;color:#8B90A3;">STAKEHOLDEREK</div><div style="font-size:11.5px;color:#8B90A3;margin-top:3px;">A projekt megerősített és javasolt stakeholderei.</div></div>
+                <div style="padding:6px 8px 10px;">
+                  <a href="#1a" style="display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:6px;"><div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#8458B3,#6C43A0);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">VP</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#23262F;">Varga Péter</div><div style="font-size:11px;color:#8B90A3;">IT Lead · Technikai felelős</div></div><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#2E8B5E;background:#EAF3EE;padding:2px 8px;border-radius:999px;flex-shrink:0;"><svg width="8" height="8" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>megerősítve</span></a>
+                  <a href="#1a" style="display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:6px;"><div style="width:30px;height:30px;border-radius:7px;background:#EDEEF3;color:#8B90A3;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">AT</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#23262F;">AI Tanácsadó</div><div style="font-size:11px;color:#8B90A3;">Külső tanácsadó</div></div><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#2E8B5E;background:#EAF3EE;padding:2px 8px;border-radius:999px;flex-shrink:0;"><svg width="8" height="8" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>megerősítve</span></a>
+                  <a href="#1a" style="display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:6px;"><div style="width:30px;height:30px;border-radius:7px;background:#DDF0F7;color:#2E77A8;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">TZ</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#23262F;">Tóth Zoltán</div><div style="font-size:11px;color:#8B90A3;">CEO · Szponzor</div></div><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#2E8B5E;background:#EAF3EE;padding:2px 8px;border-radius:999px;flex-shrink:0;"><svg width="8" height="8" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>megerősítve</span></a>
+                  <a href="#1a" style="display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:6px;"><div style="width:30px;height:30px;border-radius:7px;background:#EDEEF3;color:#55596B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">SM</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#23262F;">Szabó Márton</div><div style="font-size:11px;color:#8B90A3;">COO · Projektvezető</div></div><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#2E8B5E;background:#EAF3EE;padding:2px 8px;border-radius:999px;flex-shrink:0;"><svg width="8" height="8" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>megerősítve</span></a>
+                  <a href="#1a" style="display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:6px;"><div style="width:30px;height:30px;border-radius:7px;background:#EDEEF3;color:#55596B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">KJ</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#23262F;">Kovács Judit</div><div style="font-size:11px;color:#8B90A3;">CS vezető · Üzleti megrendelő</div></div><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#2E8B5E;background:#EAF3EE;padding:2px 8px;border-radius:999px;flex-shrink:0;"><svg width="8" height="8" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>megerősítve</span></a>
+                  <a href="#1a" style="display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:6px;"><div style="width:30px;height:30px;border-radius:7px;background:#EDEEF3;color:#55596B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">KD</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#23262F;">Kelemen Dávid</div><div style="font-size:11px;color:#8B90A3;">Vezető mérnök · értékesítő</div></div><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#9A6A12;background:#FBF3E0;padding:2px 8px;border-radius:999px;flex-shrink:0;"><svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2.5 L9.5 4 M8.5 2 L4 6.5 L3.5 8.5 L5.5 8 L10 3.5 Z"/></svg>kézi</span></a>
+                </div>
+              </div>
+              <!-- ezen a héten -->
+              <div style="background:#FFFFFF;border:1px solid #E4E6EE;border-radius:8px;box-shadow:0 1px 2px rgba(35,38,47,0.04);padding:15px 18px;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;color:#8B90A3;margin-bottom:12px;">EZEN A HÉTEN</div>
+                <div style="display:flex;flex-direction:column;gap:11px;">
+                  <div style="display:flex;gap:10px;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8B90A3;flex-shrink:0;width:42px;">júl 15</span><span style="font-size:12.5px;color:#33374A;line-height:1.4;">generate_draft kapu lezárva</span></div>
+                  <div style="display:flex;gap:10px;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8B90A3;flex-shrink:0;width:42px;">júl 15</span><span style="font-size:12.5px;color:#33374A;line-height:1.4;">extract kapu lezárva</span></div>
+                  <div style="display:flex;gap:10px;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8B90A3;flex-shrink:0;width:42px;">júl 15</span><span style="font-size:12.5px;color:#33374A;line-height:1.4;">Business case v1 frissült</span></div>
+                </div>
+              </div>
+              <!-- client facts -->
+              <div style="background:#FAFAFC;border:1px solid #E4E6EE;border-radius:8px;padding:15px 18px;">
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:9px 14px;align-items:center;">
+                  <span style="font-size:12px;color:#8B90A3;">Ügyfél</span><span style="font-size:12.5px;font-weight:700;text-align:right;">GreenTherm Kft.</span>
+                  <span style="font-size:12px;color:#8B90A3;">Iparág</span><span style="font-size:12px;color:#33374A;text-align:right;line-height:1.4;">Épületgépészet, megújuló energia, okosotthon</span>
+                  <span style="font-size:12px;color:#8B90A3;">Charter</span><a href="#1a" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;text-align:right;">P0 · Approved ↗</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12.5px;color:#55596B;line-height:1.6;max-width:1000px;margin-top:14px;">A hierarchia most a fontosság szerint rendez: a <b>státusz-sor</b> felül egyetlen mondatban megmondja, hol állunk és mi blokkol; a <b>fázis-gerinc</b> ad térbeli orientációt (P2 aktív, kapu 0/2). A régi „következő legjobb lépés" és „kilépő kapu" — amelyek ugyanazt a két kritériumot mondták kétszer — <b>egyetlen kapu-fókusz hőssé</b> olvadtak: a két kritérium állapota (Business case draft → jóváhagyásra; Pilot-terv nincs elkezdve → létrehozás), külön-külön teendővel, és alul a fő gomb. A health-metrikák közül a blokkoló borostyán színnel kiemelve. A jobb sáv (stakeholderek · heti napló · ügyfél-adatok) alátámasztó — jelen van, de nem verseng a fókusszal.</div>
+  </div>
+
+</section>
+</x-dc>
+</body>
+</html>

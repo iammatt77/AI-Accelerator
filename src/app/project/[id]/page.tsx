@@ -162,6 +162,85 @@ export default async function ProjectCockpitPage({
   }
   const activityRows = activity.slice(0, 3);
 
+  // Kapu-fókusz (HERO): a kapu-kritériumokat cselekvésre-kész sorokká oldjuk fel
+  // — a MEGLÉVŐ kritérium+deliverable-adatból (nincs új logika). Minden sor a
+  // saját állapotával (draft/nincs elkezdve/jóváhagyva) + a saját teendőjével.
+  type GateStatus = "approved" | "draft" | "in_review" | "not_started" | "open";
+  interface GateItem {
+    id: string;
+    label: string;
+    satisfied: boolean;
+    status: GateStatus;
+    version: number | null;
+    filled: number;
+    required: number;
+    href: string;
+    action: "approve" | "create" | "open" | null;
+  }
+  const workspaceHref = `/project/${id}/phase/${activePhase}`;
+  const gateItems: GateItem[] = (active?.criteria ?? []).map((c) => {
+    const label = criterionLabel(c, tCriteria, tTypes);
+    const def = c.typeKey ? getTypeDef(c.typeKey) : null;
+    if (c.satisfied) {
+      const art = def ? artifacts.find((a) => a.type === c.typeKey) : undefined;
+      const comp =
+        def && art ? completeness(def, parseArtifactFields(def, art.fields)) : { filled: 0, required: 0 };
+      return {
+        id: c.id,
+        label,
+        satisfied: true,
+        status: "approved",
+        version: art?.version ?? null,
+        filled: comp.filled,
+        required: comp.required,
+        href: art ? `/project/${id}/artifact/${art.id}` : workspaceHref,
+        action: null,
+      };
+    }
+    if (def) {
+      const art = artifacts.find((a) => a.type === c.typeKey);
+      if (!art) {
+        const comp = completeness(def, parseArtifactFields(def, null));
+        return {
+          id: c.id,
+          label,
+          satisfied: false,
+          status: "not_started",
+          version: null,
+          filled: 0,
+          required: comp.required,
+          href: workspaceHref,
+          action: "create",
+        };
+      }
+      const comp = completeness(def, parseArtifactFields(def, art.fields));
+      return {
+        id: c.id,
+        label,
+        satisfied: false,
+        status: art.status === "in_review" ? "in_review" : "draft",
+        version: art.version,
+        filled: comp.filled,
+        required: comp.required,
+        href: `/project/${id}/artifact/${art.id}`,
+        action: "approve",
+      };
+    }
+    return {
+      id: c.id,
+      label,
+      satisfied: false,
+      status: "open",
+      version: null,
+      filled: 0,
+      required: 0,
+      href: workspaceHref,
+      action: "open",
+    };
+  });
+  // A blokkoló health-metrika (a ref: a riport-készültség a kaput blokkolja).
+  const reportBlocks = unmet.length > 0 && fieldsRequired > 0 && fieldsFilled < fieldsRequired;
+
   const charter = artifacts.find(
     (a) => getTypeDef(a.type)?.phase === "P0" && a.status === "approved",
   );
@@ -204,11 +283,42 @@ export default async function ProjectCockpitPage({
         </span>
       </div>
 
-      {/* P7: állapot-összefoglaló sor */}
+      {/* Státusz-sor (erős) — hol állunk + mi blokkol; blokkoltan FIGYELEM */}
       {active && (
-        <div className="border-b border-line-soft bg-context px-1 py-3">
-          <p className="text-[14px] leading-snug text-ink">
-            <b>
+        <div
+          className={`mt-4 flex items-center gap-3.5 rounded-shell border border-l-[3px] px-4 py-3 ${
+            unmet.length > 0
+              ? "border-tint-gate-border border-l-gate bg-tint-gate"
+              : "border-line border-l-done bg-tint-done"
+          }`}
+        >
+          {unmet.length > 0 ? (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 20 20"
+              aria-hidden
+              className="shrink-0 text-gate-text"
+            >
+              <path
+                d="M10 2.5 L18 16.5 L2 16.5 Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10 8 L10 12 M10 14 L10 14.1"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <IconCheck size={16} className="shrink-0 text-done-text" />
+          )}
+          <p className="min-w-0 flex-1 text-[14px] leading-snug">
+            <b className="text-ink">
               {t("summaryLine", {
                 phase: activePhase,
                 name: phaseShort(activePhase),
@@ -216,12 +326,17 @@ export default async function ProjectCockpitPage({
                 total: active.criteria.length,
               })}
             </b>{" "}
-            {unmet.length === 1 && (
-              <span className="text-ink-secondary">
-                {t("summaryOneStep", { next: nextUnlock, criterion: firstUnmetLabel })}
-              </span>
-            )}
+            <span className={unmet.length > 0 ? "text-gate-text" : "text-ink-secondary"}>
+              {unmet.length > 0
+                ? t("statusBlocked")
+                : t("statusReady", { next: nextUnlock })}
+            </span>
           </p>
+          {unmet.length > 0 && (
+            <span className="shrink-0 rounded-control bg-tint-gate-band px-2.5 py-1 font-mono text-[11px] font-bold text-gate-text">
+              {t("attentionTag")}
+            </span>
+          )}
         </div>
       )}
 
@@ -325,64 +440,161 @@ export default async function ProjectCockpitPage({
         </div>
       </div>
 
-      {/* Törzs */}
-      <div className="grid grid-cols-1 gap-5 pt-5 lg:grid-cols-[1.55fr_1fr]">
-        <div className="flex flex-col gap-4">
-          {/* Next best step (accent-kártya, mini-úttal) */}
-          {active && (
-            <section className="rounded-shell border-[1.5px] border-action bg-accent-tint p-5 shadow-accent">
-              <div className="mb-2.5 flex items-center gap-2">
+      {/* Törzs: kapu-fókusz (HERO) + health + artefaktumok | jobb sáv */}
+      <div className="grid grid-cols-1 gap-5 pt-5 lg:grid-cols-[1fr_372px]">
+        <div className="flex min-w-0 flex-col gap-5">
+          {/* KAPU-FÓKUSZ — a régi „next best" + gate-kártya EGYETLEN, cselekvésre
+              kész hőssé olvad: a két kritérium EGYSZER, külön teendővel. */}
+          {active && active.criteria.length > 0 && (
+            <section className="overflow-hidden rounded-shell border-[1.5px] border-accent-box-border bg-surface shadow-accent">
+              {/* fejléc */}
+              <div className="flex items-center gap-3 border-b border-neutral-100 bg-accent-tint px-5 py-4">
                 <span
                   aria-hidden
-                  className="flex h-6 w-6 items-center justify-center rounded-tile bg-action text-white"
+                  className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-tile bg-action text-white"
                 >
-                  →
+                  <IconLock size={15} />
                 </span>
-                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-action-deep">
-                  {t("nextBest")}
-                </span>
-              </div>
-              <h2 className="text-[19px] font-bold leading-tight tracking-tight">
-                {unmet[0] ? firstUnmetLabel : t("gateReadyTitle", { phase: activePhase })}
-              </h2>
-              {active.criteria.length > 0 && (
-                <div className="mt-3.5 flex flex-wrap items-center">
-                  {active.criteria.map((c, i) => (
-                    <div key={c.id} className="flex items-center">
-                      {i > 0 && <span aria-hidden className="h-px w-3.5 bg-neutral-400" />}
-                      <span
-                        className={`flex items-center gap-1.5 rounded-control border px-[11px] py-[7px] text-[11.5px] ${
-                          c.satisfied
-                            ? "border-line bg-surface text-ink-secondary"
-                            : "border-[1.5px] border-gate bg-tint-gate font-bold text-gate-text"
-                        }`}
-                      >
-                        {c.satisfied ? (
-                          <IconCheck size={10} className="text-done-text" />
-                        ) : (
-                          <span
-                            aria-hidden
-                            className="h-[9px] w-[9px] rounded-[2px] border-[1.5px] border-gate"
-                          />
-                        )}
-                        {criterionLabel(c, tCriteria, tTypes)}
-                      </span>
-                    </div>
-                  ))}
+                <div className="min-w-0">
+                  <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-ink-tertiary">
+                    {t("gateFocusKicker", { phase: activePhase })}
+                  </div>
+                  <div className="mt-0.5 text-[16px] font-extrabold tracking-tight">
+                    {unmet.length > 0
+                      ? t("gateFocusHeadline", { n: unmet.length, next: nextUnlock })
+                      : t("gateFocusReady")}
+                  </div>
                 </div>
-              )}
-              <div className="mt-3.5">
+                <div className="ml-auto shrink-0 text-right">
+                  <div className="font-mono text-[26px] font-bold leading-none text-gate-text">
+                    {met.length}
+                    <span className="text-[15px] text-gate"> / {active.criteria.length}</span>
+                  </div>
+                  <div className="font-mono text-[9px] font-bold uppercase tracking-[0.1em] text-gate-text">
+                    {t("gateReadyCountLabel")}
+                  </div>
+                </div>
+              </div>
+              {/* kritérium-sorok (cselekvésre készen) */}
+              <div className="px-5">
+                {gateItems.map((it, i) => (
+                  <div
+                    key={it.id}
+                    className={`flex items-center gap-3.5 py-3.5 ${i > 0 ? "border-t border-neutral-100" : ""}`}
+                  >
+                    {it.satisfied ? (
+                      <span
+                        aria-hidden
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-control bg-done text-white"
+                      >
+                        <IconCheck size={11} />
+                      </span>
+                    ) : (
+                      <span
+                        aria-hidden
+                        className={`h-5 w-5 shrink-0 rounded-control border-[1.5px] ${
+                          it.action === "approve"
+                            ? "border-gate bg-tint-gate"
+                            : "border-neutral-350 bg-neutral-50"
+                        }`}
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14px] font-bold">{it.label}</div>
+                      <div className="mt-0.5 text-[12px] text-ink-tertiary">
+                        {it.satisfied
+                          ? t("csSub.approved")
+                          : it.status === "not_started"
+                            ? t("csSub.notStarted")
+                            : it.status === "open"
+                              ? t("csSub.open")
+                              : it.status === "in_review"
+                                ? t("csSub.inReview", { v: String(it.version ?? 1) })
+                                : t("csSub.draft", { v: String(it.version ?? 1) })}{" "}
+                        <span
+                          className={`font-mono ${
+                            it.satisfied
+                              ? "text-done-text"
+                              : it.action === "approve"
+                                ? "text-gate-text"
+                                : "text-ink-tertiary"
+                          }`}
+                        >
+                          {t(`cs.${it.satisfied ? "approved" : it.status}`)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3.5">
+                      {it.required > 0 && (
+                        <div className="hidden w-[90px] sm:block">
+                          <div className="h-[5px] overflow-hidden rounded-pill bg-neutral-100">
+                            <span
+                              className="block h-full bg-action"
+                              style={{
+                                width: `${Math.min(100, Math.round((it.filled / it.required) * 100))}%`,
+                              }}
+                            />
+                          </div>
+                          <div className="mt-1 text-right font-mono text-[9px] text-ink-tertiary">
+                            {t("fieldsMeter", { filled: it.filled, required: it.required })}
+                          </div>
+                        </div>
+                      )}
+                      {it.action === "approve" && (
+                        <Link
+                          href={it.href}
+                          className="shrink-0 rounded-control bg-action px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-action-hover"
+                        >
+                          {t("actionApprove")} →
+                        </Link>
+                      )}
+                      {it.action === "create" && (
+                        <Link
+                          href={it.href}
+                          className="shrink-0 rounded-control border border-line bg-surface px-3.5 py-1.5 text-[12px] font-semibold text-ink hover:bg-soft"
+                        >
+                          {t("actionCreate")} +
+                        </Link>
+                      )}
+                      {it.action === "open" && (
+                        <Link
+                          href={it.href}
+                          className="shrink-0 rounded-control border border-line bg-surface px-3.5 py-1.5 text-[12px] font-semibold text-ink hover:bg-soft"
+                        >
+                          {t("actionOpen")} →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* footer: fő gomb + poka-yoke */}
+              <div className="flex items-center gap-3 border-t border-neutral-100 bg-soft px-5 py-3.5">
                 <Link
-                  href={`/project/${id}/phase/${activePhase}`}
-                  className="inline-flex items-center gap-1.5 rounded-control bg-action px-4 py-2 text-[13px] font-semibold text-white shadow-action hover:bg-action-hover"
+                  href={workspaceHref}
+                  className="inline-flex items-center gap-2 rounded-control bg-action px-4 py-2.5 text-[13px] font-semibold text-white shadow-action hover:bg-action-hover"
                 >
                   {t("openWorkspace", { phase: activePhase })} →
                 </Link>
+                <div className="flex-1" />
+                {unmet.length > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-control border border-line bg-sunken px-3.5 py-2 text-[12px] text-ink-tertiary">
+                    <IconLock size={12} />
+                    {t("gateCloseBlockedShort", { n: unmet.length })}
+                  </span>
+                ) : (
+                  <Link
+                    href={workspaceHref}
+                    className="rounded-control bg-done px-3.5 py-2 text-[12px] font-semibold text-white hover:opacity-90"
+                  >
+                    {t("gateCloseReady")} →
+                  </Link>
+                )}
               </div>
             </section>
           )}
 
-          {/* Statok — az érték dominál (P2) */}
+          {/* Health-strip (alátámasztó) — a blokkoló metrika borostyán */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatTile
               value={`${painConfirmed}`}
@@ -404,6 +616,7 @@ export default async function ProjectCockpitPage({
               label={t("statReportFields")}
               pct={fieldsRequired > 0 ? (fieldsFilled / fieldsRequired) * 100 : 0}
               tone="gate"
+              note={reportBlocks ? t("blocksGate") : undefined}
             />
           </div>
 
@@ -446,68 +659,6 @@ export default async function ProjectCockpitPage({
         </div>
 
         <div className="flex flex-col gap-4">
-          {/* Gate-kártya — a gomb hordozza az indoklását (P5) */}
-          {active && active.criteria.length > 0 && (
-            <section className="overflow-hidden rounded-shell border border-tint-gate-border bg-surface shadow-card">
-              <div className="flex items-center gap-2 border-b border-tint-gate-border bg-tint-gate px-4 py-3">
-                <span aria-hidden className="text-gate-text">
-                  ◇
-                </span>
-                <h2 className="text-[13px] font-bold">
-                  {t("gateCardTitle", { phase: activePhase })}
-                </h2>
-                <span className="ml-auto font-mono text-[11px] font-semibold text-gate-text">
-                  {gateScore}
-                </span>
-              </div>
-              <div className="flex flex-col gap-2.5 p-4">
-                {active.criteria.map((c) =>
-                  c.satisfied ? (
-                    <div key={c.id} className="flex items-center gap-2.5">
-                      <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-control bg-done text-white">
-                        <IconCheck size={10} />
-                      </span>
-                      <span className="text-[12.5px] text-ink-secondary">
-                        {criterionLabel(c, tCriteria, tTypes)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div
-                      key={c.id}
-                      className="flex items-center gap-2.5 rounded-control border border-tint-gate-border bg-tint-gate-band px-2.5 py-2"
-                    >
-                      <span
-                        aria-hidden
-                        className="h-[18px] w-[18px] shrink-0 rounded-control border-[1.5px] border-gate"
-                      />
-                      <span className="min-w-0 flex-1 text-[12.5px] font-bold text-gate-text">
-                        {criterionLabel(c, tCriteria, tTypes)}
-                      </span>
-                      <span className="shrink-0 font-mono text-[10.5px] font-semibold text-gate-text">
-                        {t("gateOpenTag")}
-                      </span>
-                    </div>
-                  ),
-                )}
-              </div>
-              <div className="px-4 pb-3.5">
-                {unmet.length > 0 ? (
-                  <div className="flex items-center justify-center gap-1.5 rounded-control bg-neutral-100 px-3 py-2 text-center text-[12px] font-semibold leading-tight text-ink-tertiary">
-                    <IconLock size={12} className="shrink-0" />
-                    {t("gateCloseBlocked", { criterion: firstUnmetLabel })}
-                  </div>
-                ) : (
-                  <Link
-                    href={`/project/${id}/phase/${activePhase}`}
-                    className="flex items-center justify-center rounded-control bg-action px-3 py-2 text-[12px] font-semibold text-white shadow-action hover:bg-action-hover"
-                  >
-                    {t("gateCloseReady")} →
-                  </Link>
-                )}
-              </div>
-            </section>
-          )}
-
           {/* Stakeholderek (#8) — kattintásra a dedikált nézet */}
           <section className="overflow-hidden rounded-shell border border-line bg-surface shadow-card">
             <div className="border-b border-neutral-100 px-4 py-3">
@@ -601,20 +752,22 @@ function StatTile({
   label,
   pct,
   tone,
+  note,
 }: {
   value: string;
   suffix: string;
   label: string;
   pct: number;
   tone: "done" | "pivot" | "gate";
+  note?: string;
 }) {
   const valueCls =
     tone === "done" ? "text-done-text" : tone === "pivot" ? "text-pivot" : "text-gate-text";
   const barCls = tone === "done" ? "bg-done" : tone === "pivot" ? "bg-pivot" : "bg-gate";
   return (
     <div
-      className={`rounded-tile border bg-surface p-3.5 shadow-card-sm ${
-        tone === "gate" ? "border-tint-gate-border" : "border-line"
+      className={`rounded-tile border p-3.5 shadow-card-sm ${
+        note ? "border-tint-gate-border bg-tint-gate" : tone === "gate" ? "border-tint-gate-border bg-surface" : "border-line bg-surface"
       }`}
     >
       <div className="flex items-baseline gap-1.5">
@@ -625,6 +778,7 @@ function StatTile({
         className={`mt-[3px] text-[11px] ${tone === "gate" ? "font-semibold text-gate-text" : "text-ink-tertiary"}`}
       >
         {label}
+        {note && <span className="font-bold"> · {note}</span>}
       </div>
       <div className="mt-2 flex h-1 overflow-hidden rounded-[2px] bg-neutral-100">
         <span className={barCls} style={{ width: `${Math.min(100, Math.round(pct))}%` }} />

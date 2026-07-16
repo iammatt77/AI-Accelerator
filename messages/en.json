@@ -136,7 +136,34 @@
     "activityGateClosed": "{phase} gate closed",
     "activityArtifact": "{name} v{v} updated",
     "activityInput": "new raw material added",
-    "metaCharter": "Charter"
+    "metaCharter": "Charter",
+    "attentionTag": "ATTENTION",
+    "statusBlocked": "The project is at the gate; the missing approvals are needed to proceed.",
+    "statusReady": "The gate is ready to close — {next} opens next.",
+    "gateFocusKicker": "{phase} exit gate · to do",
+    "gateFocusHeadline": "{n} approval(s) away from {next}",
+    "gateFocusReady": "The gate is ready to close",
+    "gateReadyCountLabel": "done",
+    "cs": {
+      "approved": "APPROVED",
+      "draft": "DRAFT",
+      "in_review": "IN REVIEW",
+      "not_started": "NOT STARTED",
+      "open": "OPEN"
+    },
+    "csSub": {
+      "approved": "Approved.",
+      "draft": "Draft ready (v{v}) — awaiting approval.",
+      "inReview": "In review (v{v}) — awaiting approval.",
+      "notStarted": "Not started yet — required for the gate.",
+      "open": "To satisfy for the gate."
+    },
+    "fieldsMeter": "{filled}/{required} fields",
+    "actionApprove": "To approval",
+    "actionCreate": "Create",
+    "actionOpen": "Open",
+    "gateCloseBlockedShort": "Close gate — the {n} criteria first",
+    "blocksGate": "blocks the gate"
   },
   "phases": {
     "p0": {
