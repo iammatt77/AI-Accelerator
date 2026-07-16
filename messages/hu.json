@@ -854,8 +854,29 @@
   },
   "sourcesPage": {
     "title": "Források",
-    "lead": "A projekt nyersanyagai olvasó nézetben — az új bemenet felvétele a fázis-munkafelület Input zónájában történik.",
-    "empty": "Még nincs nyersanyag — az első bemenetet a fázis-munkafelületen add meg."
+    "lead": "A projekt nyersanyagai kereshető könyvtárként — bal oldalt a lista, jobbra a kiválasztott forrás olvasó-nézete. Az új bemenet felvétele a fázis-munkafelület Input zónájában történik.",
+    "empty": "Még nincs nyersanyag — az első bemenetet a fázis-munkafelületen add meg.",
+    "searchPlaceholder": "Keresés a forrásokban…",
+    "filterAll": "Mind",
+    "kind": {
+      "transcript": "Átirat",
+      "list": "Lista",
+      "note": "Jegyzet",
+      "data": "Adat",
+      "document": "Dokumentum"
+    },
+    "noMatch": "Nincs a szűrőre illeszkedő forrás.",
+    "addHint": "Új bemenet felvétele a fázis-munkafelület Input zónájában történik.",
+    "readerEmpty": "Válassz forrást a listából az olvasó-nézethez.",
+    "refCountShort": "hivatkozva {n}×",
+    "referencedBy": "Hivatkozva:",
+    "noReferences": "— még egyetlen deliverable vagy stakeholder sem hivatkozik rá",
+    "uploadedOn": "feltöltve {date}",
+    "wordCount": "{n} szó",
+    "viewRaw": "Megnyitás ↗",
+    "viewFormatted": "Formázott nézet",
+    "insertCitation": "Hivatkozás beszúrása",
+    "citationCopied": "Másolva ✓"
   },
   "stakeholders": {
     "sectionTitle": "Stakeholderek",

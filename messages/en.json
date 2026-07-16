@@ -854,8 +854,29 @@
   },
   "sourcesPage": {
     "title": "Sources",
-    "lead": "The project's raw materials in a reading view — new inputs are added in the phase workspace Input zone.",
-    "empty": "No raw materials yet — add the first input on the phase workspace."
+    "lead": "The project's raw materials as a searchable library — the list on the left, the selected source's reading view on the right. New inputs are added in the phase workspace Input zone.",
+    "empty": "No raw materials yet — add the first input on the phase workspace.",
+    "searchPlaceholder": "Search the sources…",
+    "filterAll": "All",
+    "kind": {
+      "transcript": "Transcript",
+      "list": "List",
+      "note": "Note",
+      "data": "Data",
+      "document": "Document"
+    },
+    "noMatch": "No source matches the filter.",
+    "addHint": "New inputs are added in the phase workspace Input zone.",
+    "readerEmpty": "Select a source from the list to open the reading view.",
+    "refCountShort": "referenced {n}×",
+    "referencedBy": "Referenced by:",
+    "noReferences": "— no deliverable or stakeholder references it yet",
+    "uploadedOn": "uploaded {date}",
+    "wordCount": "{n} words",
+    "viewRaw": "Open raw ↗",
+    "viewFormatted": "Formatted view",
+    "insertCitation": "Insert reference",
+    "citationCopied": "Copied ✓"
   },
   "stakeholders": {
     "sectionTitle": "Stakeholders",
