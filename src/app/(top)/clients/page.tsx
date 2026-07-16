@@ -1,21 +1,14 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
-import { loadPhaseBoard } from "@/lib/phases/service";
-import { nextPhase, type PhaseId } from "@/lib/phases/config";
+import type { PhaseId } from "@/lib/phases/config";
 import { criterionLabel } from "@/lib/phases/criterion-label";
+import { loadProjectStates } from "@/lib/projects/state";
 import {
   ClientsPortfolio,
   type ClientVM,
   type PortfolioKpis,
 } from "@/components/ClientsPortfolio";
-import {
-  attentionRank,
-  daysSince,
-  needsAttention,
-  STALL_THRESHOLD_DAYS,
-  weekOf,
-  type AttentionLevel,
-} from "@/lib/clients/portfolio";
+import { attentionRank, needsAttention, weekOf, type AttentionLevel } from "@/lib/clients/portfolio";
 import type { ClientRow, ProjectRow } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
@@ -72,91 +65,45 @@ export default async function ClientsPage() {
   const projects = (projectData ?? []) as ProjectRow[];
   const projectIds = projects.map((p) => p.id);
 
-  // Utolsó aktivitás forrásai (nincs projects.updated_at): artefaktum-frissülés
-  // + kapu-döntés + a projekt létrejötte közül a legkésőbbi.
-  const [artRes, decRes, boards] = await Promise.all([
-    projectIds.length
-      ? supabase.from("artifacts").select("project_id, updated_at").in("project_id", projectIds)
-      : Promise.resolve({ data: [] as { project_id: string; updated_at: string }[] }),
-    projectIds.length
-      ? supabase.from("decisions").select("project_id, created_at").in("project_id", projectIds)
-      : Promise.resolve({ data: [] as { project_id: string; created_at: string }[] }),
-    Promise.all(projects.map((p) => loadPhaseBoard(supabase, p.id))),
-  ]);
-  const artByProject = new Map<string, string[]>();
-  for (const a of (artRes.data ?? []) as { project_id: string; updated_at: string }[]) {
-    (artByProject.get(a.project_id) ?? artByProject.set(a.project_id, []).get(a.project_id)!).push(
-      a.updated_at,
-    );
-  }
-  const decByProject = new Map<string, string[]>();
-  for (const d of (decRes.data ?? []) as { project_id: string; created_at: string }[]) {
-    (decByProject.get(d.project_id) ?? decByProject.set(d.project_id, []).get(d.project_id)!).push(
-      d.created_at,
-    );
-  }
-  const boardByProject = new Map(projects.map((p, i) => [p.id, boards[i]]));
+  // Projekt-állapotok a KÖZÖS szerver-helperből (ugyanaz, mint a Projektek-lap).
+  const states = await loadProjectStates(supabase, projects, nowMs);
 
+  // A közös állapotból a lista-nézet teendő-szövege (i18n a hívónál).
   function deriveProject(project: ProjectRow): ProjectDeriv {
-    const board = boardByProject.get(project.id) ?? [];
-    const active =
-      board.find((e) => e.state === "in_progress" || e.state === "gate_pending") ??
-      board.find((e) => e.state === "open") ??
-      null;
-    const completed = board.filter((e) => e.state === "completed");
-    const lastCompleted = completed.length ? completed[completed.length - 1].phase : ("P0" as PhaseId);
-
-    // Utolsó aktivitás.
-    let lastIso = project.created_at;
-    for (const iso of artByProject.get(project.id) ?? []) if (iso > lastIso) lastIso = iso;
-    for (const iso of decByProject.get(project.id) ?? []) if (iso > lastIso) lastIso = iso;
-    const days = daysSince(lastIso, nowMs);
-    const projectActive = project.status === "active";
-
-    const met = active ? active.criteria.filter((c) => c.satisfied).length : 0;
-    const total = active ? active.criteria.length : 0;
-    const unmet = active ? active.criteria.filter((c) => !c.satisfied) : [];
-    const isClosed = !active && projectActive === false ? true : !active;
-    const stalled = projectActive && !isClosed && days >= STALL_THRESHOLD_DAYS;
-
-    let attention: AttentionLevel;
+    const s = states.get(project.id)!;
     let todo: string;
     let todoTone: ClientVM["todoTone"];
-    if (isClosed) {
-      attention = "closed";
+    if (s.attention === "closed") {
       todo = t("todoClosed");
       todoTone = "done";
-    } else if (stalled) {
-      attention = "stalled";
-      todo = t("todoStalled", { n: days });
+    } else if (s.attention === "stalled") {
+      todo = t("todoStalled", { n: s.days });
       todoTone = "danger";
-    } else if (unmet.length > 0) {
-      attention = "blocked";
-      todo = t("todoGate", { met, total, criterion: criterionLabel(unmet[0], tCriteria, tTypes) });
+    } else if (s.attention === "blocked") {
+      todo = t("todoGate", {
+        met: s.met,
+        total: s.total,
+        criterion: s.firstUnmet ? criterionLabel(s.firstUnmet, tCriteria, tTypes) : "",
+      });
       todoTone = "gate";
-    } else if (active?.gateReady) {
-      attention = "ready";
-      const nx = nextPhase(active.phase) ?? active.phase;
-      todo = t("todoReady", { met, total, next: nx });
+    } else if (s.attention === "ready") {
+      todo = t("todoReady", { met: s.met, total: s.total, next: s.nextPhase });
       todoTone = "done";
     } else {
-      attention = "healthy";
       todo = t("todoHealthy");
       todoTone = "muted";
     }
-
-    const phase = active?.phase ?? lastCompleted;
     return {
       project,
-      attention,
-      phase,
-      phaseTone: isClosed ? "done" : "action",
+      attention: s.attention,
+      phase: s.phase,
+      phaseTone: s.isClosed ? "done" : "action",
       todo,
       todoTone,
-      lastIso,
-      days,
-      met,
-      total,
+      lastIso: s.lastIso,
+      days: s.days,
+      met: s.met,
+      total: s.total,
     };
   }
 

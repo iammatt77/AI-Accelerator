@@ -58,3 +58,26 @@ export function barClass(a: AttentionLevel): string {
   if (a === "blocked") return "border-l-gate";
   return "border-l-transparent";
 }
+
+// Teszt/piszkozat-szűrés: a szemét-projektek (üres/teszt/próba nevűek vagy a
+// magánhangzó nélküli „sdfsdf"-szerű gépelés) alapból elrejtve, a szűrőben
+// elérhetők. A kritérium DOKUMENTÁLT, nem varázsszám:
+//  1) a projekt VAGY az ügyfél neve tartalmaz teszt-kulcsszót (teszt/test/
+//     próba/piszkozat/draft/üres/demo), VAGY
+//  2) a projekt neve „placeholder-gépelés": ≤2 karakter, vagy nincs benne
+//     magánhangzó (pl. „sdfsdf", „asd", „qwe").
+const TEST_KEYWORDS = /(teszt|test|pr[oó]ba|piszkozat|draft|[uü]res|dummy|demo|placeholder)/i;
+const HAS_VOWEL = /[aáeéiíoóöőuúüűAÁEÉIÍOÓÖŐUÚÜŰ]/;
+
+/** Placeholder-gépelésnek tűnik-e a név (magánhangzó nélküli / túl rövid). */
+function looksLikeGibberish(name: string): boolean {
+  const n = name.trim();
+  if (n.length <= 2) return true;
+  return !HAS_VOWEL.test(n);
+}
+
+/** Teszt/piszkozat projekt-e (alapból rejtett). Lásd a fenti kritériumot. */
+export function isTestProject(projectName: string, clientName: string | null): boolean {
+  if (TEST_KEYWORDS.test(projectName) || TEST_KEYWORDS.test(clientName ?? "")) return true;
+  return looksLikeGibberish(projectName);
+}
