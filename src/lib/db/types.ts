@@ -129,3 +129,27 @@ export interface PainPointStakeholderRow {
   pain_point_id: string;
   stakeholder_id: string;
 }
+
+/** process_maps sora (0008, #10 Folyamattérkép). */
+export interface ProcessMapRow {
+  id: string;
+  project_id: string;
+  phase: string | null;
+  kind: "as_is" | "to_be";
+  title: string;
+  status: ArtifactStatus;
+  version: number;
+  /** A nyers leirat (input_items) — csak hivatkozott, SOHA nem íródik felül. */
+  source_input_id: string | null;
+  to_be_origin: "document" | "ai_suggested" | null;
+  /** Node-lista jsonb — defenzív parse: lib/processmap/parse.graphFromJson. */
+  nodes: unknown;
+  /** Él-lista jsonb — ugyanott. */
+  edges: unknown;
+  /** Az eredeti AI-generált {nodes,edges} a változáskövetéshez. */
+  original_snapshot: unknown;
+  /** Chat-üzenetek + függő javaslat jsonb — lib/processmap/chat. */
+  chat_log: unknown;
+  created_at: string;
+  updated_at: string;
+}
