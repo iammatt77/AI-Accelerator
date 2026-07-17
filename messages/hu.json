@@ -1189,5 +1189,13 @@
     "scaleThenPlaceholder": "pl. teljes B2C sorra",
     "pivotThenPlaceholder": "pl. +4 hét újramérés",
     "stopThenPlaceholder": "pl. leállítás"
+  },
+  "processMap": {
+    "errInputNotFound": "A kiválasztott bemenet nem található a projektben.",
+    "noticeNoSteps": "A feldolgozás lefutott, de nem adott azonosítható folyamat-lépést — nézd meg a forrást.",
+    "errSave": "A folyamatterv mentése nem sikerült: {message}",
+    "errLlm": "A generálás nem sikerült: {message}",
+    "errAsIsNotFound": "Az AS-IS folyamatterv nem található — előbb azt generáld le.",
+    "toBeDefaultTitle": "TO-BE folyamat (AI-javasolt)"
   }
 }

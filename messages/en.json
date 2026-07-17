@@ -1189,5 +1189,13 @@
     "scaleThenPlaceholder": "e.g. to the full B2C queue",
     "pivotThenPlaceholder": "e.g. +4 weeks re-measure",
     "stopThenPlaceholder": "e.g. stop"
+  },
+  "processMap": {
+    "errInputNotFound": "The selected input was not found in the project.",
+    "noticeNoSteps": "Processing finished but produced no identifiable process step — check the source.",
+    "errSave": "Saving the process map failed: {message}",
+    "errLlm": "Generation failed: {message}",
+    "errAsIsNotFound": "The AS-IS process map was not found — generate it first.",
+    "toBeDefaultTitle": "TO-BE process (AI-suggested)"
   }
 }

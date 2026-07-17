@@ -730,3 +730,198 @@ function mockGenerateBody(
     `_Vége — ${byKey.size} megerősített mező, ${sources.length} forrás._`,
   ].join("\n");
 }
+
+// ── Folyamattérkép (#10): AS-IS kivonatolás + TO-BE tervezés ──
+
+// A folyamat-javaslat parse-a a lib/processmap/parse-ban él (tiszta,
+// önállóan tesztelt). Itt csak a prompt + a determinisztikus mock.
+import { parseProcessProposal, type ParsedProcess } from "@/lib/processmap/parse";
+export type { ParsedProcess } from "@/lib/processmap/parse";
+
+const PROCESS_SHAPE = [
+  `{ "title": "<a folyamat rövid címe>", "steps": [ { "id": "s1",`,
+  `"title": "<lépés címe>", "sub": "<rövid metaadat vagy null>",`,
+  `"type": "start_end" | "human" | "system" | "decide" | "ai_intervention" | "control_hitl",`,
+  `"desc": "<1-2 mondatos magyarázat>", "quote": "<szó szerinti idézet a forrásból>",`,
+  `"loc": "<hely a leiratban, pl. időkód, vagy üres>",`,
+  `"open_points": [{"level":"blocker"|"important"|"clarify","text":"<nyitott kérdés>"}],`,
+  `"next": [{"to":"s2","label":"<ág-felirat döntésnél, egyébként null>"}] } ] }`,
+].join(" ");
+
+/**
+ * Folyamat-kivonatolás (#10, E1 első fele): EGY nyers leiratból bejárható
+ * lépéslistát épít (node-topológia + élek). Minden lépés forrás-hivatkozással
+ * (szó szerinti idézet + hely) — ami a leiratban nincs benne, az NEM kerül a
+ * térképre. A megerősítés/jóváhagyás emberi lépés. AS-IS-hez és bevitt
+ * TO-BE-leirathoz ugyanez a belépő (a kind a hívónál dől el).
+ */
+export async function extractProcessMap(
+  source: LlmSource,
+  refLabel: string,
+): Promise<ParsedProcess> {
+  if (isMock()) {
+    return mockExtractProcessMap(source, refLabel);
+  }
+
+  const system = [
+    "Üzleti folyamat-elemző vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A megadott nyers leiratból a LEÍRT folyamat lépéseit rekonstruálod, bejárható",
+    "gráfként. KIZÁRÓLAG érvényes JSON-t adsz vissza. SZIGORÚ SZABÁLY: csak olyan",
+    "lépést vehetsz fel, amelyre a leiratban tényleges alap van; a quote mező",
+    "SZÓ SZERINTI idézet a forrásból (rövidíthetsz …-tal, de nem fogalmazhatsz át).",
+    "TILOS lépést kitalálni vagy általános folyamat-tudásból pótolni.",
+    "A type az adott készletből választandó; ha egyik sem illik, használhatsz új,",
+    "kisbetűs snake_case típust — a készlet a folyamat jellegéhez idomul.",
+    "Elágazásnál (decide) a next-elemek label-je az ág neve. A kezdő és a záró",
+    "állapot type-ja start_end. Az eredmény magyarul készül.",
+  ].join(" ");
+
+  const userPrompt = [
+    "── Nyers leirat ──",
+    `${refLabel} ${source.title}`,
+    source.text,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    PROCESS_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 6000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseProcessProposal(textFromMessage(message), refLabel, source.title);
+}
+
+export interface ProcessBasisPain {
+  title: string;
+  description: string | null;
+}
+
+export interface AsIsStepSummary {
+  title: string;
+  type: string;
+  desc: string;
+}
+
+/**
+ * TO-BE tervezés (#10, AI-javasolt eredet): a MEGERŐSÍTETT fájdalompontokból
+ * + az AS-IS lépéslistából jövőbeli folyamatot javasol — ai_intervention
+ * (hol lép be az AI) és control_hitl (hol kötelező emberi kontroll) node-okkal.
+ * Ez TERVEZÉS (emberi ítélet is kell) — minden lépés quote-ja az eredet-
+ * megjelölés (mely fájdalompont/AS-IS lépés az alapja), nem leirat-idézet.
+ * A javaslat draft — a tanácsadó iterál rajta és egyben hagyja jóvá.
+ */
+export async function suggestToBeProcess(
+  asIsSteps: AsIsStepSummary[],
+  pains: ProcessBasisPain[],
+): Promise<ParsedProcess> {
+  if (isMock()) {
+    return mockSuggestToBeProcess(asIsSteps, pains);
+  }
+
+  const system = [
+    "AI-implementációs folyamat-tervező vagy. A feladat: az ügyfél MAI (AS-IS)",
+    "folyamatából és a feltárt fájdalompontokból JÖVŐBELI (TO-BE) folyamatot",
+    "tervezni. KIZÁRÓLAG érvényes JSON-t adsz vissza.",
+    "Szabályok: ai_intervention type-ú lépés oda kerül, ahol az AI ténylegesen",
+    "kivált vagy támogat egy mai lépést; control_hitl oda, ahol emberi kontroll",
+    "KÖTELEZŐ (kimenő automata tartalom emberi jóváhagyás nélkül tilos).",
+    "A quote mező itt EREDET-MEGJELÖLÉS: nevezd meg, melyik fájdalompontból",
+    "és/vagy melyik AS-IS lépésből vezetted le a lépést, és jelöld, hogy",
+    "felülvizsgálandó javaslat. TILOS számszerű hatást (időt, százalékot,",
+    "költséget) kitalálni — ha a bemenetben nincs szám, a lépés sub-ja ne",
+    "tartalmazzon számot. Az eredmény magyarul készül.",
+  ].join(" ");
+
+  const painLines =
+    pains.length > 0
+      ? pains
+          .map((p, i) => `${i + 1}. ${p.title}${p.description ? ` — ${p.description}` : ""}`)
+          .join("\n")
+      : "(nincs megerősített fájdalompont — az AS-IS gyenge pontjaiból indulj ki)";
+  const stepLines = asIsSteps
+    .map((s, i) => `${i + 1}. [${s.type}] ${s.title} — ${s.desc}`)
+    .join("\n");
+
+  const userPrompt = [
+    "── Fájdalompontok ──",
+    painLines,
+    "",
+    "── AS-IS lépések ──",
+    stepLines,
+    "",
+    "Tervezd meg a TO-BE folyamatot. Add vissza pontosan ebben a JSON-alakban:",
+    PROCESS_SHAPE,
+    "A loc mező maradjon üres. Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 6000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseProcessProposal(textFromMessage(message), "AI", "eredet: AI-terv");
+}
+
+// ── Folyamattérkép mock-fixture-ök (determinisztikus) ────────
+
+// A demo panaszkezelés-leiratához igazított AS-IS: lineáris lánc + egy
+// kétágú döntés, ami visszacsatlakozik (a bejárás/ág-választás tesztelhető).
+// Az idézetek SZÓ SZERINT a reset-demo transzkriptjéből valók, hogy a
+// nyers-leirat overlay kiemelése működjön. Rövid forrásnál (<40 kar.) üres
+// (nincs alap → az AI nem tippel — negatív teszt).
+function mockExtractProcessMap(source: LlmSource, refLabel: string): ParsedProcess {
+  if (source.text.trim().length < 40) {
+    return { title: "", graph: { nodes: [], edges: [] } };
+  }
+  const steps = [
+    { id: "s1", title: "Panasz beérkezik", sub: "email · központi cím", type: "start_end", desc: "A panaszok egy központi címre érkeznek, napi ~40 darab, hullámzó eloszlással.", quote: "Napi negyven körül jön be, hullámzik.", loc: "04:12", open_points: [], next: [{ to: "s2", label: null }] },
+    { id: "s2", title: "Kézi szétosztás kategóriákba", sub: "1 fő · akár másfél nap", type: "human", desc: "Egy kolléga reggelente kézzel osztja szét a leveleket kategóriákba — a szétosztás akár másfél napig tart.", quote: "minden reggel egy kolléga végigmegy a leveleken és szétdobálja őket kategóriákba", loc: "04:12", open_points: [{ level: "clarify", text: "Végleges kategória-lista egyeztetendő." }], next: [{ to: "s3", label: null }] },
+    { id: "s3", title: "Sürgős reklamáció?", sub: null, type: "decide", desc: "Nincs előszűrés — a sürgős reklamáció ugyanabban a sorban áll, mint a sima érdeklődés; a megkülönböztetés az ügyintézőre marad.", quote: "A sürgős reklamációk is ugyanabban a sorban állnak, mint a sima érdeklődés. Nincs előszűrés.", loc: "09:48", open_points: [], next: [{ to: "s4", label: "Igen · sürgős" }, { to: "s5", label: "Nem · normál" }] },
+    { id: "s4", title: "Azonnali kézi válasz", sub: "sürgős ág", type: "human", desc: "A sürgősnek felismert reklamációt az ügyintéző soron kívül, kézzel válaszolja meg.", quote: "A sürgős reklamációk is ugyanabban a sorban állnak, mint a sima érdeklődés.", loc: "09:48", open_points: [{ level: "blocker", text: "Sürgősség-kritérium nincs leírva — ki dönti el?" }], next: [{ to: "s6", label: null }] },
+    { id: "s5", title: "Válasz sablon nélkül", sub: "ügyintézőnként eltérő", type: "human", desc: "Nincs egységes sablon — mindenki a maga módján ír, a hangnem és a terjedelem ingadozik.", quote: "nincs egységes sablonunk, mindenki úgy ír, ahogy tud", loc: "18:37", open_points: [{ level: "important", text: "Sablon-készlet hiányzik — ki a gazdája?" }], next: [{ to: "s6", label: null }] },
+    { id: "s6", title: "Havi riport kézzel Excelben", sub: "vezetőség felé", type: "system", desc: "A vezetőség havi riportot kér a panasz-okokról; ezt most kézzel számolják Excelben.", quote: "A vezetőség havi riportot kér a panasz-okokról, azt most kézzel számoljuk Excelben.", loc: "24:05", open_points: [], next: [{ to: "s7", label: null }] },
+    { id: "s7", title: "Jegy lezárva", sub: null, type: "start_end", desc: "A panasz megválaszolva, az ügy lezárva.", quote: "Napi negyven körül jön be, hullámzik.", loc: "04:12", open_points: [], next: [] },
+  ];
+  return parseProcessProposal(
+    JSON.stringify({ title: "Panaszkezelés — jelenlegi folyamat", steps }),
+    refLabel,
+    source.title,
+  );
+}
+
+// TO-BE fixture: a fájdalompontokból + AS-IS-ből tervezett folyamat —
+// ai_intervention + control_hitl node-okkal, eredet-megjelöléses quote-tal
+// (nem fabrikál számot). Üres AS-IS-nél üres (nincs alap).
+function mockSuggestToBeProcess(
+  asIsSteps: AsIsStepSummary[],
+  pains: ProcessBasisPain[],
+): ParsedProcess {
+  if (asIsSteps.length === 0) {
+    return { title: "", graph: { nodes: [], edges: [] } };
+  }
+  const pain = (i: number) => pains[i]?.title ?? pains[0]?.title ?? "az AS-IS gyenge pontja";
+  const basis = (p: string, s: string) =>
+    `AI-javaslat — a(z) „${p}” fájdalompontból és az AS-IS „${s}” lépéséből levezetve. Felülvizsgálandó.`;
+  const steps = [
+    { id: "t1", title: "Panasz beérkezik", sub: "változatlan csatorna", type: "start_end", desc: "A beérkezés változatlan — a folyamat az érkezés után válik el az AS-IS-től.", quote: basis(pain(0), "Panasz beérkezik"), loc: "", open_points: [], next: [{ to: "t2", label: null }] },
+    { id: "t2", title: "AI-előszűrés és kategorizálás", sub: "automatikus", type: "ai_intervention", desc: "Az AI egységes taxonómia szerint kategorizál és sürgősséget jelöl — a kézi szétosztás kiváltása.", quote: basis(pain(0), "Kézi szétosztás kategóriákba"), loc: "", open_points: [], next: [{ to: "t3", label: null }] },
+    { id: "t3", title: "AI válasz-javaslat", sub: "sablon-alapú", type: "ai_intervention", desc: "Az AI a jóváhagyott sablonkészletből állít össze válasz-javaslatot az ügyintézőnek.", quote: basis(pain(1), "Válasz sablon nélkül"), loc: "", open_points: [{ level: "important", text: "Sablon-készlet összeállítása a bevezetés előtt." }], next: [{ to: "t4", label: null }] },
+    { id: "t4", title: "Megbízható a javaslat?", sub: null, type: "decide", desc: "A javaslat megbízhatósága dönt: megfelelő javaslat ügyintézői jóváhagyásra megy, egyébként kézi válasz készül.", quote: basis(pain(1), "Sürgős reklamáció?"), loc: "", open_points: [], next: [{ to: "t5", label: "Igen · jóváhagyásra" }, { to: "t6", label: "Nem · kézi válasz" }] },
+    { id: "t5", title: "Ügyintéző jóváhagyja / szerkeszti", sub: "HITL", type: "control_hitl", desc: "Automata válasz SOHA nem megy ki emberi jóváhagyás nélkül — az ügyintéző elfogadja, szerkeszti vagy elveti a javaslatot.", quote: basis(pain(1), "Válasz sablon nélkül"), loc: "", open_points: [], next: [{ to: "t7", label: null }] },
+    { id: "t6", title: "Kézi válasz (edge case)", sub: "AI-javaslat háttérként", type: "human", desc: "Bizonytalan javaslatnál az ügyintéző kézzel válaszol — az AI-javaslat háttéranyagként elérhető.", quote: basis(pain(1), "Válasz sablon nélkül"), loc: "", open_points: [], next: [{ to: "t7", label: null }] },
+    { id: "t7", title: "Riport automatikusan", sub: "AI-címkékből", type: "system", desc: "A havi vezetői riport az AI-címkékből áll össze — a kézi Excel-számolás kiváltása.", quote: basis(pain(0), "Havi riport kézzel Excelben"), loc: "", open_points: [], next: [{ to: "t8", label: null }] },
+    { id: "t8", title: "Jegy lezárva + visszacsatolás", sub: "javaslat-minőség mérése", type: "start_end", desc: "A lezárás mellett az ügyintézői szerkesztések visszacsatolása méri a javaslatok minőségét.", quote: basis(pain(0), "Jegy lezárva"), loc: "", open_points: [], next: [] },
+  ];
+  return parseProcessProposal(
+    JSON.stringify({ title: "Panaszkezelés — TO-BE (AI-javasolt)", steps }),
+    "AI",
+    "eredet: AI-terv",
+  );
+}
