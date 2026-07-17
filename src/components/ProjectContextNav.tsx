@@ -88,6 +88,12 @@ export function ProjectContextNav({ nav }: { nav: ProjectNavData }) {
         >
           <span className="flex-1">{t("processMap")}</span>
         </Link>
+        <Link
+          href={`${base}/requirements`}
+          className={itemCls(pathname.startsWith(`${base}/requirements`))}
+        >
+          <span className="flex-1">{t("requirements")}</span>
+        </Link>
         <div className="mt-auto">
           {nav.lockedRange && (
             <div
