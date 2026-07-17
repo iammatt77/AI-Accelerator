@@ -738,14 +738,29 @@ function mockGenerateBody(
 import { parseProcessProposal, type ParsedProcess } from "@/lib/processmap/parse";
 export type { ParsedProcess } from "@/lib/processmap/parse";
 
+// A shape maga DEMONSTRÁLJA az elágazást ÉS az összefutást (merge): a döntési
+// (decide) node-nak KÉT kimenő next-eleme van, két KÜLÖNBÖZŐ cél-node-ba, majd
+// a két ág UGYANARRA a merge-node-ra fut vissza. Ez a minta gátolja a hamis
+// linearitást (a #10-layout gyökérok: a modell a régi 1-elemű next-mintát
+// utánozta, ezért minden lépés egy oszlopba került).
 const PROCESS_SHAPE = [
-  `{ "title": "<a folyamat rövid címe>", "steps": [ { "id": "s1",`,
-  `"title": "<lépés címe>", "sub": "<rövid metaadat vagy null>",`,
-  `"type": "start_end" | "human" | "system" | "decide" | "ai_intervention" | "control_hitl",`,
-  `"desc": "<1-2 mondatos magyarázat>", "quote": "<szó szerinti idézet a forrásból>",`,
-  `"loc": "<hely a leiratban, pl. időkód, vagy üres>",`,
+  `{ "title": "<a folyamat rövid címe>", "steps": [`,
+  `{ "id": "s1", "title": "<első lépés>", "sub": "<rövid metaadat vagy null>",`,
+  `"type": "start_end", "desc": "<1-2 mondat>", "quote": "<szó szerinti idézet>",`,
+  `"loc": "<hely a leiratban vagy üres>", "open_points": [], "next": [{"to":"s2","label":null}] },`,
+  `{ "id": "s2", "title": "<döntési kérdés>",`,
+  `"type": "decide", "desc": "<mit dönt el>", "quote": "<idézet>", "loc": "<hely>",`,
   `"open_points": [{"level":"blocker"|"important"|"clarify","text":"<nyitott kérdés>"}],`,
-  `"next": [{"to":"s2","label":"<ág-felirat döntésnél, egyébként null>"}] } ] }`,
+  `"next": [{"to":"s3","label":"<1. ág feltétele, pl. Igen>"}, {"to":"s4","label":"<2. ág feltétele, pl. Nem>"}] },`,
+  `{ "id": "s3", "title": "<1. ág lépése>", "sub": null, "type": "human", "desc": "<…>",`,
+  `"quote": "<idézet>", "loc": "<hely>", "open_points": [], "next": [{"to":"s5","label":null}] },`,
+  `{ "id": "s4", "title": "<2. ág lépése>", "sub": null, "type": "human", "desc": "<…>",`,
+  `"quote": "<idézet>", "loc": "<hely>", "open_points": [], "next": [{"to":"s5","label":null}] },`,
+  `{ "id": "s5", "title": "<közös záró lépés — a két ág ide fut össze>", "sub": null,`,
+  `"type": "start_end", "desc": "<…>", "quote": "<idézet>", "loc": "<hely>", "open_points": [], "next": [] }`,
+  `] }`,
+  `A "type" a fenti készletből választandó (start_end / human / system / decide /`,
+  `ai_intervention / control_hitl); ha egyik sem illik, kisbetűs snake_case új típus.`,
 ].join(" ");
 
 /**
@@ -772,8 +787,16 @@ export async function extractProcessMap(
     "TILOS lépést kitalálni vagy általános folyamat-tudásból pótolni.",
     "A type az adott készletből választandó; ha egyik sem illik, használhatsz új,",
     "kisbetűs snake_case típust — a készlet a folyamat jellegéhez idomul.",
-    "Elágazásnál (decide) a next-elemek label-je az ág neve. A kezdő és a záró",
-    "állapot type-ja start_end. Az eredmény magyarul készül.",
+    "ELÁGAZÁS (kötelező, ha a folyamatban van): minden döntési (decide) node-nak",
+    "LEGALÁBB KÉT kimenő next-eleme legyen, KÜLÖNBÖZŐ cél-node-okba — ezek a döntés",
+    "PÁRHUZAMOS ágai, NEM egymást követő lépések. Az ágak label-je az ág",
+    "feltétele/kimenete (pl. „Igen”, „Nem · túl bonyolult”). Ha az ágak később közös",
+    "lépésre futnak, MINDKÉT ág next-je UGYANARRA a merge-node-ra mutasson — a közös",
+    "lépést NE ismételd meg két külön node-ként. Ha egy ág a végéig külön fut (nincs",
+    "merge), az is rendben. Kerüld a HAMIS LINEARITÁST: a leirat „ha X, akkor…,",
+    "egyébként…” szerkezetét elágazó next-ekkel add vissza, ne egymás utáni",
+    "lépésekként. DE ne találj ki elágazást ott, ahol a folyamat valóban lineáris.",
+    "A kezdő és a záró állapot type-ja start_end. Az eredmény magyarul készül.",
   ].join(" ");
 
   const userPrompt = [
@@ -834,7 +857,13 @@ export async function suggestToBeProcess(
     "és/vagy melyik AS-IS lépésből vezetted le a lépést, és jelöld, hogy",
     "felülvizsgálandó javaslat. TILOS számszerű hatást (időt, százalékot,",
     "költséget) kitalálni — ha a bemenetben nincs szám, a lépés sub-ja ne",
-    "tartalmazzon számot. Az eredmény magyarul készül.",
+    "tartalmazzon számot.",
+    "ELÁGAZÁS: minden döntési (decide) node-nak LEGALÁBB KÉT kimenő next-eleme",
+    "legyen, KÜLÖNBÖZŐ cél-node-okba (a döntés párhuzamos ágai, nem egymást követő",
+    "lépések), ág-label-lel; ahol az ágak közös lépésre futnak, mindkettő next-je",
+    "UGYANARRA a merge-node-ra mutasson (a közös lépést ne duplikáld). Kerüld a",
+    "hamis linearitást, de elágazást csak ott adj, ahol a folyamat tényleg elágazik.",
+    "Az eredmény magyarul készül.",
   ].join(" ");
 
   const painLines =
