@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
+import { ProcessApprovePanel } from "@/components/ProcessApprovePanel";
 import { ProcessChatDrawer } from "@/components/ProcessChatDrawer";
 import { ProcessMapViewer, type ProcessMapData } from "@/components/ProcessMapViewer";
 import { chatLogFromJson } from "@/lib/processmap/chat";
@@ -99,6 +100,9 @@ export default async function ProcessMapPage({
             chatLog={chatLogFromJson(mapRow.chat_log)}
           />
         ) : undefined
+      }
+      approveSlot={
+        <ProcessApprovePanel projectId={id} mapId={mapId} status={mapRow.status} />
       }
     />
   );

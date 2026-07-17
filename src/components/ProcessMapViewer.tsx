@@ -331,6 +331,8 @@ export function ProcessMapViewer({
             </Link>
           </>
         )}
+        {/* Egyben-jóváhagyás / új iteráció — ha nincs diff-sáv, itt lakik. */}
+        {!diffBarVisible && mode === initialKind && approveSlot}
       </div>
 
       {/* ── Változáskövetés-sáv ── */}
@@ -365,7 +367,10 @@ export function ProcessMapViewer({
           </button>
           <div className="flex-1" />
           {diffMap.status === "approved" ? (
-            <span className="text-[11.5px] text-done-text">{t("approvedNote")}</span>
+            <>
+              <span className="text-[11.5px] text-done-text">{t("approvedNote")}</span>
+              {mode === initialKind && approveSlot}
+            </>
           ) : (
             <>
               <span className="text-[11px] text-ink-tertiary">{t("iterateFreely")}</span>

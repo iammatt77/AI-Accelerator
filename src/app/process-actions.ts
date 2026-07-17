@@ -358,3 +358,94 @@ export async function discardChatProposalAction(
   revalidatePath(`/project/${projectId}/process/${mapId}`);
   return { ok: true, error: null };
 }
+
+// ─────────────────────────────────────────────────────────────
+// Egyben-jóváhagyás + új iteráció (#10, Fázis 5).
+// A jóváhagyás a TELJES tervet zárja (E1: az ember dönt) — a verzió ezzel
+// rögzül, az original_snapshot (az eredeti AI-verzió) megmarad a sorban.
+// További munka: új iteráció (v+1) — a jóváhagyott állapot másolata friss
+// diff-alappal (a snapshot az induló állapot, a diff-jegyzetek törlődnek).
+// ─────────────────────────────────────────────────────────────
+
+/** A terv egyben-jóváhagyása — a verzió ezzel zárul. */
+export async function approveProcessMapAction(
+  projectId: string,
+  mapId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const t = await getTranslations("processMap");
+  const supabase = createServiceSupabaseClient();
+  const { data } = await supabase
+    .from("process_maps")
+    .select("*")
+    .eq("id", mapId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (!data) return { ok: false, error: t("errMapNotFound") };
+  const map = data as ProcessMapRow;
+  if (map.status === "approved") {
+    return { ok: true, error: null, notice: t("noticeAlreadyApproved") };
+  }
+  const { error } = await supabase
+    .from("process_maps")
+    .update({ status: "approved", updated_at: new Date().toISOString() })
+    .eq("id", mapId);
+  if (error) {
+    return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+  }
+  revalidatePath(`/project/${projectId}/process/${mapId}`);
+  revalidatePath(`/project/${projectId}/process`);
+  return { ok: true, error: null };
+}
+
+/** Új iteráció a jóváhagyott tervből: v+1 draft, friss diff-alappal. */
+export async function newIterationAction(
+  projectId: string,
+  mapId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const t = await getTranslations("processMap");
+  const supabase = createServiceSupabaseClient();
+  const { data } = await supabase
+    .from("process_maps")
+    .select("*")
+    .eq("id", mapId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (!data) return { ok: false, error: t("errMapNotFound") };
+  const map = data as ProcessMapRow;
+
+  // Friss alap: a mostani (jóváhagyott) állapot lesz a v+1 snapshotja,
+  // a korábbi diff-jelzések nem öröklődnek.
+  const graph = graphFromJson(map.nodes, map.edges);
+  const cleanNodes = graph.nodes.map((n) => ({ ...n, diff: null, diff_note: null }));
+
+  let newId: string;
+  const version = await nextVersion(supabase, projectId, map.kind);
+  const { data: inserted, error } = await supabase
+    .from("process_maps")
+    .insert({
+      project_id: projectId,
+      phase: map.phase,
+      kind: map.kind,
+      title: map.title,
+      status: "draft",
+      version,
+      source_input_id: map.source_input_id,
+      to_be_origin: map.to_be_origin,
+      nodes: cleanNodes,
+      edges: graph.edges,
+      original_snapshot: { nodes: cleanNodes, edges: graph.edges },
+      chat_log: [],
+    })
+    .select("id")
+    .single();
+  if (error || !inserted) {
+    return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+  }
+  newId = (inserted as { id: string }).id;
+  revalidatePath(`/project/${projectId}/process`);
+  redirect(`/project/${projectId}/process/${newId}`);
+}
