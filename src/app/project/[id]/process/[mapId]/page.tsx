@@ -4,7 +4,7 @@ import { ProcessApprovePanel } from "@/components/ProcessApprovePanel";
 import { ProcessChatDrawer } from "@/components/ProcessChatDrawer";
 import { ProcessMapViewer, type ProcessMapData } from "@/components/ProcessMapViewer";
 import { chatLogFromJson } from "@/lib/processmap/chat";
-import { computeDiff } from "@/lib/processmap/model";
+import { computeDiff, layoutGraph } from "@/lib/processmap/model";
 import { graphFromJson, snapshotFromJson } from "@/lib/processmap/parse";
 import type { InputItemRow, ProcessMapRow, ProjectRow } from "@/lib/db/types";
 
@@ -18,8 +18,13 @@ export const dynamic = "force-dynamic";
 // ─────────────────────────────────────────────────────────────
 
 function toMapData(row: ProcessMapRow): ProcessMapData {
-  const graph = graphFromJson(row.nodes, row.edges);
-  const snapshot = snapshotFromJson(row.original_snapshot);
+  // Az elrendezést BETÖLTÉSKOR újraszámoljuk a tárolt topológiából — így a
+  // korábban generált térképek is az új, elágazó 2D-layouttal rajzolódnak,
+  // újragenerálás nélkül (a pozíció tiszta nézet-ügy).
+  const rawGraph = graphFromJson(row.nodes, row.edges);
+  const graph = layoutGraph(rawGraph.nodes, rawGraph.edges);
+  const rawSnapshot = snapshotFromJson(row.original_snapshot);
+  const snapshot = layoutGraph(rawSnapshot.nodes, rawSnapshot.edges);
   const diff = computeDiff(graph.nodes, snapshot.nodes);
   return {
     id: row.id,

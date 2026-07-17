@@ -7,7 +7,7 @@ import {
   edgePath,
   styleOf,
   worldHeight,
-  WORLD_W,
+  worldWidth,
   type GraphDiff,
   type ProcessEdge,
   type ProcessNode,
@@ -121,6 +121,7 @@ export function ProcessMapViewer({
   );
   const edges = activeMap ? (useOriginal ? activeMap.originalEdges : activeMap.edges) : [];
   const worldH = useMemo(() => worldHeight(nodes), [nodes]);
+  const worldW = useMemo(() => worldWidth(nodes), [nodes]);
   const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
   const order = nodes.map((n) => n.id);
   const startId = order[0] ?? "";
@@ -165,8 +166,8 @@ export function ProcessMapViewer({
       CANVAS_H / 2 - curNode.y * FOCUS_ZOOM + pan.y
     }px) scale(${FOCUS_ZOOM})`;
   } else {
-    const s = Math.min(vw / WORLD_W, CANVAS_H / worldH) * 0.94;
-    camera = `translate(${vw / 2 - (WORLD_W / 2) * s + pan.x}px, ${
+    const s = Math.min(vw / worldW, CANVAS_H / worldH) * 0.94;
+    camera = `translate(${vw / 2 - (worldW / 2) * s + pan.x}px, ${
       CANVAS_H / 2 - (worldH / 2) * s + pan.y
     }px) scale(${s})`;
   }
@@ -427,6 +428,7 @@ export function ProcessMapViewer({
               camera={camera}
               camTransition={dragging ? "none" : "transform .7s cubic-bezier(.6,.02,.1,1)"}
               worldH={worldH}
+              worldW={worldW}
               onGo={go}
               t={t}
             />
@@ -576,6 +578,7 @@ function World({
   camera,
   camTransition,
   worldH,
+  worldW,
   onGo,
   t,
 }: {
@@ -587,15 +590,16 @@ function World({
   camera: string;
   camTransition: string;
   worldH: number;
+  worldW: number;
   onGo: (id: string) => void;
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
   return (
     <div
       className="absolute left-0 top-0"
-      style={{ width: WORLD_W, height: worldH, transform: camera, transformOrigin: "0 0", transition: camTransition }}
+      style={{ width: worldW, height: worldH, transform: camera, transformOrigin: "0 0", transition: camTransition }}
     >
-      <svg width={WORLD_W} height={worldH} className="pointer-events-none absolute left-0 top-0">
+      <svg width={worldW} height={worldH} className="pointer-events-none absolute left-0 top-0">
         <defs>
           <marker id="pfArr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse">
             <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#C7CAD6" strokeWidth="2.2" />
@@ -752,7 +756,8 @@ function CompareView({
   const mini = (m: ProcessMapData | null, left: number, labelKey: string, labelCls: string) => {
     if (!m) return null;
     const h = worldHeight(m.nodes);
-    const s = Math.min((half - 40) / WORLD_W, (CANVAS_H - 60) / h);
+    const w = worldWidth(m.nodes);
+    const s = Math.min((half - 40) / w, (CANVAS_H - 60) / h);
     return (
       <>
         <div
@@ -763,9 +768,9 @@ function CompareView({
         </div>
         <div
           className="absolute top-[26px]"
-          style={{ left, width: WORLD_W, height: h, transform: `translate(20px,10px) scale(${s})`, transformOrigin: "0 0" }}
+          style={{ left, width: w, height: h, transform: `translate(20px,10px) scale(${s})`, transformOrigin: "0 0" }}
         >
-          <svg width={WORLD_W} height={h} className="pointer-events-none absolute left-0 top-0">
+          <svg width={w} height={h} className="pointer-events-none absolute left-0 top-0">
             {m.edges.map((e) => {
               const g = edgePath(m.nodes, e);
               return g ? <path key={e.id} d={g.d} fill="none" stroke="#C1C6D4" strokeWidth={3} /> : null;

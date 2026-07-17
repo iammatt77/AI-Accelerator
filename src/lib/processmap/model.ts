@@ -96,23 +96,29 @@ export function styleOf(type: string): NodeTypeStyle {
   return NODE_TYPE_STYLES[type] ?? { ...NEUTRAL, labelKey: "unknown" };
 }
 
-// ── Determinisztikus layout (a ref elrendezés-mintája) ───────
+// ── Elágazó 2D-layout (a Task04 mintája, automatikusan számolva) ──
 //
-// A generálás TOPOLÓGIÁT ad (lépések + next-élek); a layouter BFS-mélység
-// szerint sorokba rendez: 1 node/sor → x=700; 2 → 360/1040; 3 → 360/700/1040.
-// Az y kumulatív (sor-magasság + rés). Él-oldalak: azonos x → bottom→top;
-// döntésből oldalra → left/right + via a döntés sorában; visszacsatlakozás
-// → bottom → left/right + via a cél sorában (a ref EA/EB mintája).
+// A generálás TOPOLÓGIÁT ad (lépések + next-élek); a layouter réteges
+// (Sugiyama-szerű) elrendezést számol, hogy a döntések ágai TÉRBEN
+// szétváljanak — nem kézzel megadott koordinátákból, hanem tetszőleges
+// generált folyamatra:
+//   1) visszaél-detekció (DFS) → a kör megtörik a rétegezéshez;
+//   2) réteg (Y): leghosszabb út a gyökerekből az előre-éleken;
+//   3) sáv (X): a gyerekek szimmetrikusan szétnyílnak a szülő körül, a
+//      merge-node a szülők sáv-átlaga (középre húz), rétegenként ütközés-
+//      feloldással (min. 1 sáv rés);
+//   4) derékszögű él-útvonalak oldal-horgonyokkal + köztes pontokkal
+//      (döntés → oldalág; merge → alsó könyök; visszaél → felső kerülő).
+// A layout a TÁROLT node/edge adatból számol — a meglévő térképek
+// újrarajzolhatók újragenerálás nélkül.
 
-export const WORLD_W = 1400;
-const CENTER_X = 700;
-const SIDE_X: Record<number, number[]> = {
-  1: [CENTER_X],
-  2: [360, 1040],
-  3: [360, CENTER_X, 1040],
-};
-const ROW_GAP = 110;
+export const WORLD_W = 1400; // örökölt fit-alapérték; a tényleges szélesség: worldWidth()
+
+const LANE_UNIT = 430; // vízszintes távolság két szomszédos sáv között (px)
+const ROW_GAP = 96; // függőleges rés két réteg között (px)
 const TOP_Y = 80;
+const MARGIN_X = 240; // bal/jobb margó (a legszélesebb node fél-szélessége + tartalék)
+const BACK_UP = 66; // visszaél kerülő-magassága a cél teteje felett
 
 function sizeOf(node: Pick<ProcessNode, "type" | "title">): { w: number; h: number } {
   const shape = styleOf(node.type).shape;
@@ -123,75 +129,178 @@ function sizeOf(node: Pick<ProcessNode, "type" | "title">): { w: number; h: numb
 
 /**
  * Pozíciók + él-geometria hozzárendelése a topológiához. A bemeneti nodes
- * x/y/w/h értékét felülírja; az edges fs/ts/via mezőit tölti. Tiszta függvény.
+ * x/y/w/h értékét felülírja; az edges fs/ts/via mezőit tölti. Tiszta függvény;
+ * determinisztikus (bemeneti node/edge-sorrend adja a döntetlen-feloldást).
  */
 export function layoutGraph(nodes: ProcessNode[], edges: ProcessEdge[]): ProcessGraph {
   if (nodes.length === 0) return { nodes: [], edges: [] };
   const byId = new Map(nodes.map((n) => [n.id, n]));
-  const out = new Map<string, string[]>();
-  const indeg = new Map<string, number>();
-  for (const n of nodes) indeg.set(n.id, 0);
+  const outOf = new Map<string, ProcessEdge[]>();
+  const inOf = new Map<string, ProcessEdge[]>();
+  for (const n of nodes) {
+    outOf.set(n.id, []);
+    inOf.set(n.id, []);
+  }
   for (const e of edges) {
     if (!byId.has(e.from) || !byId.has(e.to)) continue;
-    (out.get(e.from) ?? out.set(e.from, []).get(e.from)!).push(e.to);
-    indeg.set(e.to, (indeg.get(e.to) ?? 0) + 1);
+    outOf.get(e.from)!.push(e);
+    inOf.get(e.to)!.push(e);
   }
-  // BFS-mélység a start(ok)ból (indeg=0; fallback: első node).
-  const roots = nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0).map((n) => n.id);
-  const queue = roots.length ? roots : [nodes[0].id];
-  const depth = new Map<string, number>();
-  queue.forEach((id) => depth.set(id, 0));
-  const bfs = [...queue];
-  while (bfs.length) {
-    const id = bfs.shift()!;
-    for (const next of out.get(id) ?? []) {
-      const d = (depth.get(id) ?? 0) + 1;
-      if (!depth.has(next) || d > (depth.get(next) ?? 0)) {
-        depth.set(next, d);
-        bfs.push(next);
+
+  // 1) Visszaél-detekció (DFS szín-jelöléssel) — a kör megtörése a rétegezéshez.
+  const backEdges = new Set<ProcessEdge>();
+  {
+    const color = new Map<string, number>(nodes.map((n) => [n.id, 0])); // 0 fehér, 1 szürke, 2 fekete
+    const visitFrom = (s: string) => {
+      const stack: { id: string; i: number }[] = [{ id: s, i: 0 }];
+      color.set(s, 1);
+      while (stack.length) {
+        const top = stack[stack.length - 1];
+        const es = outOf.get(top.id)!;
+        if (top.i >= es.length) {
+          color.set(top.id, 2);
+          stack.pop();
+          continue;
+        }
+        const e = es[top.i++];
+        const c = color.get(e.to);
+        if (c === 1) backEdges.add(e); // vissza egy stackben lévő node-ra → visszaél (kör)
+        else if (c === 0) {
+          color.set(e.to, 1);
+          stack.push({ id: e.to, i: 0 });
+        }
       }
+    };
+    const rootIds = nodes.filter((n) => inOf.get(n.id)!.length === 0).map((n) => n.id);
+    for (const s of rootIds.length ? rootIds : [nodes[0].id]) if (color.get(s) === 0) visitFrom(s);
+    for (const n of nodes) if (color.get(n.id) === 0) visitFrom(n.id); // körben rekedt / izolált
+  }
+  const fwdOut = (id: string) => outOf.get(id)!.filter((e) => !backEdges.has(e));
+  const fwdIn = (id: string) => inOf.get(id)!.filter((e) => !backEdges.has(e));
+
+  // 2) Réteg (Y): leghosszabb út a gyökerekből az előre-éleken (Kahn + longest-path).
+  const layer = new Map<string, number>(nodes.map((n) => [n.id, 0]));
+  const indeg = new Map<string, number>(nodes.map((n) => [n.id, fwdIn(n.id).length]));
+  const queue = nodes.filter((n) => indeg.get(n.id) === 0).map((n) => n.id);
+  for (let qi = 0; qi < queue.length; qi++) {
+    const id = queue[qi];
+    for (const e of fwdOut(id)) {
+      if (layer.get(id)! + 1 > layer.get(e.to)!) layer.set(e.to, layer.get(id)! + 1);
+      indeg.set(e.to, indeg.get(e.to)! - 1);
+      if (indeg.get(e.to) === 0) queue.push(e.to);
     }
   }
-  // Sorok mélység szerint, a node-sorrend megtartásával.
-  const maxDepth = Math.max(...nodes.map((n) => depth.get(n.id) ?? 0));
-  const rows: ProcessNode[][] = [];
-  for (let d = 0; d <= maxDepth; d++) {
-    rows.push(nodes.filter((n) => (depth.get(n.id) ?? 0) === d));
+  const maxLayer = Math.max(...nodes.map((n) => layer.get(n.id)!));
+
+  // 3) DFS-sorrend (bal→jobb rendezés az ütközés-feloldás döntetlenéhez).
+  const order = new Map<string, number>();
+  {
+    let idx = 0;
+    const seen = new Set<string>();
+    const dfs = (id: string) => {
+      if (seen.has(id)) return;
+      seen.add(id);
+      order.set(id, idx++);
+      for (const e of fwdOut(id)) dfs(e.to);
+    };
+    const rootIds = nodes.filter((n) => fwdIn(n.id).length === 0).map((n) => n.id);
+    (rootIds.length ? rootIds : [nodes[0].id]).forEach(dfs);
+    for (const n of nodes)
+      if (!seen.has(n.id)) {
+        seen.add(n.id);
+        order.set(n.id, idx++);
+      }
   }
-  let y = TOP_Y;
-  for (const row of rows) {
-    if (row.length === 0) continue;
-    const xs = SIDE_X[Math.min(row.length, 3)] ?? SIDE_X[3];
-    let rowH = 0;
-    row.forEach((n, i) => {
-      const { w, h } = sizeOf(n);
-      n.w = w;
-      n.h = h;
-      n.x = xs[Math.min(i, xs.length - 1)];
-      rowH = Math.max(rowH, h);
-    });
-    row.forEach((n) => {
-      n.y = y + rowH / 2;
-    });
-    y += rowH + ROW_GAP;
+
+  // 4) Sáv (X): rétegenként fentről lefelé — a gyerekek szimmetrikusan
+  //    szétnyílnak a szülő körül; a merge a szülők átlaga; majd ütközés-feloldás.
+  const lane = new Map<string, number>();
+  const rows: string[][] = Array.from({ length: maxLayer + 1 }, () => []);
+  for (const n of nodes) rows[layer.get(n.id)!].push(n.id);
+  for (let L = 0; L <= maxLayer; L++) {
+    const row = rows[L];
+    for (const id of row) {
+      const parents = fwdIn(id);
+      if (parents.length === 0) {
+        lane.set(id, 0);
+        continue;
+      }
+      let sum = 0;
+      for (const e of parents) {
+        const kids = fwdOut(e.from);
+        const k = kids.indexOf(e);
+        const offset = k - (kids.length - 1) / 2; // 1 gyerek→0, 2→∓0.5, 3→−1,0,+1
+        sum += (lane.get(e.from) ?? 0) + offset;
+      }
+      lane.set(id, sum / parents.length);
+    }
+    if (row.length > 1) {
+      const meanBefore = row.reduce((a, id) => a + lane.get(id)!, 0) / row.length;
+      const sorted = [...row].sort(
+        (a, b) => lane.get(a)! - lane.get(b)! || order.get(a)! - order.get(b)!,
+      );
+      for (let i = 1; i < sorted.length; i++) {
+        const min = lane.get(sorted[i - 1])! + 1;
+        if (lane.get(sorted[i])! < min) lane.set(sorted[i], min);
+      }
+      const meanAfter = sorted.reduce((a, id) => a + lane.get(id)!, 0) / sorted.length;
+      const shift = meanBefore - meanAfter;
+      if (shift !== 0) for (const id of sorted) lane.set(id, lane.get(id)! + shift);
+    }
   }
-  // Él-oldalak + via (a ref mintája).
+
+  // 5) Sáv → X (nem-negatív), réteg → Y (kumulatív sor-magasság).
+  const minLane = Math.min(...nodes.map((n) => lane.get(n.id)!));
+  const rowH = rows.map((row) => Math.max(0, ...row.map((id) => sizeOf(byId.get(id)!).h)));
+  const rowY: number[] = [];
+  {
+    let y = TOP_Y;
+    for (let L = 0; L <= maxLayer; L++) {
+      rowY.push(y + rowH[L] / 2);
+      y += rowH[L] + ROW_GAP;
+    }
+  }
+  for (const n of nodes) {
+    const s = sizeOf(n);
+    n.w = s.w;
+    n.h = s.h;
+    n.x = MARGIN_X + (lane.get(n.id)! - minLane) * LANE_UNIT;
+    n.y = rowY[layer.get(n.id)!];
+  }
+
+  // 6) Él-geometria: oldal-horgonyok + derékszögű köztes pontok.
   for (const e of edges) {
     const s = byId.get(e.from);
     const t = byId.get(e.to);
     if (!s || !t) continue;
-    if (s.x === t.x) {
+    if (backEdges.has(e)) {
+      // Visszaél (kör): felül ki, a cél teteje fölé, majd be a cél tetejére.
+      const upY = Math.min(s.y - s.h / 2, t.y - t.h / 2) - BACK_UP;
+      e.fs = "top";
+      e.ts = "top";
+      e.via = [
+        [s.x, upY],
+        [t.x, upY],
+      ];
+    } else if (Math.abs(s.x - t.x) < 1) {
+      // Azonos sáv: egyenes lefelé.
       e.fs = "bottom";
       e.ts = "top";
       e.via = [];
     } else if (styleOf(s.type).shape === "diamond") {
+      // Döntés ága: oldalról ki, vízszintesen a cél oszlopig, majd le.
       e.fs = t.x < s.x ? "left" : "right";
       e.ts = "top";
       e.via = [[t.x, s.y]];
     } else {
+      // Egyéb (pl. összefutás): alul ki, félmagasságban átlép a cél oszlopba.
+      const my = (s.y + s.h / 2 + (t.y - t.h / 2)) / 2;
       e.fs = "bottom";
-      e.ts = s.x < t.x ? "left" : "right";
-      e.via = [[s.x, t.y]];
+      e.ts = "top";
+      e.via = [
+        [s.x, my],
+        [t.x, my],
+      ];
     }
   }
   return { nodes, edges };
@@ -201,6 +310,12 @@ export function layoutGraph(nodes: ProcessNode[], edges: ProcessEdge[]): Process
 export function worldHeight(nodes: ProcessNode[]): number {
   if (nodes.length === 0) return 800;
   return Math.max(...nodes.map((n) => n.y + n.h / 2)) + 120;
+}
+
+/** A világ szélessége (kamera-fit-hez) — az elágazó layout dinamikus szélessége. */
+export function worldWidth(nodes: ProcessNode[]): number {
+  if (nodes.length === 0) return WORLD_W;
+  return Math.max(900, Math.max(...nodes.map((n) => n.x + n.w / 2)) + MARGIN_X);
 }
 
 // ── Él-geometria (a ref edgeD/anchor függvénye) ──────────────
