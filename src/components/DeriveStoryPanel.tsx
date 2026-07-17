@@ -193,6 +193,7 @@ export function DeriveStoryPanel({
             <button
               type="submit"
               formAction={draftAction}
+              formNoValidate
               disabled={draftPending || covered.length === 0}
               className="rounded-control border border-[#C9B3E6] bg-surface px-3 py-1.5 text-[11.5px] font-semibold text-action-deep disabled:opacity-60"
             >
