@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
+import { ProcessChatDrawer } from "@/components/ProcessChatDrawer";
 import { ProcessMapViewer, type ProcessMapData } from "@/components/ProcessMapViewer";
+import { chatLogFromJson } from "@/lib/processmap/chat";
 import { computeDiff } from "@/lib/processmap/model";
 import { graphFromJson, snapshotFromJson } from "@/lib/processmap/parse";
 import type { InputItemRow, ProcessMapRow, ProjectRow } from "@/lib/db/types";
@@ -89,6 +91,15 @@ export default async function ProcessMapPage({
       toBe={toBe}
       initialKind={mapRow.kind}
       source={source}
+      chatSlot={
+        mapRow.status !== "approved" ? (
+          <ProcessChatDrawer
+            projectId={id}
+            mapId={mapId}
+            chatLog={chatLogFromJson(mapRow.chat_log)}
+          />
+        ) : undefined
+      }
     />
   );
 }

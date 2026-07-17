@@ -12,6 +12,7 @@ import {
   type ProcessEdge,
   type ProcessNode,
 } from "@/lib/processmap/model";
+import { ProcessChatCloseContext } from "@/components/processChatContext";
 import type { ArtifactStatus } from "@/lib/db/types";
 
 // ─────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ export function ProcessMapViewer({
   const [legendOpen, setLegendOpen] = useState(false);
   const [srcOpen, setSrcOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const closeChat = useCallback(() => setChatOpen(false), []);
   const [showOriginal, setShowOriginal] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [vw, setVw] = useState(1180);
@@ -193,8 +195,11 @@ export function ProcessMapViewer({
           : t("summaryTobe", { steps: curStats.steps, ai: curStats.ai, hitl: curStats.hitl })
         : t("summaryAsis", { steps: curStats.steps, open: curStats.open });
 
+  // A diff-sáv az AKTÍV terven mutat eltérést az eredeti AI-snapshothoz
+  // képest (chat-szerkesztés AS-IS-en és TO-BE-n is történhet).
+  const diffMap = mode !== "cmp" ? activeMap : null;
   const diffBarVisible =
-    mode === "to_be" && toBe !== null && (toBe.diff.added > 0 || toBe.diff.modified > 0);
+    diffMap !== null && (diffMap.diff.added > 0 || diffMap.diff.modified > 0);
 
   // Nyers-leirat kiemelés: az aktuális node idézete a szövegben.
   const highlight = useMemo(() => {
@@ -279,7 +284,7 @@ export function ProcessMapViewer({
             {t("rawSourceBtn")}
           </button>
         )}
-        {chatSlot && activeMap && activeMap.status !== "approved" && (
+        {chatSlot && activeMap && activeMap.status !== "approved" && mode === initialKind && (
           <button
             type="button"
             onClick={() => setChatOpen((v) => !v)}
@@ -329,29 +334,29 @@ export function ProcessMapViewer({
       </div>
 
       {/* ── Változáskövetés-sáv ── */}
-      {diffBarVisible && toBe && (
+      {diffBarVisible && diffMap && (
         <div className="flex flex-wrap items-center gap-3 border-b border-line bg-accent-tint px-5 py-2">
           <span className="font-mono text-[9.5px] font-bold tracking-[0.1em] text-action-deep">
             {t("diffTitle")}
           </span>
           <span className="whitespace-nowrap text-[12px] text-ink">
-            {t("diffCounts", { orig: toBe.diff.originalCount, cur: toBe.diff.currentCount })}
+            {t("diffCounts", { orig: diffMap.diff.originalCount, cur: diffMap.diff.currentCount })}
           </span>
-          {toBe.diff.added > 0 && (
+          {diffMap.diff.added > 0 && (
             <span className="rounded-3 bg-tint-action px-2 py-px font-mono text-[9.5px] font-bold text-action-deep">
-              +{toBe.diff.added} {t("diffNew")}
+              +{diffMap.diff.added} {t("diffNew")}
             </span>
           )}
-          {toBe.diff.modified > 0 && (
+          {diffMap.diff.modified > 0 && (
             <span className="rounded-3 bg-tint-gate px-2 py-px font-mono text-[9.5px] font-bold text-gate-text">
-              {toBe.diff.modified} {t("diffMod")}
+              {diffMap.diff.modified} {t("diffMod")}
             </span>
           )}
           <button
             type="button"
             onClick={() => {
               setShowOriginal((v) => !v);
-              setTrails((prev) => ({ ...prev, to_be: { path: [], ve: [] } }));
+              setTrails((prev) => ({ ...prev, [trailKind]: { path: [], ve: [] } }));
               setView("overview");
             }}
             className="rounded-control border border-line bg-surface px-2.5 py-1 text-[11.5px] font-semibold text-ink-secondary hover:bg-soft"
@@ -359,12 +364,12 @@ export function ProcessMapViewer({
             {showOriginal ? t("showEdited") : t("showOriginal")}
           </button>
           <div className="flex-1" />
-          {toBe.status === "approved" ? (
+          {diffMap.status === "approved" ? (
             <span className="text-[11.5px] text-done-text">{t("approvedNote")}</span>
           ) : (
             <>
               <span className="text-[11px] text-ink-tertiary">{t("iterateFreely")}</span>
-              {approveSlot}
+              {mode === initialKind && approveSlot}
             </>
           )}
         </div>
@@ -517,8 +522,12 @@ export function ProcessMapViewer({
           </div>
         </div>
 
-        {/* CHAT DRAWER (Fázis 4 — slot) */}
-        {chatOpen && chatSlot}
+        {/* CHAT DRAWER (Fázis 4 — slot; a ✕ a contexten kapott bezáróval zár) */}
+        {chatOpen && mode === initialKind && (
+          <ProcessChatCloseContext.Provider value={closeChat}>
+            {chatSlot}
+          </ProcessChatCloseContext.Provider>
+        )}
       </div>
 
       {/* ── Breadcrumbs ── */}
@@ -946,7 +955,7 @@ function NodeInspector({
           </span>
           <p className="mt-1.5 text-[12.5px] italic leading-[1.55] text-[#4B4F60]">{node.source_ref.quote}</p>
           <p className="mt-1.5 font-mono text-[9.5px] text-ink-tertiary">{node.source_ref.loc}</p>
-          {hasSource && (
+          {hasSource && node.source_ref.ref !== "CHAT" && (
             <button
               type="button"
               onClick={onOpenSrc}

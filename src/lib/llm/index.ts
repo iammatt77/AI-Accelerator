@@ -925,3 +925,120 @@ function mockSuggestToBeProcess(
     "eredet: AI-terv",
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// Folyamattérkép chat-szerkesztő (#10, Fázis 4)
+// ─────────────────────────────────────────────────────────────
+
+// A javaslat parse-a a lib/processmap/chat-ben él (tiszta, tesztelhető).
+import { parseChatProposal, type ChatProposal } from "@/lib/processmap/chat";
+export type { ChatProposal } from "@/lib/processmap/chat";
+
+export interface ChatStepSummary {
+  id: string;
+  title: string;
+  sub: string | null;
+  type: string;
+  desc: string;
+}
+
+const CHAT_SHAPE = [
+  `{ "reply": "<rövid magyar válasz a tanácsadónak — mit készítettél elő>",`,
+  `"changes": [`,
+  `{ "op": "insert_after", "after_id": "<meglévő lépés id>", "title": "<új lépés címe>",`,
+  `"sub": "<rövid metaadat vagy null>", "type": "<lépés-típus>", "desc": "<1-2 mondat>",`,
+  `"note": "<mit és miért — a változás-jegyzethez>" },`,
+  `{ "op": "update", "id": "<lépés id>", "title": "<opcionális>", "sub": "<opcionális>",`,
+  `"desc": "<opcionális>", "type": "<opcionális>", "note": "<eredeti → módosított, miért>" },`,
+  `{ "op": "remove", "id": "<lépés id>", "note": "<miért esik ki>" } ] }`,
+].join(" ");
+
+/**
+ * Chat-szerkesztés (#10, HITL): a tanácsadó kérésére az asszisztens a
+ * STRUKTURÁLT lépéslistára tesz változás-javaslatot — a nyers forrást SOHA
+ * nem érinti. A javaslat NEM kerül automatikusan az ábrára: pendingként
+ * tárolódik, az ember alkalmazza vagy elveti.
+ */
+export async function chatEditProcess(
+  steps: ChatStepSummary[],
+  userMessage: string,
+): Promise<ChatProposal> {
+  if (isMock()) {
+    return mockChatEditProcess(steps, userMessage);
+  }
+
+  const system = [
+    "Folyamat-szerkesztő asszisztens vagy egy AI-implementációs tanácsadói",
+    "rendszerben. A tanácsadó kérésére a MEGADOTT lépéslistán javasolsz",
+    "változásokat (insert_after / update / remove). KIZÁRÓLAG érvényes JSON-t",
+    "adsz vissza. SZIGORÚ SZABÁLYOK: a nyers forrás-leiratot nem módosíthatod",
+    "és nem is látod — csak a strukturált lépéslistát. Csak azt változtasd,",
+    "amit a kérés ténylegesen kér; TILOS számszerű hatást (időt, százalékot,",
+    "költséget) kitalálni. A type a meglévő készletből választandó",
+    "(start_end/human/system/decide/ai_intervention/control_hitl), vagy új",
+    "kisbetűs snake_case típus, ha egyik sem illik. Minden change note-ja",
+    "1 mondatban rögzíti, mi és miért változott (eredeti → módosított).",
+    "A reply rövid magyar összefoglaló; a javaslatot az ember alkalmazza.",
+    "Ha a kérés nem igényel változást, a changes üres lista.",
+  ].join(" ");
+
+  const stepLines = steps
+    .map((s) => `${s.id} [${s.type}] ${s.title}${s.sub ? ` (${s.sub})` : ""} — ${s.desc}`)
+    .join("\n");
+
+  const userPrompt = [
+    "── Jelenlegi lépéslista ──",
+    stepLines,
+    "",
+    "── A tanácsadó kérése ──",
+    userMessage,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    CHAT_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 4000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseChatProposal(textFromMessage(message));
+}
+
+// Chat-fixture (determinisztikus): a ref forgatókönyve — ① új HITL-lépés
+// az AI-előszűrés után („Kockázatos kategóriák kézi ellenőrzése"), ② az
+// „AI válasz-javaslat" lépés kiegészítése: mindig citációkkal. A célpontokat
+// a lépéslistából keresi (nem drótozott id), így AS-IS-en is lefut értelmes
+// fallback-kel; ha nincs találat, üres changes (nincs alap → nem tippel).
+function mockChatEditProcess(steps: ChatStepSummary[], _userMessage: string): ChatProposal {
+  const anchor = steps.find((s) => s.type === "ai_intervention") ?? null;
+  const target = steps.find((s) => s.title.toLowerCase().startsWith("ai válasz")) ?? null;
+  const changes: ChatProposal["changes"] = [];
+  if (anchor) {
+    changes.push({
+      op: "insert_after",
+      after_id: anchor.id,
+      title: "Kockázatos kategóriák kézi ellenőrzése",
+      sub: "garancia · jogi · HITL",
+      type: "control_hitl",
+      desc: "Chat-szerkesztéssel beszúrt kötelező kontrollpont: a garanciális és jogi kategóriájú panaszok az előszűrés után mindig emberi ellenőrzésre mennek — automata válasz ezekben tilos.",
+      note: "Beszúrva: kötelező emberi ellenőrzés a kockázatos (garanciális/jogi) kategóriákra az AI-előszűrés után (chat-szerkesztés).",
+    });
+  }
+  if (target) {
+    changes.push({
+      op: "update",
+      id: target.id,
+      sub: `${target.sub ? `${target.sub} · ` : ""}mindig citációkkal`,
+      note: `Eredeti: „${target.sub ?? "—"}” → Módosított: a javaslat mindig forrás-citációkkal jön (chat-szerkesztés).`,
+    });
+  }
+  const reply =
+    changes.length === 0
+      ? "Ehhez a tervhez nem találtam a kéréshez illő lépést — pontosítsd, melyik lépést módosítsam."
+      : "Két módosítást készítettem elő: ① új HITL-lépés: „Kockázatos kategóriák kézi ellenőrzése” — az AI-előszűrés után; ② az „AI válasz-javaslat” lépés kiegészítve: mindig citációkkal. Előnézet kész — alkalmazod az ábrán?";
+  return { reply, changes };
+}

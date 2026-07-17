@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
-import { extractProcessMap, suggestToBeProcess } from "@/lib/llm";
+import { chatEditProcess, extractProcessMap, suggestToBeProcess, type ChatProposal } from "@/lib/llm";
 import { loadNumberedSources } from "@/lib/sources";
 import { layoutGraph } from "@/lib/processmap/model";
+import { applyChanges, chatLogFromJson, type ChatEntry } from "@/lib/processmap/chat";
 import { graphFromJson } from "@/lib/processmap/parse";
 import type { PainPointRow, ProcessMapRow } from "@/lib/db/types";
 import type { FormState } from "./actions";
@@ -186,3 +187,174 @@ export async function suggestToBeAction(
   redirect(`/project/${projectId}/process/${mapId}`);
 }
 
+
+// ─────────────────────────────────────────────────────────────
+// Chat-szerkesztés (#10, Fázis 4) — javaslat → alkalmazás/elvetés (HITL).
+// Az asszisztens a strukturált lépéslistát javasolja módosítani; a nyers
+// forráshoz (input_items) nem nyúl SEMELYIK akció. Jóváhagyott terv nem
+// szerkeszthető — arra új iteráció való (Fázis 5).
+// ─────────────────────────────────────────────────────────────
+
+async function loadEditableMap(
+  supabase: ReturnType<typeof createServiceSupabaseClient>,
+  projectId: string,
+  mapId: string,
+): Promise<ProcessMapRow | { error: string }> {
+  const t = await getTranslations("processMap");
+  const { data } = await supabase
+    .from("process_maps")
+    .select("*")
+    .eq("id", mapId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (!data) return { error: t("errMapNotFound") };
+  const map = data as ProcessMapRow;
+  if (map.status === "approved") return { error: t("errChatApproved") };
+  return map;
+}
+
+/** Chat-üzenet: az asszisztens javaslatot készít (pending) — nem alkalmaz. */
+export async function processChatAction(
+  projectId: string,
+  mapId: string,
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const t = await getTranslations("processMap");
+  const supabase = createServiceSupabaseClient();
+  const message = String(formData.get("message") ?? "").trim();
+  if (!message) {
+    return { ok: false, error: t("errChatEmpty") };
+  }
+  const map = await loadEditableMap(supabase, projectId, mapId);
+  if ("error" in map) return { ok: false, error: map.error };
+
+  const graph = graphFromJson(map.nodes, map.edges);
+  const chatLog = chatLogFromJson(map.chat_log);
+  // Egyszerre EGY pending javaslat él: az új kérés a régit elvetetté teszi
+  // (az ember expliciten úgyis az utolsó előnézetről dönt).
+  for (const e of chatLog) {
+    if (e.proposal_status === "pending") e.proposal_status = "discarded";
+  }
+
+  let proposal: ChatProposal;
+  try {
+    proposal = await chatEditProcess(
+      graph.nodes.map((n) => ({ id: n.id, title: n.title, sub: n.sub, type: n.type, desc: n.desc })),
+      message,
+    );
+  } catch (e) {
+    return { ok: false, error: t("errLlm", { message: e instanceof Error ? e.message : "?" }) };
+  }
+
+  const now = new Date().toISOString();
+  chatLog.push({ role: "user", text: message, at: now });
+  const reply: ChatEntry = {
+    role: "assistant",
+    text: proposal.reply || t("chatNoChangeReply"),
+    at: now,
+  };
+  if (proposal.changes.length > 0) {
+    reply.proposal = proposal.changes;
+    reply.proposal_status = "pending";
+  }
+  chatLog.push(reply);
+
+  const { error } = await supabase
+    .from("process_maps")
+    .update({ chat_log: chatLog, updated_at: now })
+    .eq("id", mapId);
+  if (error) {
+    return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+  }
+  revalidatePath(`/project/${projectId}/process/${mapId}`);
+  return { ok: true, error: null };
+}
+
+/** A pending javaslat alkalmazása az ábrán (az EMBER dönt — HITL). */
+export async function applyChatProposalAction(
+  projectId: string,
+  mapId: string,
+  entryIndex: number,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const t = await getTranslations("processMap");
+  const locale = await getLocale();
+  const supabase = createServiceSupabaseClient();
+  const map = await loadEditableMap(supabase, projectId, mapId);
+  if ("error" in map) return { ok: false, error: map.error };
+
+  const chatLog = chatLogFromJson(map.chat_log);
+  const entry = chatLog[entryIndex];
+  if (!entry || entry.role !== "assistant" || entry.proposal_status !== "pending" || !entry.proposal) {
+    return { ok: false, error: t("errChatNoPending") };
+  }
+
+  const graph = graphFromJson(map.nodes, map.edges);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString(locale === "hu" ? "hu-HU" : "en-GB", {
+    timeZone: "Europe/Budapest",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const applied = applyChanges(graph, entry.proposal, t("chatLocStamp", { date: dateStr }));
+  const laidOut = layoutGraph(applied.graph.nodes, applied.graph.edges);
+
+  entry.proposal_status = "applied";
+  chatLog.push({
+    role: "assistant",
+    text: t("chatAppliedMsg", {
+      added: applied.added,
+      modified: applied.modified,
+      removed: applied.removed,
+    }),
+    at: now.toISOString(),
+  });
+
+  const { error } = await supabase
+    .from("process_maps")
+    .update({
+      nodes: laidOut.nodes,
+      edges: laidOut.edges,
+      chat_log: chatLog,
+      updated_at: now.toISOString(),
+    })
+    .eq("id", mapId);
+  if (error) {
+    return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+  }
+  revalidatePath(`/project/${projectId}/process/${mapId}`);
+  return { ok: true, error: null };
+}
+
+/** A pending javaslat elvetése — az ábra érintetlen marad. */
+export async function discardChatProposalAction(
+  projectId: string,
+  mapId: string,
+  entryIndex: number,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const t = await getTranslations("processMap");
+  const supabase = createServiceSupabaseClient();
+  const map = await loadEditableMap(supabase, projectId, mapId);
+  if ("error" in map) return { ok: false, error: map.error };
+
+  const chatLog = chatLogFromJson(map.chat_log);
+  const entry = chatLog[entryIndex];
+  if (!entry || entry.role !== "assistant" || entry.proposal_status !== "pending") {
+    return { ok: false, error: t("errChatNoPending") };
+  }
+  entry.proposal_status = "discarded";
+  const { error } = await supabase
+    .from("process_maps")
+    .update({ chat_log: chatLog, updated_at: new Date().toISOString() })
+    .eq("id", mapId);
+  if (error) {
+    return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+  }
+  revalidatePath(`/project/${projectId}/process/${mapId}`);
+  return { ok: true, error: null };
+}
