@@ -153,3 +153,77 @@ export interface ProcessMapRow {
   created_at: string;
   updated_at: string;
 }
+
+// ── Követelmény-modul (0009, #11) ────────────────────────────
+
+export type RequirementLevel = "business" | "stakeholder" | "system";
+export type RequirementSubtype = "functional" | "non_functional";
+/** MoSCoW — NULLABLE: emberi ítélet, az AI alap nélkül nem tölti. */
+export type Moscow = "must" | "should" | "could" | "wont";
+
+/** requirements sora — háromszintű fa (parent_id), display_id = BR-/SR-/SYS-/NFR-nn. */
+export interface RequirementRow {
+  id: string;
+  project_id: string;
+  phase: string;
+  level: RequirementLevel;
+  subtype: RequirementSubtype | null;
+  parent_id: string | null;
+  moscow: Moscow | null;
+  text: string;
+  source_input_ids: string[];
+  state: EntityState;
+  display_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** acceptance_criteria sora — az AC a REQUIREMENTEN él (közös AC magja). */
+export interface AcceptanceCriterionRow {
+  id: string;
+  requirement_id: string;
+  title: string;
+  given_text: string;
+  when_text: string;
+  then_text: string;
+  ord: number;
+  created_at: string;
+}
+
+/** epics sora (EP-nn). */
+export interface EpicRow {
+  id: string;
+  project_id: string;
+  title: string;
+  business_requirement_id: string | null;
+  display_id: string;
+  created_at: string;
+}
+
+/** user_stories sora (US-nn) — a system requirementekből SZÁRMAZIK. */
+export interface UserStoryRow {
+  id: string;
+  project_id: string;
+  epic_id: string | null;
+  role: string;
+  want: string;
+  so_that: string;
+  moscow: Moscow | null;
+  state: EntityState;
+  source_input_ids: string[];
+  display_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** requirement ↔ story N:M kötés sora. */
+export interface RequirementStoryRow {
+  requirement_id: string;
+  story_id: string;
+}
+
+/** stakeholder-szintű requirement érintett-kötése. */
+export interface StakeholderRequirementRow {
+  requirement_id: string;
+  stakeholder_id: string;
+}
