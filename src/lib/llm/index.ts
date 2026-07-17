@@ -1071,3 +1071,350 @@ function mockChatEditProcess(steps: ChatStepSummary[], _userMessage: string): Ch
       : "Két módosítást készítettem elő: ① új HITL-lépés: „Kockázatos kategóriák kézi ellenőrzése” — az AI-előszűrés után; ② az „AI válasz-javaslat” lépés kiegészítve: mindig citációkkal. Előnézet kész — alkalmazod az ábrán?";
   return { reply, changes };
 }
+
+// ─────────────────────────────────────────────────────────────
+// Követelmény-modul (#11): requirement-fa + story-származtatás + vázlatok
+// ─────────────────────────────────────────────────────────────
+
+import {
+  parseAcDrafts,
+  parseRequirementProposals,
+  parseStoryDraft,
+  parseStoryPackage,
+  type AcDraft,
+  type RequirementProposal,
+  type StoryDraft,
+  type StoryPackage,
+} from "@/lib/requirements/parse";
+import type { Moscow, RequirementSubtype } from "@/lib/db/types";
+export type {
+  AcDraft,
+  RequirementProposal,
+  StoryDraft,
+  StoryPackage,
+} from "@/lib/requirements/parse";
+
+export interface RequirementBasisPain {
+  title: string;
+  description: string | null;
+}
+
+export interface RequirementBasisStep {
+  title: string;
+  type: string;
+  desc: string;
+}
+
+export interface RequirementBasisStakeholder {
+  name: string;
+  title: string | null;
+}
+
+const REQ_SHAPE = [
+  `{ "requirements": [ { "tmp": "r1", "level": "business" | "stakeholder" | "system",`,
+  `"subtype": "functional" | "non_functional" | null,`,
+  `"parent_tmp": "<a szülő tmp-je vagy null>", "text": "<a követelmény szövege>",`,
+  `"moscow": "must" | "should" | "could" | "wont" | null,`,
+  `"source_indices": [<forrás-sorszámok, pl. 1>],`,
+  `"stakeholder_names": ["<érintett neve a megadott listából — csak stakeholder szinten>"] } ] }`,
+].join(" ");
+
+/**
+ * Requirement-fa javaslat (#11, E1): a megerősített fájdalompontokból, a
+ * TO-BE folyamat lépéseiből és az érintettekből háromszintű requirement-fát
+ * javasol (business → stakeholder → system, a system szinten funkcionális /
+ * nem-funkcionális bontással), forrás-hivatkozással. A MoSCoW-t CSAK
+ * egyértelmű alappal tölti (egyébként null — emberi ítélet); ai_suggested
+ * → az ember erősíti meg.
+ */
+export async function suggestRequirements(
+  sources: LlmSource[],
+  pains: RequirementBasisPain[],
+  toBeSteps: RequirementBasisStep[],
+  stakeholders: RequirementBasisStakeholder[],
+): Promise<RequirementProposal[]> {
+  if (isMock()) {
+    return mockSuggestRequirements(sources, pains, toBeSteps, stakeholders);
+  }
+
+  const system = [
+    "Üzleti elemző (BA) vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A megadott alapanyagból (fájdalompontok, TO-BE folyamat lépései, érintettek,",
+    "számozott források) HÁROMSZINTŰ requirement-fát javasolsz: business →",
+    "stakeholder → system; a system szinten functional / non_functional altípussal.",
+    "KIZÁRÓLAG érvényes JSON-t adsz vissza. SZIGORÚ SZABÁLYOK: minden stakeholder-",
+    "szintű elem parent_tmp-je egy business elem, minden system elemé egy",
+    "stakeholder elem. Csak olyan követelményt vehetsz fel, amelyre az alapanyagban",
+    "tényleges alap van — a source_indices a támasztó forrás(ok) sorszáma; TILOS",
+    "követelményt kitalálni. A moscow mezőt CSAK akkor töltsd, ha az alapanyagból",
+    "egyértelmű a prioritás — egyébként null (emberi ítélet dönti el). A",
+    "stakeholder_names KIZÁRÓLAG a megadott érintett-listából választható.",
+    "Az eredmény magyarul készül.",
+  ].join(" ");
+
+  const painLines = pains.length
+    ? pains.map((p, i) => `${i + 1}. ${p.title}${p.description ? ` — ${p.description}` : ""}`).join("\n")
+    : "(nincs)";
+  const stepLines = toBeSteps.length
+    ? toBeSteps.map((s, i) => `${i + 1}. [${s.type}] ${s.title} — ${s.desc}`).join("\n")
+    : "(nincs)";
+  const shLines = stakeholders.length
+    ? stakeholders.map((s) => `- ${s.name}${s.title ? ` (${s.title})` : ""}`).join("\n")
+    : "(nincs)";
+  const srcLines = sources.map((s) => `[${s.index}] ${s.title}`).join("\n");
+
+  const userPrompt = [
+    "── Fájdalompontok ──",
+    painLines,
+    "",
+    "── TO-BE folyamat lépései ──",
+    stepLines,
+    "",
+    "── Érintettek ──",
+    shLines,
+    "",
+    "── Számozott források ──",
+    srcLines,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    REQ_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 6000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseRequirementProposals(textFromMessage(message));
+}
+
+export interface StoryBasisRequirement {
+  displayId: string;
+  text: string;
+  subtype: RequirementSubtype | null;
+  moscow: Moscow | null;
+}
+
+const STORY_SHAPE = [
+  `{ "epics": [ { "tmp": "e1", "title": "<epic címe>",`,
+  `"business_display_id": "<BR-nn vagy null>" } ],`,
+  `"stories": [ { "tmp": "s1", "epic_tmp": "e1",`,
+  `"role": "<szerep>", "want": "<cél>", "so_that": "<ok>",`,
+  `"moscow": "must" | "should" | "could" | "wont" | null,`,
+  `"covers_display_ids": ["<a lefedett system requirement display_id-je>"],`,
+  `"source_indices": [] } ] }`,
+].join(" ");
+
+/**
+ * Story-származtatás (#11, E1): a SYSTEM requirementekből user story-kat
+ * javasol epic-csomagolással. Az irány KÖTÖTT: requirement → story; a
+ * covers_display_ids adja az N:M kötést. AC-t NEM generál — a story a
+ * lefedett requirement(ek) AC-jét a kötésen át örökli (közös AC).
+ */
+export async function suggestStories(
+  systemReqs: StoryBasisRequirement[],
+  businessReqs: { displayId: string; text: string }[],
+): Promise<StoryPackage> {
+  if (isMock()) {
+    return mockSuggestStories(systemReqs, businessReqs);
+  }
+
+  const system = [
+    "Agile delivery-tervező vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A megadott SYSTEM szintű requirementekből user story-kat javasolsz",
+    "(„[szerep]ként szeretnék [cél], hogy [ok]”), epic-ekbe szervezve.",
+    "KIZÁRÓLAG érvényes JSON-t adsz vissza. SZIGORÚ SZABÁLYOK: minden story",
+    "KIZÁRÓLAG a megadott requirementekből származhat — a covers_display_ids",
+    "CSAK a listában szereplő display_id-ket tartalmazhatja (az irány kötött:",
+    "requirement → story). Egy story több requirementet is fedhet (N:M), ha",
+    "azok egy delivery-egységbe tartoznak — de NE ismételd a requirement",
+    "szövegét, csomagold delivery-nézetbe. Acceptance criteriát NE generálj",
+    "— a story a lefedett requirement AC-jét örökli. A moscow a lefedett",
+    "requirement(ek) moscow-jából vehető át, ha egyértelmű — egyébként null.",
+    "Az epic business_display_id-je a megadott business listából való (vagy",
+    "null). Az eredmény magyarul készül.",
+  ].join(" ");
+
+  const reqLines = systemReqs
+    .map((r) => `${r.displayId} [${r.subtype ?? "functional"}${r.moscow ? ` · ${r.moscow}` : ""}] ${r.text}`)
+    .join("\n");
+  const brLines = businessReqs.length
+    ? businessReqs.map((r) => `${r.displayId} ${r.text}`).join("\n")
+    : "(nincs)";
+
+  const userPrompt = [
+    "── System requirementek (a származtatás forrása) ──",
+    reqLines,
+    "",
+    "── Business requirementek (epic-kötéshez) ──",
+    brLines,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    STORY_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 6000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseStoryPackage(textFromMessage(message));
+}
+
+const AC_SHAPE = `{ "acs": [ { "title": "<rövid cím>", "given": "<előfeltétel>", "when": "<esemény>", "then": "<elvárt kimenet>" } ] }`;
+
+/**
+ * AC-vázlat (#11, HITL): egy system requirementhez 1-2 Given–When–Then
+ * vázlatot javasol — a vázlat a szerkesztő-űrlapba kerül, az EMBER dönt
+ * és ment. Nem ír adatbázist.
+ */
+export async function suggestAcDraft(requirementText: string): Promise<AcDraft[]> {
+  if (isMock()) {
+    return mockSuggestAcDraft(requirementText);
+  }
+  const system = [
+    "Üzleti elemző vagy. A megadott system-követelményhez 1-2 tömör",
+    "Given–When–Then acceptance criteriát vázolsz. KIZÁRÓLAG érvényes JSON-t",
+    "adsz vissza. Csak a követelmény szövegéből indulj ki — TILOS új",
+    "funkcionalitást vagy számot kitalálni, ami nincs benne. Ez vázlat:",
+    "az ember szerkeszti és dönt. Magyarul.",
+  ].join(" ");
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 1500,
+    system,
+    messages: [
+      {
+        role: "user",
+        content: `── Követelmény ──\n${requirementText}\n\nAdd vissza pontosan ebben a JSON-alakban:\n${AC_SHAPE}\nCsak JSON-t adj vissza.`,
+      },
+    ],
+  });
+  return parseAcDrafts(textFromMessage(message));
+}
+
+const STORY_DRAFT_SHAPE = `{ "role": "<szerep>", "want": "<cél>", "so_that": "<ok>", "epic_title": "<javasolt epic-cím vagy null>" }`;
+
+/**
+ * Story-vázlat (#11, HITL): a kijelölt (lefedendő) requirement(ek)ből
+ * egyetlen story-vázlatot javasol a származtatás-űrlapba — az EMBER
+ * véglegesíti. Nem ír adatbázist.
+ */
+export async function suggestStoryDraft(
+  coveredReqs: { displayId: string; text: string }[],
+): Promise<StoryDraft | null> {
+  if (isMock()) {
+    return mockSuggestStoryDraft(coveredReqs);
+  }
+  const system = [
+    "Agile delivery-tervező vagy. A megadott (lefedendő) requirementekből",
+    "EGY user story-vázlatot adsz („[szerep]ként szeretnék [cél], hogy [ok]”).",
+    "KIZÁRÓLAG érvényes JSON-t adsz vissza. Csak a megadott követelményekből",
+    "indulj ki. Ez vázlat: az ember szerkeszti és dönt. Magyarul.",
+  ].join(" ");
+  const reqLines = coveredReqs.map((r) => `${r.displayId} ${r.text}`).join("\n");
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 800,
+    system,
+    messages: [
+      {
+        role: "user",
+        content: `── Lefedendő requirementek ──\n${reqLines}\n\nAdd vissza pontosan ebben a JSON-alakban:\n${STORY_DRAFT_SHAPE}\nCsak JSON-t adj vissza.`,
+      },
+    ],
+  });
+  return parseStoryDraft(textFromMessage(message));
+}
+
+// ── Követelmény-mockok (determinisztikus; c-minta: alap nélkül üres) ──
+
+// A demo (panaszkezelés) láncához igazított fa — a ref jelenetei szerint.
+// A MoSCoW szándékosan NEM mindenhol kitöltött (br2, sys3, sr3): a mock is
+// demonstrálja, hogy alap nélkül az AI nem tölti (emberi ítélet).
+function mockSuggestRequirements(
+  sources: LlmSource[],
+  pains: RequirementBasisPain[],
+  toBeSteps: RequirementBasisStep[],
+  stakeholders: RequirementBasisStakeholder[],
+): RequirementProposal[] {
+  if (pains.length === 0 && toBeSteps.length === 0) {
+    return []; // nincs alap → nem talál ki (negatív teszt)
+  }
+  const src = (i: number) => (sources[i - 1] ? [i] : sources.length ? [1] : []);
+  const sh = (i: number) => (stakeholders[i] ? [stakeholders[i].name] : stakeholders[0] ? [stakeholders[0].name] : []);
+  const raw = {
+    requirements: [
+      { tmp: "br1", level: "business", parent_tmp: null, text: "Csökkentsük a panaszkezelés átfutási idejét.", moscow: "must", source_indices: src(1), stakeholder_names: [] },
+      { tmp: "br2", level: "business", parent_tmp: null, text: "Növeljük az első kontaktusnál lezárt panaszok arányát.", moscow: null, source_indices: src(1), stakeholder_names: [] },
+      { tmp: "sr1", level: "stakeholder", parent_tmp: "br1", text: "Az ügyintéző lássa a javasolt választ, mielőtt jóváhagyja.", moscow: "must", source_indices: src(2), stakeholder_names: sh(0) },
+      { tmp: "sr2", level: "stakeholder", parent_tmp: "br1", text: "A vezetőség lássa az eszkalációk okát és gyakoriságát.", moscow: "should", source_indices: src(2), stakeholder_names: sh(2) },
+      { tmp: "sr3", level: "stakeholder", parent_tmp: "br2", text: "Az ügyfél kapjon azonnali visszaigazolást a rögzítésről.", moscow: null, source_indices: src(1), stakeholder_names: [] },
+      { tmp: "sys1", level: "system", subtype: "functional", parent_tmp: "sr1", text: "A rendszer minden bejövő panaszhoz válasz-javaslatot generál.", moscow: "must", source_indices: src(2), stakeholder_names: [] },
+      { tmp: "sys2", level: "system", subtype: "functional", parent_tmp: "sr1", text: "Az ügyintéző egy kattintással jóváhagyhatja vagy átírhatja a javaslatot.", moscow: "must", source_indices: src(2), stakeholder_names: [] },
+      { tmp: "sys3", level: "system", subtype: "functional", parent_tmp: "sr2", text: "Eszkalációs kimutatás: ok és gyakoriság szerinti bontás.", moscow: null, source_indices: src(1), stakeholder_names: [] },
+      { tmp: "nfr1", level: "system", subtype: "non_functional", parent_tmp: "sr1", text: "A panaszszöveg nem hagyhatja el az EU-adatrégiót (GDPR).", moscow: "must", source_indices: src(1), stakeholder_names: [] },
+      { tmp: "nfr2", level: "system", subtype: "non_functional", parent_tmp: "sr1", text: "A válasz-javaslat késleltetése maradjon az ügyintézői munkát nem zavaró szinten.", moscow: null, source_indices: src(2), stakeholder_names: [] },
+    ],
+  };
+  return parseRequirementProposals(JSON.stringify(raw));
+}
+
+// Story-mock: az ÁTADOTT display_id-kból építkezik (nem drótozott SYS-01):
+// az 1. story az első system reqet fedi, a 2. az első KETTŐT (N:M demó),
+// a 3. moscow nélkül. Üres bemenet → üres csomag (nincs alap → nem tippel).
+function mockSuggestStories(
+  systemReqs: StoryBasisRequirement[],
+  businessReqs: { displayId: string; text: string }[],
+): StoryPackage {
+  if (systemReqs.length === 0) return { epics: [], stories: [] };
+  const d = (i: number) => systemReqs[Math.min(i, systemReqs.length - 1)].displayId;
+  const nfr = systemReqs.find((r) => r.subtype === "non_functional");
+  const raw = {
+    epics: [
+      { tmp: "e1", title: "Ügyintézői válasz-asszisztens", business_display_id: businessReqs[0]?.displayId ?? null },
+      { tmp: "e2", title: "Megfelelőség és audit", business_display_id: null },
+    ],
+    stories: [
+      { tmp: "s1", epic_tmp: "e1", role: "ügyfélszolgálati ügyintéző", want: "minden panaszhoz automatikus válasz-javaslatot kapni", so_that: "ne kelljen nulláról fogalmaznom", moscow: "must", covers_display_ids: [d(0)], source_indices: [] },
+      { tmp: "s2", epic_tmp: "e1", role: "ügyfélszolgálati ügyintéző", want: "egy kattintással jóváhagyni vagy átírni a javaslatot", so_that: "gyorsan és egységes minőségben zárhassam le a panaszt", moscow: "must", covers_display_ids: [d(0), d(1)], source_indices: [] },
+      { tmp: "s3", epic_tmp: "e1", role: "ügyfélszolgálati ügyintéző", want: "látni a javaslat forrás-cikkét", so_that: "ellenőrizhessem a helyességét", moscow: null, covers_display_ids: [d(0)], source_indices: [] },
+      ...(nfr
+        ? [{ tmp: "s4", epic_tmp: "e2", role: "compliance-felelős", want: "hogy a panaszszöveg ne hagyja el az EU-t", so_that: "megfeleljünk a GDPR-nek", moscow: "must", covers_display_ids: [nfr.displayId], source_indices: [] }]
+        : []),
+    ],
+  };
+  return parseStoryPackage(JSON.stringify(raw));
+}
+
+function mockSuggestAcDraft(requirementText: string): AcDraft[] {
+  if (requirementText.trim().length < 10) return [];
+  const raw = {
+    acs: [
+      { title: "Sikeres javaslat-generálás beérkezéskor", given: "egy új panasz érkezik, és a tudásbázis elérhető,", when: "a rendszer feldolgozza a panasz szövegét,", then: "válasz-javaslatot jelenít meg forrás-hivatkozással a tudásbázis-cikkre." },
+      { title: "Nincs megbízható javaslat", given: "a rendszer egyetlen ismert esethez sem tudja kötni a panaszt,", when: "nem tud megbízható javaslatot adni,", then: "„kézi feldolgozás” jelöléssel az ügyintézőhöz irányítja, javaslat nélkül." },
+    ],
+  };
+  return parseAcDrafts(JSON.stringify(raw));
+}
+
+function mockSuggestStoryDraft(
+  coveredReqs: { displayId: string; text: string }[],
+): StoryDraft | null {
+  if (coveredReqs.length === 0) return null;
+  const raw = {
+    role: "ügyfélszolgálati ügyintéző",
+    want: "egy kattintással jóváhagyni vagy átírni a rendszer válasz-javaslatát",
+    so_that: "gyorsan és egységes minőségben zárhassam le a panaszt",
+    epic_title: "Ügyintézői válasz-asszisztens",
+  };
+  return parseStoryDraft(JSON.stringify(raw));
+}
