@@ -14,7 +14,7 @@ import {
 } from "@/app/requirements-actions";
 import { AddRequirementPanel } from "@/components/AddRequirementPanel";
 import { DeriveStoryPanel } from "@/components/DeriveStoryPanel";
-import { buildTree, lineageOf } from "@/lib/requirements/model";
+import { buildLineageRows, buildTree, lineageOf, rowSystems } from "@/lib/requirements/model";
 import type { FormState } from "@/app/actions";
 import type {
   AcceptanceCriterionRow,
@@ -367,23 +367,15 @@ function BaLanes({
   const nfrs = requirements.filter((r) => r.level === "system" && r.subtype === "non_functional");
   const empty = requirements.length === 0;
 
-  const laneHead = (dotCls: string, label: string, sub: string, count: number) => (
-    <div className="flex items-center gap-2">
-      <span className={`h-[9px] w-[9px] rounded-[2px] ${dotCls}`} />
-      <span className="text-[13px] font-extrabold">{label}</span>
-      <span className="font-mono text-[10px] text-ink-tertiary">{sub}</span>
-      <span className="ml-auto rounded-pill bg-[#ECEEF4] px-2 py-px font-mono text-[11px] font-bold text-ink-tertiary">
-        {count}
-      </span>
-    </div>
-  );
+  // Swimlane-sorok: business-requirementenként a teljes leszármazott-lánc.
+  const rows = buildLineageRows(requirements);
 
-  return (
-    <div className="grid grid-cols-[1fr_1fr_1.55fr] bg-[#F4F5F9]">
-      {/* BUSINESS */}
-      <div className="flex flex-col gap-3 border-r border-line p-4">
-        {laneHead("bg-action-deep", t("laneBusiness"), t("laneBusinessSub"), business.length)}
-        {empty ? (
+  // ── Üres állapot: a korábbi 3-oszlopos „kezdd itt" nézet (8. jelenet) ──
+  if (empty) {
+    return (
+      <div className="grid grid-cols-[1fr_1fr_1.55fr] bg-[#F4F5F9]">
+        <div className="flex flex-col gap-3 border-r border-line p-4">
+          <LaneHead dotCls="bg-action-deep" label={t("laneBusiness")} sub={t("laneBusinessSub")} count={0} />
           <div className="flex flex-col items-center gap-2.5 rounded-tile border-[1.5px] border-dashed border-[#C9B3E6] bg-[#FBF9FE] px-3.5 py-4 text-center">
             <span className="flex h-[30px] w-[30px] items-center justify-center rounded-shell bg-tint-action text-[17px] font-bold text-action">+</span>
             <span className="text-[12.5px] font-bold">{t("emptyBizTitle")}</span>
@@ -396,122 +388,24 @@ function BaLanes({
               + {t("emptyBizCta")}
             </button>
           </div>
-        ) : (
-          business.map((r) => (
-            <ReqCard
-              key={r.id}
-              projectId={projectId}
-              req={r}
-              tree={tree}
-              acs={acs}
-              epics={epics}
-              links={links}
-              stakeholderLinks={stakeholderLinks}
-              shById={shById}
-              dim={dimReq(r.id)}
-              selected={sel?.kind === "req" && sel.id === r.id}
-              selStories={selStories}
-              onSelect={onSelect}
-            />
-          ))
-        )}
-      </div>
-
-      {/* STAKEHOLDER */}
-      <div className="flex flex-col gap-3 border-r border-line p-4">
-        {laneHead("bg-ink-secondary", t("laneStakeholder"), t("laneStakeholderSub"), stakeholder.length)}
-        {empty ? (
+        </div>
+        <div className="flex flex-col gap-3 border-r border-line p-4">
+          <LaneHead dotCls="bg-ink-secondary" label={t("laneStakeholder")} sub={t("laneStakeholderSub")} count={0} />
           <div className="rounded-tile border-[1.5px] border-dashed border-neutral-350 bg-[#FBFBFD] px-3.5 py-4 text-center text-[11.5px] leading-[1.5] text-ink-tertiary">
             {t("emptyShNote")}
           </div>
-        ) : (
-          stakeholder.map((r) => (
-            <ReqCard
-              key={r.id}
-              projectId={projectId}
-              req={r}
-              tree={tree}
-              acs={acs}
-              epics={epics}
-              links={links}
-              stakeholderLinks={stakeholderLinks}
-              shById={shById}
-              dim={dimReq(r.id)}
-              selected={sel?.kind === "req" && sel.id === r.id}
-              selStories={selStories}
-              onSelect={onSelect}
-            />
-          ))
-        )}
-      </div>
-
-      {/* SYSTEM (Funkcionális / Nem-funkcionális split) */}
-      <div className="flex flex-col gap-3.5 p-4">
-        {laneHead("bg-[#23262F]", t("laneSystem"), t("laneSystemSub"), funcs.length + nfrs.length)}
-        {empty ? (
+        </div>
+        <div className="flex flex-col gap-3 p-4">
+          <LaneHead
+            dotCls="bg-[#23262F]"
+            label={t("laneSystem")}
+            sub={`${t("funcLabel")} · ${t("nfrLabel")}`}
+            count={0}
+          />
           <div className="rounded-tile border-[1.5px] border-dashed border-neutral-350 bg-[#FBFBFD] px-3.5 py-4 text-center text-[11.5px] leading-[1.5] text-ink-tertiary">
             {t("emptySysNote")}
           </div>
-        ) : (
-          <>
-            <div className="overflow-hidden rounded-tile border border-line bg-[#FBFCFE]">
-              <div className="flex items-center gap-2 border-b border-[#D7E6F1] bg-tint-sky px-3 py-2">
-                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-pivot">{t("funcLabel")}</span>
-                <span className="ml-auto font-mono text-[10px] font-bold text-pivot">{funcs.length}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5 p-2.5">
-                {funcs.map((r) => (
-                  <ReqCard
-                    key={r.id}
-                    projectId={projectId}
-                    req={r}
-                    tree={tree}
-                    acs={acs}
-                    epics={epics}
-                    links={links}
-                    stakeholderLinks={stakeholderLinks}
-                    shById={shById}
-                    dim={dimReq(r.id)}
-                    selected={sel?.kind === "req" && sel.id === r.id}
-                    selStories={selStories}
-                    onSelect={onSelect}
-                    compact
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="overflow-hidden rounded-tile border border-line bg-[#FEFCF7]">
-              <div className="flex items-center gap-2 border-b border-[#EADFC0] bg-tint-gate px-3 py-2">
-                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-gate-text">{t("nfrLabel")}</span>
-                <span className="ml-auto font-mono text-[10px] font-bold text-gate-text">{nfrs.length}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5 p-2.5">
-                {nfrs.map((r) => (
-                  <ReqCard
-                    key={r.id}
-                    projectId={projectId}
-                    req={r}
-                    tree={tree}
-                    acs={acs}
-                    epics={epics}
-                    links={links}
-                    stakeholderLinks={stakeholderLinks}
-                    shById={shById}
-                    dim={dimReq(r.id)}
-                    selected={sel?.kind === "req" && sel.id === r.id}
-                    selStories={selStories}
-                    onSelect={onSelect}
-                    compact
-                  />
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Üres állapot alsó sávja: ✦ AI-javaslat a TO-BE-ből (8. jelenet) */}
-      {empty && (
+        </div>
         <div className="col-span-3 flex flex-wrap items-center gap-3 border-t border-line bg-surface px-5 py-3.5">
           <span className="text-[13px]">✦</span>
           <span className="min-w-0 flex-1 text-[12.5px] leading-[1.45] text-ink-secondary">
@@ -527,7 +421,127 @@ function BaLanes({
             </button>
           </form>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  const reqCardProps = { projectId, tree, acs, epics, links, stakeholderLinks, shById, selStories, onSelect };
+
+  // ── Populált BA-nézet: swimlane-sorok, sticky fejléc, egyben görgethető ──
+  return (
+    <div className="bg-[#F4F5F9]">
+      <div className="max-h-[72vh] overflow-y-auto overscroll-contain">
+        {/* Sticky oszlopfejlécek (a sorok alattuk görgethetők) */}
+        <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.55fr)] border-b border-line bg-[#E9EBF1] shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+          <div className="border-r border-line px-4 py-2.5">
+            <LaneHead dotCls="bg-action-deep" label={t("laneBusiness")} sub={t("laneBusinessSub")} count={business.length} />
+          </div>
+          <div className="border-r border-line px-4 py-2.5">
+            <LaneHead dotCls="bg-ink-secondary" label={t("laneStakeholder")} sub={t("laneStakeholderSub")} count={stakeholder.length} />
+          </div>
+          <div className="px-4 py-2.5">
+            <LaneHead
+              dotCls="bg-[#23262F]"
+              label={t("laneSystem")}
+              sub={`${funcs.length} ${t("funcLabel")} · ${nfrs.length} ${t("nfrLabel")}`}
+              count={funcs.length + nfrs.length}
+            />
+          </div>
+        </div>
+
+        {/* Sorok: 1 business req + teljes leszármazott-lánc, tetejéhez igazítva, zebra */}
+        {rows.map((row, i) => {
+          const systems = rowSystems(row);
+          return (
+            <div
+              key={row.key}
+              data-testid={`ba-row-${row.business?.display_id ?? "orphan"}`}
+              className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.55fr)] items-start border-b border-line ${
+                i % 2 === 1 ? "bg-[#EFF1F6]" : "bg-transparent"
+              }`}
+            >
+              {/* Business-cella */}
+              <div className="min-w-0 border-r border-line p-4">
+                {row.business ? (
+                  <ReqCard {...reqCardProps} req={row.business} dim={dimReq(row.business.id)} selected={sel?.kind === "req" && sel.id === row.business.id} />
+                ) : (
+                  <div className="rounded-tile border-[1.5px] border-dashed border-[#EADFC0] bg-tint-gate/40 px-3 py-3 text-center">
+                    <div className="font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-gate-text">
+                      {t("orphanRowTitle")}
+                    </div>
+                    <div className="mt-1 text-[10.5px] leading-[1.4] text-ink-tertiary">{t("orphanRowNote")}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Stakeholder-cella */}
+              <div className="flex min-w-0 flex-col gap-2.5 border-r border-line p-4">
+                {row.stakeholders.length > 0 ? (
+                  row.stakeholders.map((s) => (
+                    <ReqCard
+                      {...reqCardProps}
+                      key={s.requirement.id}
+                      req={s.requirement}
+                      dim={dimReq(s.requirement.id)}
+                      selected={sel?.kind === "req" && sel.id === s.requirement.id}
+                    />
+                  ))
+                ) : (
+                  <EmptyCell label={t("rowNoStakeholder")} onAdd={onAdd} addLabel={t("rowAddCta")} />
+                )}
+              </div>
+
+              {/* System-cella (funkcionális + NFR, kártya-szintű megkülönböztetéssel) */}
+              <div className="flex min-w-0 flex-col gap-2.5 p-4">
+                {systems.length > 0 ? (
+                  systems.map((r) => (
+                    <ReqCard
+                      {...reqCardProps}
+                      key={r.id}
+                      req={r}
+                      dim={dimReq(r.id)}
+                      selected={sel?.kind === "req" && sel.id === r.id}
+                      compact
+                    />
+                  ))
+                ) : (
+                  <EmptyCell label={t("rowNoSystem")} onAdd={onAdd} addLabel={t("rowAddCta")} />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LaneHead({ dotCls, label, sub, count }: { dotCls: string; label: string; sub: string; count: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`h-[9px] w-[9px] rounded-[2px] ${dotCls}`} />
+      <span className="text-[13px] font-extrabold">{label}</span>
+      <span className="min-w-0 truncate font-mono text-[10px] text-ink-tertiary">{sub}</span>
+      <span className="ml-auto shrink-0 rounded-pill bg-[#ECEEF4] px-2 py-px font-mono text-[11px] font-bold text-ink-tertiary">
+        {count}
+      </span>
+    </div>
+  );
+}
+
+// Halk placeholder egy üres sor-cellához — a sor NEM omlik össze, a hierarchia
+// látszik. Nem fabrikál tartalmat: csak jelzi az űrt + egy „+ hozzáadás" utat.
+function EmptyCell({ label, addLabel, onAdd }: { label: string; addLabel: string; onAdd: () => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-tile border border-dashed border-neutral-350 bg-[#FBFBFD] px-3 py-2.5">
+      <span className="min-w-0 flex-1 text-[11px] leading-[1.4] text-ink-tertiary">{label}</span>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="shrink-0 rounded-3 border border-[#C9B3E6] bg-surface px-2 py-0.5 font-mono text-[9.5px] font-bold text-action-deep hover:bg-accent-tint"
+      >
+        + {addLabel}
+      </button>
     </div>
   );
 }

@@ -137,6 +137,88 @@ export function implementingStories(
  * A story-nál megjelenő KÖZÖS AC-k: a lefedett requirement(ek) AC-i a
  * kötésen át — NEM másolat; ugyanazok a rekordok, requirement-címkével.
  */
+// ── Lineage-sorok (BA-nézet swimlane-rendezés, tiszta deriváció) ──
+// Minden business requirement EGY sort képez a teljes leszármazott-láncával:
+// a közvetlen stakeholder-gyerekek, és azok system/NFR unokái. NEM új tábla,
+// NEM migráció — a meglévő parent_id-láncból származtatva. A szigorú fa melletti
+// adatintegritási hibát (ős-vesztett elem) egy záró gyűjtő-sor fogadja be, hogy
+// a nézet ne omoljon össze.
+
+export interface LineageRowStakeholder {
+  requirement: RequirementRow;
+  /** A stakeholder-igény system/NFR gyerekei (saját sorrendjükben). */
+  systems: RequirementRow[];
+}
+
+export interface LineageRow {
+  /** React-kulcs: a business req id-ja, vagy a gyűjtő-sor szentinelje. */
+  key: string;
+  /** A sor business requirementje; null CSAK a záró gyűjtő-sornál. */
+  business: RequirementRow | null;
+  stakeholders: LineageRowStakeholder[];
+  /** Stakeholder-szülő nélküli system/NFR elemek (csak a gyűjtő-sorban). */
+  looseSystems: RequirementRow[];
+}
+
+export const ORPHAN_ROW_KEY = "__orphan__";
+
+/**
+ * A BA-nézet swimlane-sorai: business-requirementenként egy sor, a teljes
+ * leszármazott-lánccal. A sorrend a business-requirementek megjelenési
+ * sorrendje; a soron belül a leszármazottak a saját sorrendjükben. A
+ * feloldhatatlan ősű elemeket egy záró gyűjtő-sor fogadja be (defenzív;
+ * a szigorú fa mellett nem kellene előfordulnia).
+ */
+export function buildLineageRows(rows: RequirementRow[]): LineageRow[] {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  const rowByBiz = new Map<string, LineageRow>();
+  const businessRows: LineageRow[] = [];
+  for (const r of rows) {
+    if (r.level === "business") {
+      const row: LineageRow = { key: r.id, business: r, stakeholders: [], looseSystems: [] };
+      rowByBiz.set(r.id, row);
+      businessRows.push(row);
+    }
+  }
+
+  const orphan: LineageRow = {
+    key: ORPHAN_ROW_KEY,
+    business: null,
+    stakeholders: [],
+    looseSystems: [],
+  };
+
+  // Stakeholder-szint → a business-szülő sorába, egyébként a gyűjtő-sorba.
+  const shEntryById = new Map<string, LineageRowStakeholder>();
+  for (const r of rows) {
+    if (r.level !== "stakeholder") continue;
+    const parent = r.parent_id ? byId.get(r.parent_id) : undefined;
+    const host = parent && parent.level === "business" ? rowByBiz.get(parent.id)! : orphan;
+    const entry: LineageRowStakeholder = { requirement: r, systems: [] };
+    host.stakeholders.push(entry);
+    shEntryById.set(r.id, entry);
+  }
+
+  // System-szint → a stakeholder-szülő alá; szülő nélkül a gyűjtő-sor looseSystems-be.
+  for (const r of rows) {
+    if (r.level !== "system") continue;
+    const parent = r.parent_id ? byId.get(r.parent_id) : undefined;
+    const entry = parent && parent.level === "stakeholder" ? shEntryById.get(parent.id) : undefined;
+    if (entry) entry.systems.push(r);
+    else orphan.looseSystems.push(r);
+  }
+
+  const out = [...businessRows];
+  if (orphan.stakeholders.length > 0 || orphan.looseSystems.length > 0) out.push(orphan);
+  return out;
+}
+
+/** Egy sor összes system/NFR eleme (a stakeholder-gyerekek unokái + a laza elemek). */
+export function rowSystems(row: LineageRow): RequirementRow[] {
+  return [...row.stakeholders.flatMap((s) => s.systems), ...row.looseSystems];
+}
+
 export function inheritedAcs(
   storyId: string,
   links: RequirementStoryRow[],
