@@ -649,78 +649,42 @@ function World({
         const isCur = cur === n.id;
         const isVisited = visited.has(n.id) && !isCur;
         const isNew = n.diff === "new";
+        const isDiamond = st.shape === "diamond";
         const shadow = isCur
           ? "0 0 0 4px rgba(132,88,179,.24), 0 14px 34px rgba(108,67,160,.2)"
           : "0 1px 2px rgba(35,38,47,.05), 0 6px 18px rgba(35,38,47,.06)";
-        if (st.shape === "diamond") {
-          return (
-            <button
-              key={n.id}
-              type="button"
-              onClick={() => onGo(n.id)}
-              className="absolute flex cursor-pointer items-center justify-center"
-              style={{ left: n.x, top: n.y, width: 190, height: 190, transform: "translate(-50%,-50%)" }}
-            >
-              <span
-                aria-hidden
-                className="absolute left-1/2 top-1/2 rounded-5"
-                style={{
-                  width: "70.7%",
-                  height: "70.7%",
-                  transform: "translate(-50%,-50%) rotate(45deg)",
-                  background: st.bg,
-                  border: `2px solid ${isCur ? "#2E77A8" : visited.has(n.id) ? "#8458B3" : st.line}`,
-                  boxShadow: shadow,
-                }}
-              />
-              <span className="relative z-[1] max-w-[130px] text-center">
-                <span className="mb-0.5 block font-mono text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: st.fg }}>
-                  {t(`nodeType.${st.labelKey}`)}
-                </span>
-                <span className="text-[13.5px] font-semibold leading-[1.18] text-ink">{n.title}</span>
-              </span>
-              {isVisited && <VisitedTick className="absolute right-[18px] top-[18px] z-[2]" />}
-            </button>
-          );
-        }
+        // Állapot-függő keretszín (a kanonikus alak/szín ProcessNodeShape-ben).
+        const borderColor = isDiamond
+          ? isCur
+            ? "#2E77A8"
+            : visited.has(n.id)
+              ? "#8458B3"
+              : st.line
+          : isNew
+            ? "#8458B3"
+            : isCur
+              ? st.c
+              : st.line;
         return (
           <button
             key={n.id}
             type="button"
             onClick={() => onGo(n.id)}
-            className="absolute cursor-pointer px-4 py-2.5 text-center"
-            style={{
-              left: n.x,
-              top: n.y,
-              width: n.w,
-              transform: "translate(-50%,-50%)",
-              background: st.bg,
-              border: isNew ? "2px dashed #8458B3" : isCur ? `2px solid ${st.c}` : `1.5px solid ${st.line}`,
-              borderRadius: st.shape === "pill" ? 999 : 6,
-              boxShadow: shadow,
-            }}
+            className="absolute flex cursor-pointer items-center justify-center"
+            style={{ left: n.x, top: n.y, transform: "translate(-50%,-50%)" }}
           >
-            {isVisited && <VisitedTick className="absolute -right-2 -top-2" />}
-            <span className="flex items-center justify-center gap-1.5">
-              <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.14em]" style={{ color: st.fg }}>
-                {t(`nodeType.${st.labelKey}`)}
-              </span>
-              {n.diff && (
-                <span
-                  className="rounded-3 px-1.5 py-px font-mono text-[8px] font-bold"
-                  style={{
-                    color: isNew ? "#7A4FB0" : "#9A6A12",
-                    background: isNew ? "#EDE6F7" : "#FBF3E0",
-                  }}
-                >
-                  {isNew ? t("badgeNewChat") : t("badgeModified")}
-                </span>
+            <ProcessNodeShape
+              node={n}
+              borderColor={borderColor}
+              boxShadow={shadow}
+              dashed={!isDiamond && isNew}
+              showDiffBadge
+              t={t}
+            >
+              {isVisited && (
+                <VisitedTick className={isDiamond ? "absolute right-[18px] top-[18px] z-[2]" : "absolute -right-2 -top-2"} />
               )}
-            </span>
-            <span className="mt-0.5 block text-[14px] font-semibold leading-[1.22] tracking-[-0.01em] text-ink">
-              {n.title}
-            </span>
-            {n.sub && <span className="mt-0.5 block font-mono text-[9.5px] text-ink-tertiary">{n.sub}</span>}
+            </ProcessNodeShape>
           </button>
         );
       })}
@@ -735,6 +699,96 @@ function VisitedTick({ className }: { className?: string }) {
       className={`flex h-[19px] w-[19px] items-center justify-center rounded-full border-2 border-white bg-action text-[11px] text-white ${className ?? ""}`}
     >
       ✓
+    </span>
+  );
+}
+
+// ── KANONIKUS node-vizuál: alak (pill/rombusz/kártya) + kitöltés + típus-
+// címke + szín a `styleOf(type)` egyetlen forrásból. MINDEN felület ezt
+// használja (fő canvas, bejárás/fókusz, Compare mini-térképek), így a
+// típus-nyelvtan sosem tér el nézetenként. A méret azonos (n.w / rombusz
+// 190×190); a Compare-oldal a világ-transzformmal kicsinyít, nem külön
+// stílussal. Az állapot-függő KERET (aktuális/látogatott/új) és a
+// dekorációk (✓, diff-jelvény) a hívótól jönnek propban — az ALAK/SZÍN/
+// TÍPUSCÍMKE itt kanonikus.
+function ProcessNodeShape({
+  node,
+  borderColor,
+  boxShadow,
+  dashed,
+  showDiffBadge,
+  t,
+  children,
+}: {
+  node: ProcessNode;
+  borderColor: string;
+  boxShadow?: string;
+  dashed?: boolean;
+  showDiffBadge?: boolean;
+  t: (key: string, values?: Record<string, string | number>) => string;
+  children?: React.ReactNode;
+}) {
+  const st = styleOf(node.type);
+  const isNew = node.diff === "new";
+
+  if (st.shape === "diamond") {
+    return (
+      <span aria-hidden={false} className="relative flex items-center justify-center" style={{ width: 190, height: 190 }}>
+        <span
+          aria-hidden
+          className="absolute left-1/2 top-1/2 rounded-5"
+          style={{
+            width: "70.7%",
+            height: "70.7%",
+            transform: "translate(-50%,-50%) rotate(45deg)",
+            background: st.bg,
+            border: `2px solid ${borderColor}`,
+            boxShadow,
+          }}
+        />
+        <span className="relative z-[1] max-w-[130px] text-center">
+          <span className="mb-0.5 block font-mono text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: st.fg }}>
+            {t(`nodeType.${st.labelKey}`)}
+          </span>
+          <span className="text-[13.5px] font-semibold leading-[1.18] text-ink">{node.title}</span>
+        </span>
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="relative block px-4 py-2.5 text-center"
+      style={{
+        width: node.w,
+        background: st.bg,
+        border: dashed ? `2px dashed ${borderColor}` : `1.5px solid ${borderColor}`,
+        borderRadius: st.shape === "pill" ? 999 : 6,
+        boxShadow,
+      }}
+    >
+      <span className="flex items-center justify-center gap-1.5">
+        <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.14em]" style={{ color: st.fg }}>
+          {t(`nodeType.${st.labelKey}`)}
+        </span>
+        {showDiffBadge && node.diff && (
+          <span
+            className="rounded-3 px-1.5 py-px font-mono text-[8px] font-bold"
+            style={{
+              color: isNew ? "#7A4FB0" : "#9A6A12",
+              background: isNew ? "#EDE6F7" : "#FBF3E0",
+            }}
+          >
+            {isNew ? t("badgeNewChat") : t("badgeModified")}
+          </span>
+        )}
+      </span>
+      <span className="mt-0.5 block text-[14px] font-semibold leading-[1.22] tracking-[-0.01em] text-ink">
+        {node.title}
+      </span>
+      {node.sub && <span className="mt-0.5 block font-mono text-[9.5px] text-ink-tertiary">{node.sub}</span>}
+      {children}
     </span>
   );
 }
@@ -778,21 +832,17 @@ function CompareView({
           </svg>
           {m.nodes.map((n) => {
             const st = styleOf(n.type);
+            const isNew = n.diff === "new";
+            // Ugyanaz a kanonikus node-vizuál, mint a fő canvason — a méretet
+            // a világ-transzform (scale) kicsinyíti, a típus-nyelvtan nem tér el.
             return (
-              <div
-                key={n.id}
-                className="absolute px-4 py-3.5 text-center"
-                style={{
-                  left: n.x,
-                  top: n.y,
-                  width: Math.max(n.w, 300),
-                  transform: "translate(-50%,-50%)",
-                  background: st.bg,
-                  border: `2.5px solid ${n.diff === "new" ? "#8458B3" : st.line}`,
-                  borderRadius: st.shape === "pill" ? 999 : 6,
-                }}
-              >
-                <span className="text-[22px] font-bold leading-[1.2] text-ink">{n.title}</span>
+              <div key={n.id} className="absolute" style={{ left: n.x, top: n.y, transform: "translate(-50%,-50%)" }}>
+                <ProcessNodeShape
+                  node={n}
+                  borderColor={isNew ? "#8458B3" : st.line}
+                  dashed={st.shape !== "diamond" && isNew}
+                  t={t}
+                />
               </div>
             );
           })}
