@@ -425,13 +425,13 @@ export async function addCriterionAction(
 export async function selectOptionAction(
   projectId: string,
   componentId: string,
-  optionId: string,
   _prevState: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const t = await getTranslations("solution");
   const supabase = createServiceSupabaseClient();
 
+  const optionId = String(formData.get("option_id") ?? "");
   const { data: optData } = await supabase
     .from("component_options")
     .select("id, component_id")
