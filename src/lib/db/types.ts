@@ -227,3 +227,58 @@ export interface StakeholderRequirementRow {
   requirement_id: string;
   stakeholder_id: string;
 }
+
+// ── Megoldási opció-összevető (#12, 0010) ────────────────────
+
+export type ComponentType = "process" | "infrastructure" | "personnel";
+
+/** solution_components sora — MIVEL valósul meg a megoldás. */
+export interface SolutionComponentRow {
+  id: string;
+  project_id: string;
+  phase: string;
+  type: ComponentType;
+  name: string;
+  description: string;
+  state: EntityState;
+  source_input_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * component_step_links sora — a komponens ↔ TO-BE lépés kötés a process_map
+ * jsonb-jén BELÜLI stabil node-id-re (a node-ok `id` mezője; a szerkesztés
+ * és a verzió-emelés megőrzi). A process_map_id provenance.
+ */
+export interface ComponentStepLinkRow {
+  component_id: string;
+  process_map_id: string;
+  node_id: string;
+}
+
+/** Egy szempont-cella értéke — a hiányzó szempont ÜRES (c-minta). */
+export interface CriterionValue {
+  value: string;
+  note?: string;
+  /** Egyedi (nem alap-készletbeli) szempont felirata. */
+  label?: string;
+}
+
+/** component_options sora — a nyertest EMBER választja (HITL). */
+export interface ComponentOptionRow {
+  id: string;
+  component_id: string;
+  name: string;
+  description: string;
+  /** szempont-kulcs → { value, note, label? } — defenzív parse a lib-ben. */
+  criteria_values: unknown;
+  is_selected: boolean;
+  /** ✦ AI AJÁNLJA — ajánlás, SOSEM választás. */
+  ai_recommended: boolean;
+  rationale: string;
+  selected_by: string | null;
+  selected_at: string | null;
+  ord: number;
+  created_at: string;
+}
