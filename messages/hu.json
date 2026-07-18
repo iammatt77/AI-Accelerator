@@ -29,7 +29,8 @@
     "lockedPhasesSuffix": "fázisok",
     "lockedTooltip": "A fázis a megelőző kapu lezárásával nyílik meg.",
     "processMap": "Folyamattérkép",
-    "requirements": "Követelmények"
+    "requirements": "Követelmények",
+    "solution": "Megoldás-terv"
   },
   "dashboard": {
     "title": "Vezérlőpult",

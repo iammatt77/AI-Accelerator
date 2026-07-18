@@ -29,7 +29,8 @@
     "lockedPhasesSuffix": "phases",
     "lockedTooltip": "The phase unlocks when the previous gate is closed.",
     "processMap": "Process map",
-    "requirements": "Requirements"
+    "requirements": "Requirements",
+    "solution": "Solution plan"
   },
   "dashboard": {
     "title": "Dashboard",
