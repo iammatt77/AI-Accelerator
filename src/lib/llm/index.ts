@@ -1094,6 +1094,14 @@ export type {
   StoryPackage,
 } from "@/lib/requirements/parse";
 
+import {
+  parseComponentProposals,
+  parseOptionProposals,
+  type ComponentProposal,
+  type OptionProposal,
+} from "@/lib/solution/parse";
+export type { ComponentProposal, OptionProposal } from "@/lib/solution/parse";
+
 export interface RequirementBasisPain {
   title: string;
   description: string | null;
@@ -1420,4 +1428,326 @@ function mockSuggestStoryDraft(
     epic_title: "Ügyintézői válasz-asszisztens",
   };
   return parseStoryDraft(JSON.stringify(raw));
+}
+
+// ═════════════════ Megoldási opció-összevető (#12) ═════════════════
+
+export interface SolutionBasisStep {
+  /** A process_map jsonb-n belüli STABIL node-id — a kötés erre épül. */
+  nodeId: string;
+  num: string;
+  title: string;
+  type: string;
+  desc: string;
+}
+
+const COMPONENT_SHAPE = [
+  `{ "components": [ { "type": "process" | "infrastructure" | "personnel",`,
+  `"name": "<komponens neve>", "description": "<mit valósít meg — 1-2 mondat>",`,
+  `"step_ids": ["<a kötött TO-BE lépés node-id-je a megadott listából>"],`,
+  `"source_indices": [<támasztó forrás sorszáma>] } ] }`,
+].join(" ");
+
+/**
+ * Komponens-javaslat (#12, E1): a jóváhagyott TO-BE lépésekből + a
+ * fájdalompontokból javasol megoldás-komponenseket. A kötés a lépés STABIL
+ * node-id-jére mutat; process → pontosan egy lépés, infrastructure → több,
+ * personnel → nulla vagy egy. A javaslat ai_suggested — az ember erősít meg.
+ */
+export async function suggestComponents(
+  sources: LlmSource[],
+  pains: RequirementBasisPain[],
+  toBeSteps: SolutionBasisStep[],
+): Promise<ComponentProposal[]> {
+  const validIds = new Set(toBeSteps.map((s) => s.nodeId));
+  if (isMock()) {
+    return mockSuggestComponents(sources, toBeSteps);
+  }
+
+  const system = [
+    "Megoldás-architekt vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A jóváhagyott TO-BE folyamat lépéseihez javasolsz megvalósító",
+    "KOMPONENSEKET három típusban: process (egy konkrét lépést valósít meg —",
+    "step_ids PONTOSAN EGY node-id), infrastructure (átfogó, több lépést",
+    "szolgál — step_ids a kiszolgált lépések node-id-jai; ha minden lépést,",
+    "sorold fel mindet), personnel (change-elem — step_ids üres, vagy egy",
+    "lépés, ha konkrétan ahhoz kötődik, pl. betanítás egy HITL-lépéshez).",
+    "KIZÁRÓLAG érvényes JSON-t adsz vissza. A step_ids CSAK a megadott",
+    "node-id-listából vehet értéket. Csak olyan komponenst javasolj, amelyre",
+    "a TO-BE lépésekből vagy a fájdalompontokból tényleges alap van — TILOS",
+    "kitalálni; a source_indices a támasztó forrás(ok) sorszáma. NEM választasz",
+    "megoldást és NEM adsz opciókat — csak a komponens-készletet javaslod.",
+    "Az eredmény magyarul készül.",
+  ].join(" ");
+
+  const stepLines = toBeSteps.length
+    ? toBeSteps.map((s) => `- node_id: ${s.nodeId} · TO-BE ${s.num} [${s.type}] ${s.title}${s.desc ? ` — ${s.desc}` : ""}`).join("\n")
+    : "(nincs)";
+  const painLines = pains.length
+    ? pains.map((p, i) => `${i + 1}. ${p.title}${p.description ? ` — ${p.description}` : ""}`).join("\n")
+    : "(nincs)";
+  const srcLines = sources.map((s) => `[${s.index}] ${s.title}`).join("\n");
+
+  const userPrompt = [
+    "── A jóváhagyott TO-BE folyamat lépései (stabil node-id-kkal) ──",
+    stepLines,
+    "",
+    "── Fájdalompontok ──",
+    painLines,
+    "",
+    "── Számozott források ──",
+    srcLines,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    COMPONENT_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 4000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseComponentProposals(textFromMessage(message), validIds);
+}
+
+const OPTION_SHAPE = [
+  `{ "options": [ { "name": "<opció neve>", "description": "<1 mondat>",`,
+  `"recommended": true | false,`,
+  `"criteria": { "cost": { "value": "<pl. Magas>", "note": "<pl. ~6,5 M Ft egyszeri>" },`,
+  `"lead_time": { "value": "<pl. 4 hét>" }, "risk": { "value": "...", "note": "..." },`,
+  `"data_need": { "value": "...", "note": "..." }, "fit": { "value": "..." },`,
+  `"<egyedi_kulcs>": { "label": "<egyedi szempont neve>", "value": "..." } } } ] }`,
+].join(" ");
+
+/**
+ * Opció-javaslat egy komponenshez (#12, E1): alternatívák + szempont-értékek.
+ * c-minta: ahol nincs alap egy szempont-értékre, a kulcs KIMARAD (üres cella
+ * lesz — „nincs megadva"), szám/érték fabrikálása TILOS. Legfeljebb egy
+ * recommended=true (✦ AI AJÁNLJA) — az ajánlás SOSEM választás, a nyertest
+ * az ember jelöli ki.
+ */
+export async function suggestOptions(
+  component: { name: string; type: string; description: string; stepTitles: string[] },
+  sources: LlmSource[],
+  pains: RequirementBasisPain[],
+): Promise<OptionProposal[]> {
+  if (isMock()) {
+    return mockSuggestOptions(component);
+  }
+
+  const system = [
+    "Megoldás-architekt vagy egy AI-implementációs tanácsadói rendszerben.",
+    "Egy megoldás-KOMPONENSHEZ javasolsz 2-3 megvalósítási ALTERNATÍVÁT",
+    "(opciót), szempontonkénti értékeléssel. Alap-szempontok: cost (költség),",
+    "lead_time (bevezetési idő), risk (kockázat), data_need (adatigény),",
+    "fit (illeszkedés/testreszabhatóság); indokolt esetben adhatsz egyedi",
+    "szempontot label-lel (pl. szállítói függőség). SZIGORÚ SZABÁLY: ahol az",
+    "alapanyagból NINCS alap egy szempont-értékre, a kulcsot HAGYD KI — üres",
+    "cella lesz; számot, árat, időt fabrikálni TILOS. Konkrét összeget CSAK",
+    "akkor írj a note-ba, ha a forrásokban szerepel. Legfeljebb EGY opción",
+    "lehet recommended=true, rövid ténybeli alapon — de a rendszer nem választ:",
+    "a nyertest az ember jelöli ki. KIZÁRÓLAG érvényes JSON-t adsz vissza.",
+    "Az eredmény magyarul készül.",
+  ].join(" ");
+
+  const painLines = pains.length
+    ? pains.map((p, i) => `${i + 1}. ${p.title}${p.description ? ` — ${p.description}` : ""}`).join("\n")
+    : "(nincs)";
+  const srcLines = sources.length ? sources.map((s) => `[${s.index}] ${s.title}`).join("\n") : "(nincs)";
+
+  const userPrompt = [
+    "── A komponens ──",
+    `Név: ${component.name}`,
+    `Típus: ${component.type}`,
+    component.description ? `Leírás: ${component.description}` : "",
+    component.stepTitles.length ? `Kötött TO-BE lépés(ek): ${component.stepTitles.join(", ")}` : "Nem lépéshez kötött.",
+    "",
+    "── Fájdalompontok (kontextus) ──",
+    painLines,
+    "",
+    "── Számozott források ──",
+    srcLines,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    OPTION_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 4000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseOptionProposals(textFromMessage(message));
+}
+
+// ── #12 mockok (determinisztikus MOCK_LLM fixture-ök) ────────
+
+function mockSuggestComponents(
+  sources: LlmSource[],
+  toBeSteps: SolutionBasisStep[],
+): ComponentProposal[] {
+  if (toBeSteps.length === 0) return [];
+  const src = sources.length ? [sources[0].index] : [];
+  const out: { type: string; name: string; description: string; step_ids: string[]; source_indices: number[] }[] = [];
+
+  // folyamat-komponens az első 2 nem-kezdő/záró, nem-döntés lépéshez
+  const eligible = toBeSteps.filter((s) => s.type !== "start_end" && s.type !== "decide");
+  eligible.slice(0, 2).forEach((s, i) => {
+    out.push({
+      type: "process",
+      name: i === 0 ? `Osztályozó modell (${s.num})` : `Hibakód-azonosító AI (${s.num})`,
+      description: i === 0 ? "Bejövő panasz témába sorolása." : "Panaszszövegből a hibakód kikövetkeztetése.",
+      step_ids: [s.nodeId],
+      source_indices: src,
+    });
+  });
+  // infra: az első két eligible lépést szolgálja
+  if (eligible.length >= 2) {
+    out.push({
+      type: "infrastructure",
+      name: "Vektoradatbázis / tudásbázis",
+      description: "Hibakód-leírások és korábbi megoldások embeddingjei.",
+      step_ids: eligible.slice(0, 2).map((s) => s.nodeId),
+      source_indices: src,
+    });
+  }
+  // infra: átfogó — minden lépés
+  out.push({
+    type: "infrastructure",
+    name: "Integrációs réteg (CRM-konnektor)",
+    description: "A meglévő ügyfélszolgálati rendszerhez köti a folyamat minden lépését.",
+    step_ids: toBeSteps.map((s) => s.nodeId),
+    source_indices: src,
+  });
+  // személyi: nem kötött + egy HITL-lépéshez kötött (ha van)
+  out.push({
+    type: "personnel",
+    name: "AI-champion szerep",
+    description: "Ügyféloldali felelős, aki a bevezetést és az adaptációt gazdálja.",
+    step_ids: [],
+    source_indices: [],
+  });
+  const hitl = toBeSteps.find((s) => s.type === "control_hitl");
+  if (hitl) {
+    out.push({
+      type: "personnel",
+      name: "Operátor-betanítás",
+      description: "A HITL-jóváhagyó felülethez kötött tréning.",
+      step_ids: [hitl.nodeId],
+      source_indices: src,
+    });
+  }
+  return parseComponentProposals(
+    JSON.stringify({ components: out }),
+    new Set(toBeSteps.map((s) => s.nodeId)),
+  );
+}
+
+function mockSuggestOptions(component: { name: string; type: string }): OptionProposal[] {
+  if (component.type === "process") {
+    const raw = {
+      options: [
+        {
+          name: "Saját fine-tuned modell",
+          description: "Maximális testreszabás, teljes kontroll.",
+          recommended: false,
+          criteria: {
+            cost: { value: "Magas" },
+            lead_time: { value: "8–10 hét" },
+            risk: { value: "Közepes", note: "Modell-karbantartás saját erőforrással." },
+            data_need: { value: "Magas", note: "5 000+ címkézett eset" },
+            fit: { value: "Kiváló" },
+            vendor_lock: { label: "Szállítói függőség", value: "Nincs" },
+          },
+        },
+        {
+          name: "Off-the-shelf API",
+          description: "Kész szolgáltatás, gyors indulás.",
+          recommended: false,
+          criteria: {
+            cost: { value: "Alacsony" },
+            lead_time: { value: "2 hét" },
+            risk: { value: "Alacsony", note: "Érett szolgáltatás, SLA-val." },
+            data_need: { value: "Alacsony", note: "Nincs saját tanítóadat." },
+            fit: { value: "Közepes" },
+            vendor_lock: { label: "Szállítói függőség", value: "Magas" },
+          },
+        },
+        {
+          name: "Hibrid (API + finomhangolt prompt)",
+          description: "Kész modell, projektre hangolt prompt-réteggel.",
+          recommended: true,
+          criteria: {
+            cost: { value: "Közepes" },
+            lead_time: { value: "4 hét" },
+            risk: { value: "Alacsony", note: "Kevés egyedi kód, könnyű visszaállás." },
+            data_need: { value: "Közepes", note: "~300 példa a prompt-réteghez." },
+            fit: { value: "Jó" },
+            // vendor_lock szándékosan kihagyva → üres cella ([]„nincs megadva")
+          },
+        },
+      ],
+    };
+    return parseOptionProposals(JSON.stringify(raw));
+  }
+  if (component.type === "infrastructure") {
+    const raw = {
+      options: [
+        {
+          name: "Managed (felhő) szolgáltatás",
+          description: "Üzemeltetés a szolgáltatónál.",
+          recommended: true,
+          criteria: {
+            cost: { value: "Közepes" },
+            lead_time: { value: "1 hét" },
+            risk: { value: "Alacsony" },
+          },
+        },
+        {
+          name: "Saját üzemeltetés",
+          description: "Helyben futtatott komponens.",
+          recommended: false,
+          criteria: {
+            // cost szándékosan kihagyva → üres cella
+            lead_time: { value: "3–4 hét" },
+            risk: { value: "Közepes" },
+          },
+        },
+      ],
+    };
+    return parseOptionProposals(JSON.stringify(raw));
+  }
+  const raw = {
+    options: [
+      {
+        name: "Belső kinevezés (meglévő teamlead)",
+        description: "Ismeri a folyamatot; kapacitás-kockázat a napi feladatai mellett.",
+        recommended: false,
+        criteria: {
+          cost: { value: "~0,2 FTE" },
+          lead_time: { value: "azonnal" },
+          risk: { value: "Közepes" },
+        },
+      },
+      {
+        name: "Új, dedikált szerep",
+        description: "Toborzott, teljes idejű felelős.",
+        recommended: false,
+        criteria: {
+          cost: { value: "1,0 FTE" },
+          lead_time: { value: "6–8 hét toborzás" },
+          risk: { value: "Alacsony" },
+        },
+      },
+    ],
+  };
+  return parseOptionProposals(JSON.stringify(raw));
 }
