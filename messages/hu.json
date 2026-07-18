@@ -1484,6 +1484,14 @@
     "errNotFound": "A követelmény nem található.",
     "errCoverRequired": "Legalább egy lefedett requirement kötelező — az irány kötött: requirement → story.",
     "errCoverSystemOnly": "Story csak SYSTEM szintű requirementet fedhet.",
-    "errStoryMissing": "A szerep és a cél kötelező."
+    "errStoryMissing": "A szerep és a cél kötelező.",
+    "noticeNoAc": "A generálás nem adott az alapból levezethető AC-t — pontosítsd a követelmény szövegét, vagy vedd fel kézzel.",
+    "acDeleteCta": "AC törlése",
+    "errPickStakeholder": "Válassz egy érintettet a kötéshez.",
+    "stakeholderSection": "Érintett-kötés",
+    "shNone": "Nincs kötött érintett.",
+    "shAddPlaceholder": "Érintett hozzákötése…",
+    "shBind": "Kötés",
+    "shUnbind": "{name} leválasztása"
   }
 }

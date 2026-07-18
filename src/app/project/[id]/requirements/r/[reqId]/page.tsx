@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { AcEditor } from "@/components/AcEditor";
+import { AcDeleteButton } from "@/components/AcDeleteButton";
+import { StakeholderLinkEditor } from "@/components/StakeholderLinkEditor";
 import { MoscowChip } from "@/components/RequirementsBoard";
 import { buildTree, lineageOf } from "@/lib/requirements/model";
 import { loadNumberedSources, inputIdsToIndices } from "@/lib/sources";
@@ -60,10 +62,15 @@ export default async function RequirementDetailPage({
       .map((l) => stories.find((s) => s.id === l.story_id)?.display_id)
       .filter(Boolean)
       .join(", ");
-  const shNames = ((shLinkRows ?? []) as StakeholderRequirementRow[])
-    .filter((l) => l.requirement_id === reqId)
-    .map((l) => ((shRows ?? []) as StakeholderRow[]).find((s) => s.id === l.stakeholder_id)?.name)
-    .filter(Boolean) as string[];
+  const allStakeholders = (shRows ?? []) as StakeholderRow[];
+  const boundStakeholderIds = new Set(
+    ((shLinkRows ?? []) as StakeholderRequirementRow[])
+      .filter((l) => l.requirement_id === reqId)
+      .map((l) => l.stakeholder_id),
+  );
+  const boundStakeholders = allStakeholders.filter((s) => boundStakeholderIds.has(s.id));
+  const availableStakeholders = allStakeholders.filter((s) => !boundStakeholderIds.has(s.id));
+  const shNames = boundStakeholders.map((s) => s.name);
 
   // Forrás-chipek: a kanonikus [n] számozással.
   const loaded = await loadNumberedSources(supabase, id);
@@ -145,8 +152,8 @@ export default async function RequirementDetailPage({
       </div>
 
       <div className="grid grid-cols-[1fr_320px]">
-        {/* AC-k — a KÖZÖS AC forrása */}
-        <div className="border-r border-line p-5">
+        {/* AC-k — a KÖZÖS AC forrása (min-w-0: a 1fr sáv szűküljön, a GWT törjön) */}
+        <div className="min-w-0 border-r border-line p-5">
           <div className="mb-3.5 flex items-center gap-2.5">
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-ink">
               {t("acSection")}
@@ -163,11 +170,12 @@ export default async function RequirementDetailPage({
           {acs.map((ac, i) => (
             <div key={ac.id} className="mb-3 overflow-hidden rounded-tile border border-line">
               <div className="flex items-center gap-2 border-b border-line-soft bg-[#F7F8FB] px-3.5 py-2">
-                <span className="font-mono text-[9.5px] font-bold text-ink-tertiary">AC-{i + 1}</span>
-                <span className="text-[12.5px] font-semibold">{ac.title}</span>
-                <span className="ml-auto rounded-3 border border-[#D9C8EE] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
+                <span className="shrink-0 font-mono text-[9.5px] font-bold text-ink-tertiary">AC-{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{ac.title}</span>
+                <span className="shrink-0 rounded-3 border border-[#D9C8EE] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
                   ◑ {storiesForAc(reqId) || t("acNoStoryYet")}
                 </span>
+                {req.level === "system" && <AcDeleteButton projectId={id} reqId={reqId} acId={ac.id} />}
               </div>
               <div className="flex flex-col gap-2 p-3.5">
                 {(
@@ -178,10 +186,10 @@ export default async function RequirementDetailPage({
                   ] as const
                 ).map(([kw, cls, text]) => (
                   <div key={kw} className="flex items-start gap-2.5">
-                    <span className={`min-w-[52px] rounded-4 border px-2 py-0.5 text-center font-mono text-[10px] font-bold ${cls}`}>
+                    <span className={`min-w-[52px] shrink-0 rounded-4 border px-2 py-0.5 text-center font-mono text-[10px] font-bold ${cls}`}>
                       {kw}
                     </span>
-                    <span className="text-[13px] leading-[1.5] text-[#33374A]">{text}</span>
+                    <span className="min-w-0 flex-1 break-words text-[13px] leading-[1.5] text-[#33374A]">{text}</span>
                   </div>
                 ))}
               </div>
@@ -258,6 +266,17 @@ export default async function RequirementDetailPage({
               </span>
             </div>
           </div>
+          {req.level === "stakeholder" && (
+            <>
+              <div className="h-px bg-line" />
+              <StakeholderLinkEditor
+                projectId={id}
+                reqId={reqId}
+                bound={boundStakeholders}
+                available={availableStakeholders}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -8,7 +8,6 @@ import {
   suggestRequirements,
   suggestStories,
   suggestStoryDraft,
-  type AcDraft,
   type StoryDraft,
 } from "@/lib/llm";
 import { loadNumberedSources, indicesToInputIds } from "@/lib/sources";
@@ -51,6 +50,26 @@ function moscowFromForm(v: FormDataEntryValue | null): Moscow | null {
 
 function base(projectId: string): string {
   return `/project/${projectId}/requirements`;
+}
+
+/**
+ * Egy LLM-adta érintett-név feloldása a projekt stakeholder-listájára.
+ * Normalizált pontos egyezés → EGYÉRTELMŰ tartalmazás (pontosan egy jelölt,
+ * min. 4 karakter, hogy a rövid töredékek ne kössenek false-t). Ha nem
+ * egyértelmű, null — nem fabrikálunk kötést (c-minta).
+ */
+function matchStakeholder(name: string, rows: StakeholderRow[]): StakeholderRow | null {
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  const n = norm(name);
+  if (!n) return null;
+  const exact = rows.find((s) => norm(s.name) === n);
+  if (exact) return exact;
+  if (n.length < 4) return null;
+  const contains = rows.filter((s) => {
+    const sn = norm(s.name);
+    return sn.length >= 4 && (sn.includes(n) || n.includes(sn));
+  });
+  return contains.length === 1 ? contains[0] : null;
 }
 
 // ── Generálás: requirement-fa (üres állapotból, E1) ──────────
@@ -153,13 +172,19 @@ export async function generateRequirementsAction(
     }
     const newId = (data as { id: string }).id;
     tmpToId.set(p.tmp, newId);
-    // Stakeholder-kötés név szerint (a #8 entitásra).
+    // Stakeholder-kötés név szerint (a #8 entitásra). Robusztus egyezés a
+    // valós-LLM névvariancia miatt: normalizált (kis/nagybetű, whitespace)
+    // pontos egyezés, majd EGYÉRTELMŰ tartalmazás-egyezés (pontosan egy
+    // jelölt) — ha nincs egyértelmű alap, üresen marad (c-minta, nem tippel).
     for (const name of p.stakeholderNames) {
-      const sh = shRows.find((s) => s.name.toLowerCase() === name.toLowerCase());
+      const sh = matchStakeholder(name, shRows);
       if (sh) {
         await supabase
           .from("stakeholder_requirements")
-          .insert({ requirement_id: newId, stakeholder_id: sh.id });
+          .upsert(
+            { requirement_id: newId, stakeholder_id: sh.id },
+            { onConflict: "requirement_id,stakeholder_id", ignoreDuplicates: true },
+          );
       }
     }
   }
@@ -609,18 +634,21 @@ export async function deriveStoryAction(
 
 // ── ✦ Vázlat-akciók (űrlap-kitöltés — nem írnak DB-t; az ember dönt) ──
 
-export interface AcDraftState {
-  ok: boolean;
-  error: string | null;
-  drafts: AcDraft[] | null;
-}
-
-export async function suggestAcDraftAction(
+/**
+ * ✦ AC-vázlat GENERÁLÁSA — a javasolt Given–When–Then AC-ket KÖZVETLENÜL
+ * PERZISZTÁLJA az acceptance_criteria táblába (a requirementre), majd
+ * revalidál — így kilépés/visszalépés után is megmaradnak, és a kötött
+ * story-k a közös AC mechanizmuson át azonnal látják őket. HITL: az AC
+ * a követelmény szövegéből származik (a prompt tiltja a kitalálást), és az
+ * ember bármelyik AC-t törölheti (deleteAcAction). Korábban ez csak
+ * kliens-oldali vázlatot adott — DB-be sosem írt (ez volt a bug).
+ */
+export async function generateAcAction(
   projectId: string,
   reqId: string,
-  _prevState: AcDraftState,
+  _prevState: FormState,
   _formData: FormData,
-): Promise<AcDraftState> {
+): Promise<FormState> {
   const t = await getTranslations("requirements");
   const supabase = createServiceSupabaseClient();
   const { data } = await supabase
@@ -629,18 +657,92 @@ export async function suggestAcDraftAction(
     .eq("id", reqId)
     .eq("project_id", projectId)
     .maybeSingle();
-  if (!data) return { ok: false, error: t("errNotFound"), drafts: null };
+  if (!data) return { ok: false, error: t("errNotFound") };
+
+  let drafts;
   try {
-    const drafts = await suggestAcDraft((data as { text: string }).text);
-    if (drafts.length === 0) return { ok: true, error: null, drafts: null };
-    return { ok: true, error: null, drafts };
+    drafts = await suggestAcDraft((data as { text: string }).text);
   } catch (e) {
-    return {
-      ok: false,
-      error: t("errLlm", { message: e instanceof Error ? e.message : "?" }),
-      drafts: null,
-    };
+    return { ok: false, error: t("errLlm", { message: e instanceof Error ? e.message : "?" }) };
   }
+  if (drafts.length === 0) {
+    return { ok: true, error: null, notice: t("noticeNoAc") };
+  }
+  const { data: acRows } = await supabase
+    .from("acceptance_criteria")
+    .select("ord")
+    .eq("requirement_id", reqId)
+    .order("ord", { ascending: false })
+    .limit(1);
+  let nextOrd = (((acRows ?? [])[0] as { ord: number } | undefined)?.ord ?? -1) + 1;
+  for (const d of drafts) {
+    const { error } = await supabase.from("acceptance_criteria").insert({
+      requirement_id: reqId,
+      title: d.title,
+      given_text: d.given,
+      when_text: d.when,
+      then_text: d.then,
+      ord: nextOrd,
+    });
+    if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+    nextOrd += 1;
+  }
+  revalidatePath(base(projectId));
+  revalidatePath(`${base(projectId)}/r/${reqId}`);
+  return { ok: true, error: null };
+}
+
+// ── Stakeholder-kötés (kézi bind/unbind a stakeholder requirementen) ──
+// A stakeholder_requirements kötés OPCIONÁLIS — a mentés/létrehozás sosem
+// blokkolt a hiánya miatt. Ez a manuális út, ha a generálás nem talált
+// (vagy rosszul kötött) — a c-minta szerint az AI üresen hagyja, ahol
+// nincs egyértelmű alap.
+
+export async function addStakeholderLinkAction(
+  projectId: string,
+  reqId: string,
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const t = await getTranslations("requirements");
+  const supabase = createServiceSupabaseClient();
+  const stakeholderId = String(formData.get("stakeholderId") ?? "");
+  if (!stakeholderId) return { ok: false, error: t("errPickStakeholder") };
+  // A requirementnek a projekthez kell tartoznia + stakeholder szintűnek lennie.
+  const { data: reqRow } = await supabase
+    .from("requirements")
+    .select("level")
+    .eq("id", reqId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (!reqRow) return { ok: false, error: t("errNotFound") };
+  const { error } = await supabase
+    .from("stakeholder_requirements")
+    .upsert({ requirement_id: reqId, stakeholder_id: stakeholderId }, { onConflict: "requirement_id,stakeholder_id", ignoreDuplicates: true });
+  if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+  revalidatePath(base(projectId));
+  revalidatePath(`${base(projectId)}/r/${reqId}`);
+  return { ok: true, error: null };
+}
+
+export async function removeStakeholderLinkAction(
+  projectId: string,
+  reqId: string,
+  stakeholderId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const t = await getTranslations("requirements");
+  const supabase = createServiceSupabaseClient();
+  const { error } = await supabase
+    .from("stakeholder_requirements")
+    .delete()
+    .eq("requirement_id", reqId)
+    .eq("stakeholder_id", stakeholderId);
+  if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+  revalidatePath(base(projectId));
+  revalidatePath(`${base(projectId)}/r/${reqId}`);
+  return { ok: true, error: null };
 }
 
 export interface StoryDraftState {

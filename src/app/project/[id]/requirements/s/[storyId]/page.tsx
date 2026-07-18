@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { MoscowChip } from "@/components/RequirementsBoard";
 import { buildTree, inheritedAcs, lineageOf } from "@/lib/requirements/model";
+import { loadNumberedSources, inputIdsToIndices } from "@/lib/sources";
 import type {
   AcceptanceCriterionRow,
   EpicRow,
@@ -56,6 +57,17 @@ export default async function StoryDetailPage({
     links.some((l) => l.requirement_id === r.id && l.story_id !== storyId),
   );
 
+  // Forrás-chipek: a story tényleges forrás-inputjai a kanonikus [n]
+  // számozással (korábbi bug: a .length jelent meg [N]-ként, mindig [1]).
+  const loaded = await loadNumberedSources(supabase, id);
+  const sourceChips =
+    "error" in loaded
+      ? []
+      : inputIdsToIndices(story.source_input_ids, loaded.inputIds).map((n) => ({
+          n,
+          title: loaded.sources[n - 1]?.title ?? "?",
+        }));
+
   return (
     <div className="overflow-hidden rounded-shell border border-line bg-[#FBFBFD] shadow-card">
       {/* fejléc */}
@@ -97,7 +109,7 @@ export default async function StoryDetailPage({
         </p>
       </div>
 
-      <div className="grid grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-[320px_minmax(0,1fr)]">
         {/* oldalsáv: lefedett requirementek (N:M) + forrás + eredet */}
         <div className="flex flex-col gap-4 border-r border-line bg-[#FAFAFC] p-4.5 pl-5">
           <div>
@@ -152,13 +164,23 @@ export default async function StoryDetailPage({
             <div className="mb-2 font-mono text-[9.5px] font-bold uppercase tracking-[0.1em] text-ink-tertiary">
               {t("sourceSection")}
             </div>
-            <Link
-              href={`/project/${id}/sources`}
-              className="flex items-center gap-2 rounded-4 border border-[#C7DEEF] bg-surface px-2.5 py-2 text-[12px] font-semibold"
-            >
-              <span className="font-mono text-[10px] font-bold text-pivot">[{story.source_input_ids.length}]</span>
-              <span>{t("storySourceNote")}</span>
-            </Link>
+            {sourceChips.length === 0 ? (
+              <p className="text-[11.5px] text-ink-tertiary">{t("noSource")}</p>
+            ) : (
+              <>
+                {sourceChips.map((c) => (
+                  <Link
+                    key={c.n}
+                    href={`/project/${id}/sources`}
+                    className="mb-1.5 flex items-center gap-2 rounded-4 border border-[#C7DEEF] bg-surface px-2.5 py-2 text-[12px] font-semibold"
+                  >
+                    <span className="shrink-0 font-mono text-[10px] font-bold text-pivot">[{c.n}]</span>
+                    <span className="min-w-0 truncate">{c.title}</span>
+                  </Link>
+                ))}
+                <p className="mt-0.5 text-[10.5px] leading-[1.4] text-ink-tertiary">{t("storySourceNote")}</p>
+              </>
+            )}
           </div>
           <div>
             <div className="mb-2 font-mono text-[9.5px] font-bold uppercase tracking-[0.1em] text-ink-tertiary">
@@ -177,7 +199,7 @@ export default async function StoryDetailPage({
         </div>
 
         {/* KÖZÖS AC — a requirementtől örökölve */}
-        <div className="p-5">
+        <div className="min-w-0 p-5">
           <div className="mb-1.5 flex items-center gap-2.5">
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-ink">
               {t("acSection")}
@@ -197,9 +219,9 @@ export default async function StoryDetailPage({
           {shared.map(({ ac, requirement }, i) => (
             <div key={ac.id} data-testid={`shared-ac-${ac.id}`} className="mb-3 overflow-hidden rounded-tile border border-line">
               <div className="flex items-center gap-2 border-b border-line-soft bg-[#F7F8FB] px-3.5 py-2">
-                <span className="font-mono text-[9.5px] font-bold text-ink-tertiary">AC-{i + 1}</span>
-                <span className="text-[12.5px] font-semibold">{ac.title}</span>
-                <span className="ml-auto rounded-3 border border-[#C7DEEF] bg-tint-sky px-1.5 py-px font-mono text-[8.5px] font-bold text-pivot">
+                <span className="shrink-0 font-mono text-[9.5px] font-bold text-ink-tertiary">AC-{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{ac.title}</span>
+                <span className="shrink-0 rounded-3 border border-[#C7DEEF] bg-tint-sky px-1.5 py-px font-mono text-[8.5px] font-bold text-pivot">
                   ⤴ {requirement.display_id}
                 </span>
               </div>
@@ -212,10 +234,10 @@ export default async function StoryDetailPage({
                   ] as const
                 ).map(([kw, cls, text]) => (
                   <div key={kw} className="flex items-start gap-2.5">
-                    <span className={`min-w-[52px] rounded-4 border px-2 py-0.5 text-center font-mono text-[10px] font-bold ${cls}`}>
+                    <span className={`min-w-[52px] shrink-0 rounded-4 border px-2 py-0.5 text-center font-mono text-[10px] font-bold ${cls}`}>
                       {kw}
                     </span>
-                    <span className="text-[13px] leading-[1.5] text-[#33374A]">{text}</span>
+                    <span className="min-w-0 flex-1 break-words text-[13px] leading-[1.5] text-[#33374A]">{text}</span>
                   </div>
                 ))}
               </div>

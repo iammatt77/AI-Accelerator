@@ -1484,6 +1484,14 @@
     "errNotFound": "Requirement not found.",
     "errCoverRequired": "At least one covered requirement is required — the direction is fixed: requirement → story.",
     "errCoverSystemOnly": "A story may only cover SYSTEM-level requirements.",
-    "errStoryMissing": "Role and goal are required."
+    "errStoryMissing": "Role and goal are required.",
+    "noticeNoAc": "Generation produced no AC derivable from the text — refine the requirement wording, or add one manually.",
+    "acDeleteCta": "Delete AC",
+    "errPickStakeholder": "Pick a stakeholder to bind.",
+    "stakeholderSection": "Stakeholder link",
+    "shNone": "No stakeholder bound.",
+    "shAddPlaceholder": "Bind a stakeholder…",
+    "shBind": "Bind",
+    "shUnbind": "Unbind {name}"
   }
 }

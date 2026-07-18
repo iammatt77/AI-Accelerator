@@ -1147,9 +1147,12 @@ export async function suggestRequirements(
     "stakeholder elem. Csak olyan követelményt vehetsz fel, amelyre az alapanyagban",
     "tényleges alap van — a source_indices a támasztó forrás(ok) sorszáma; TILOS",
     "követelményt kitalálni. A moscow mezőt CSAK akkor töltsd, ha az alapanyagból",
-    "egyértelmű a prioritás — egyébként null (emberi ítélet dönti el). A",
-    "stakeholder_names KIZÁRÓLAG a megadott érintett-listából választható.",
-    "Az eredmény magyarul készül.",
+    "egyértelmű a prioritás — egyébként null (emberi ítélet dönti el).",
+    "STAKEHOLDER-AZONOSÍTÁS: minden STAKEHOLDER szintű követelménynél azonosítsd,",
+    "melyik érintett(ek)től ered vagy kit szolgál, és a stakeholder_names-be az",
+    "adott érintett(ek) nevét írd — PONTOSAN a megadott érintett-listából másolva,",
+    "át nem fogalmazva. Ha nincs egyértelmű alap, hagyd üresen (ne tippelj); a",
+    "kötés opcionális, sosem kötelező. Az eredmény magyarul készül.",
   ].join(" ");
 
   const painLines = pains.length
