@@ -16,7 +16,14 @@ import {
 import { isPhaseId } from "@/lib/phases/config";
 import { parseAiAct } from "@/lib/entities/evaluators";
 import { loadNumberedSources } from "@/lib/sources";
-import type { ArtifactRow, InputItemRow, UseCaseRow } from "@/lib/db/types";
+import { evaluateApprove } from "@/lib/goldenset/model";
+import type {
+  ArtifactRow,
+  EvalCaseRow,
+  GoldenSetRow,
+  InputItemRow,
+  UseCaseRow,
+} from "@/lib/db/types";
 import type { FormState } from "./actions";
 
 // ─────────────────────────────────────────────────────────────
@@ -490,6 +497,46 @@ export async function approveArtifactAction(
         .map((f) => tFields(f.labelKey.replace(/^fields\./, "")))
         .join(", ");
       return { ok: false, error: tErrors("approveBlocked", { fields: labels }) };
+    }
+  }
+
+  // Típusspecifikus poka-yoke (#14, AC5): a Tesztriport NEM Approved-olható
+  // golden set eredmény nélkül (kemény), rögzítetlen eset mellett, küszöb
+  // nélkül vagy küszöb alatt — kivéve a dokumentált emberi felülírást
+  // (threshold_override_note). Az AI a küszöböt soha nem állítja.
+  if (artifact.type === "Tesztriport") {
+    const { data: setData } = await supabase
+      .from("golden_sets")
+      .select("*")
+      .eq("project_id", projectId)
+      .maybeSingle();
+    const goldenSet = setData as GoldenSetRow | null;
+    if (!goldenSet) {
+      return { ok: false, error: tErrors("testreportNoGoldenSet") };
+    }
+    const { data: caseData } = await supabase
+      .from("eval_cases")
+      .select("*")
+      .eq("golden_set_id", goldenSet.id);
+    const verdict = evaluateApprove(goldenSet, (caseData ?? []) as EvalCaseRow[]);
+    if (!verdict.ok) {
+      const reasonKey =
+        verdict.reason === "no_cases" || verdict.reason === "no_results"
+          ? "testreportNoResults"
+          : verdict.reason === "open_cases"
+            ? "testreportOpenCases"
+            : verdict.reason === "no_threshold"
+              ? "testreportNoThreshold"
+              : "testreportBelowThreshold";
+      return { ok: false, error: tErrors(reasonKey) };
+    }
+    if (verdict.overridden) {
+      await logDecision(
+        supabase,
+        projectId,
+        "approve_override",
+        `Tesztriport jóváhagyás dokumentált felülírással: ${goldenSet.threshold_override_note}`,
+      );
     }
   }
 

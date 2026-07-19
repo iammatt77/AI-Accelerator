@@ -100,6 +100,12 @@ export function ProjectContextNav({ nav }: { nav: ProjectNavData }) {
         >
           <span className="flex-1">{t("solution")}</span>
         </Link>
+        <Link
+          href={`${base}/goldenset`}
+          className={itemCls(pathname.startsWith(`${base}/goldenset`))}
+        >
+          <span className="flex-1">{t("goldenset")}</span>
+        </Link>
         <div className="mt-auto">
           {nav.lockedRange && (
             <div
