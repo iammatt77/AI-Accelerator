@@ -282,3 +282,61 @@ export interface ComponentOptionRow {
   ord: number;
   created_at: string;
 }
+
+// ── P3 Golden set + Tesztriport (#14, 0011) ──────────────────
+
+export type AnswerType = "free_text" | "choice_single" | "choice_multi" | "number_scale" | "yes_no";
+export type Verdict = "passed" | "partial" | "failed";
+
+/** golden_sets sora — a P2 use case-hez (1:1). A küszöb EMBERI mező. */
+export interface GoldenSetRow {
+  id: string;
+  project_id: string;
+  use_case_id: string;
+  phase: string;
+  /** NULL = nincs beállítva → a Tesztriport nem hagyható jóvá (poka-yoke). */
+  pass_threshold: number | null;
+  /** Dokumentált emberi felülírás (AC5 kivétel) — üres = nincs. */
+  threshold_override_note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** eval_cases sora (EC-nn) — az állapot (rögzítendő→besorolva) LEVEZETETT. */
+export interface EvalCaseRow {
+  id: string;
+  golden_set_id: string;
+  display_id: string;
+  input_text: string;
+  answer_type: AnswerType;
+  /** Típusfüggő konfiguráció jsonb — defenzív parse: lib/goldenset/model. */
+  answer_config: unknown;
+  /** OPCIONÁLIS elvárt kimenet (c-minta — nyílt esetnél üres, a kritérium dönt). */
+  expected_output: unknown;
+  /** A KÍVÜL lefuttatott megoldás tényleges kimenete — a rendszer nem futtat. */
+  actual_output: unknown;
+  /** ✦ AI-ajánlás — KÜLÖN az emberi végső ítélettől (E1). */
+  ai_verdict: Verdict | null;
+  ai_rationale: string;
+  /** Kritériumonkénti OK/BUKOTT hivatkozás jsonb: [{ord, ok}]. */
+  ai_criteria: unknown;
+  /** A VÉGSŐ ítélet — emberi (elfogadás vagy felülírás). */
+  final_verdict: Verdict | null;
+  verdict_by: string | null;
+  verdict_at: string | null;
+  source_input_ids: string[];
+  state: EntityState;
+  ord: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** eval_criteria sora (K1..) — a pass/fail fő alapja; eredet a state-ben. */
+export interface EvalCriterionRow {
+  id: string;
+  eval_case_id: string;
+  ord: number;
+  text: string;
+  state: EntityState;
+  created_at: string;
+}
