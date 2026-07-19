@@ -2068,3 +2068,242 @@ function mockSuggestResidualRisk(
     }),
   );
 }
+
+// ═════════════════════════════════════════════════════════════
+// P3 Megoldás-dokumentáció (#15) — struktúra-javaslat az építési
+// anyagból + megvalósítás-kötés javaslat. E1 végig: minden javaslat
+// ✦ ai_suggested, aktívvá CSAK emberi megerősítéssel válik.
+// ═════════════════════════════════════════════════════════════
+
+import {
+  parseBuildDocProposal,
+  parseImplLinkSuggestions,
+  type BuildDocProposal,
+  type ImplLinkSuggestion,
+} from "@/lib/builddoc/parse";
+export type {
+  BuildDocProposal,
+  BuildComponentProposal,
+  ControlPointProposal,
+  PromptProposal,
+  ImplLinkSuggestion,
+} from "@/lib/builddoc/parse";
+
+const BUILD_DOC_SHAPE = [
+  `{ "components": [ { "name": "<komponens>", "description": "<leírás>",`,
+  `"layer_type": "process" | "infrastructure" | "personnel",`,
+  `"origin_index": <1-alapú P2-komponens sorszám VAGY null>,`,
+  `"prompts": [ { "name": "<prompt-elem>", "purpose": "<cél>", "prompt_text": "<szöveg>" } ],`,
+  `"source_indices": [<forrás-sorszámok>] } ],`,
+  `"controls": [ { "name": "<kontrollpont>", "kind": "guardrail" | "hitl",`,
+  `"description": "<leírás>", "tobe_ord": <1-alapú TO-BE lépés-sorszám VAGY null>,`,
+  `"source_indices": [<forrás-sorszámok>] } ] }`,
+].join(" ");
+
+/**
+ * Struktúra-javaslat a feltöltött építési anyagból (#15, AC3 — E1):
+ * komponensek (P2-eredettel, ahol felismerhető), prompt-elemek,
+ * kontrollpontok. A tanácsadó szerkeszt és erősít meg.
+ */
+export async function suggestBuildDoc(
+  sources: LlmSource[],
+  ctx: {
+    p2Components: { name: string; optionName: string | null }[];
+    tobeSteps: { num: string; title: string }[];
+  },
+): Promise<BuildDocProposal> {
+  if (isMock()) {
+    return mockSuggestBuildDoc(sources, ctx);
+  }
+
+  const system = [
+    "Megoldás-dokumentáló vagy egy AI-implementációs tanácsadói rendszerben.",
+    "A tanácsadó a rendszeren KÍVÜL megépítette a megoldást; a feltöltött",
+    "építési anyagból strukturált dokumentációt draftolsz: build-komponensek",
+    "(réteg: process=folyamat-elem · infrastructure=átfogó infra ·",
+    "personnel=emberi/change elem), komponensenként a felismert prompt-elemek",
+    "(név + cél + szó szerinti prompt-szöveg, ha az anyagban szerepel), és",
+    "kontrollpontok (guardrail=szabály-korlát · hitl=emberi jóváhagyási",
+    "pont). EREDET: ha egy komponens egyértelműen a P2-lista egy eleméből",
+    "épült, add meg az origin_index-ét (1-alapú); ha nincs ilyen, null —",
+    "eredetet fabrikálni TILOS. A tobe_ord CSAK akkor tölthető, ha a",
+    "kontroll egyértelműen egy megadott TO-BE lépéshez tartozik. CSAK az",
+    "anyagban ténylegesen szereplő elemeket add vissza — kitalálni semmit",
+    "nem szabad. A source_indices a támasztó forrás(ok) sorszáma.",
+    "KIZÁRÓLAG érvényes JSON-t adsz vissza, magyarul.",
+  ].join(" ");
+
+  const p2Lines = ctx.p2Components.length
+    ? ctx.p2Components
+        .map((c, i) => `${i + 1}. ${c.name}${c.optionName ? ` (kiválasztva: ${c.optionName})` : ""}`)
+        .join("\n")
+    : "(nincs P2-komponens)";
+  const tobeLines = ctx.tobeSteps.length
+    ? ctx.tobeSteps.map((s) => `${s.num}. ${s.title}`).join("\n")
+    : "(nincs jóváhagyott TO-BE)";
+  const srcLines = sources.map((s) => `[${s.index}] ${s.title}\n${s.text.slice(0, 1500)}`).join("\n\n");
+  const userPrompt = [
+    "── P2 kiválasztott komponensek (eredet-jelöltek) ──",
+    p2Lines,
+    "",
+    "── TO-BE lépések ──",
+    tobeLines,
+    "",
+    "── Számozott források (építési anyag) ──",
+    srcLines,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    BUILD_DOC_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 6000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseBuildDocProposal(textFromMessage(message), ctx.p2Components.length, ctx.tobeSteps.length);
+}
+
+const IMPL_LINKS_SHAPE = [
+  `{ "links": [ { "target_type": "requirement" | "story" | "tobe_node" | "pain_point",`,
+  `"label": "<a cél megjelölt azonosítója, pl. SYS-02 / US-03 / TO-BE·03 / FP-01>" } ] }`,
+].join(" ");
+
+/**
+ * Megvalósítás-kötés javaslat egy komponensre (#15, AC2+AC3 — E1):
+ * a 4 cél-típus listáiból, KIZÁRÓLAG a felsorolt azonosítókra. A kötés
+ * emberi döntés — a javaslat ✦ jelölést kap, ✓/× zárja.
+ */
+export async function suggestImplLinks(
+  component: { name: string; description: string },
+  candidates: { targetType: string; label: string; title: string }[],
+): Promise<ImplLinkSuggestion[]> {
+  if (isMock()) {
+    return mockSuggestImplLinks(component, candidates);
+  }
+
+  const system = [
+    "Megoldás-dokumentáló vagy. Egy build-komponenshez javasolsz",
+    "MEGVALÓSÍTÁS-kötéseket a P0–P2 terv elemeire: mely system requirement-et,",
+    "user story-t, TO-BE lépést vagy fájdalompontot valósítja meg / kezeli a",
+    "komponens. KIZÁRÓLAG a felsorolt azonosítókra hivatkozhatsz; CSAK ott",
+    "javasolj, ahol a komponens leírása alapján valós a kapcsolat — kötést",
+    "fabrikálni TILOS, az üres lista érvényes válasz. Requirement ÉS story",
+    "egyszerre is köthető, ha mindkettőre van alap. KIZÁRÓLAG érvényes",
+    "JSON-t adsz vissza.",
+  ].join(" ");
+
+  const candLines = candidates.map((c) => `${c.label} [${c.targetType}] — ${c.title}`).join("\n");
+  const userPrompt = [
+    "── A komponens ──",
+    `Név: ${component.name}`,
+    component.description ? `Leírás: ${component.description}` : "",
+    "",
+    "── Köthető terv-elemek ──",
+    candLines,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    IMPL_LINKS_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 1200,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  const valid = new Set(candidates.map((c) => `${c.targetType}:${c.label}`));
+  return parseImplLinkSuggestions(textFromMessage(message), valid);
+}
+
+// ── #15 mockok (determinisztikus MOCK_LLM fixture-ök) ────────
+
+function mockSuggestBuildDoc(
+  sources: LlmSource[],
+  ctx: { p2Components: { name: string }[]; tobeSteps: { num: string }[] },
+): BuildDocProposal {
+  const src = sources.length ? [sources[0].index] : [];
+  const raw = {
+    components: [
+      {
+        name: "Kategorizáló modul",
+        description: "A bejövő panaszt 5 kategória egyikébe sorolja a tudásbázis-kontextussal.",
+        layer_type: "process",
+        origin_index: ctx.p2Components.length >= 1 ? 1 : null,
+        prompts: [
+          {
+            name: "Kategória-osztályozó",
+            purpose: "Panasz témába sorolása 5 kategóriára.",
+            prompt_text: "# Szerep\nOsztályozó vagy. Sorold a panaszt: Számlázás · Szállítás · Termékhiba · Garancia · Egyéb.\n# Kimenet\nEgyetlen kategória-név.",
+          },
+        ],
+        source_indices: src,
+      },
+      {
+        name: "Válaszgeneráló prompt-lánc",
+        description: "A lekért kontextusból ügyfél-hangnemű válasz-piszkozatot állít elő az operátornak.",
+        layer_type: "process",
+        origin_index: ctx.p2Components.length >= 2 ? 2 : null,
+        prompts: [
+          {
+            name: "Válasz-fogalmazó",
+            purpose: "Ügyfél-hangnemű válasz-piszkozat a lekért kontextusból.",
+            prompt_text: "# Szerep\nUdvarias ügyfélszolgálati munkatárs vagy.\n# Feladat\nEmpatikus, tömör válasz-piszkozat; minden tényálláshoz forrás: [KB-####].\n# Kimenet\nMegszólítás · lényegi válasz · zárás. Max 120 szó.",
+          },
+          {
+            name: "Forrás-idézés kényszerítő",
+            purpose: "Minden állításhoz tudásbázis-hivatkozást kér.",
+            prompt_text: "Minden tényállítás mellé tegyél [KB-####] hivatkozást; forrás nélküli állítás tilos.",
+          },
+        ],
+        source_indices: src,
+      },
+      {
+        name: "Operátor-betanítási vázlat",
+        description: "A bevezetéshez tartozó betanítási anyag és felelősségi mátrix.",
+        layer_type: "personnel",
+        origin_index: null,
+        prompts: [],
+        source_indices: src,
+      },
+    ],
+    controls: [
+      {
+        name: "Nincs jogilag kötelező ígéret",
+        kind: "guardrail",
+        description: "A válasz nem tartalmazhat konkrét kártérítési összeget vagy határidőt jóváhagyás nélkül.",
+        tobe_ord: ctx.tobeSteps.length >= 3 ? 3 : null,
+        source_indices: src,
+      },
+      {
+        name: "Operátori jóváhagyás kimenő válasz előtt",
+        kind: "hitl",
+        description: "Minden generált válasz emberi jóváhagyással megy ki — a rendszer nem küld autonóm módon.",
+        tobe_ord: null,
+        source_indices: src,
+      },
+    ],
+  };
+  return parseBuildDocProposal(JSON.stringify(raw), ctx.p2Components.length, ctx.tobeSteps.length);
+}
+
+function mockSuggestImplLinks(
+  _component: { name: string },
+  candidates: { targetType: string; label: string }[],
+): ImplLinkSuggestion[] {
+  // determinisztikus: cél-típusonként az ELSŐ jelölt (legfeljebb 3 kötés)
+  const picked: { target_type: string; label: string }[] = [];
+  for (const type of ["requirement", "story", "tobe_node"]) {
+    const first = candidates.find((c) => c.targetType === type);
+    if (first) picked.push({ target_type: type, label: first.label });
+  }
+  const valid = new Set(candidates.map((c) => `${c.targetType}:${c.label}`));
+  return parseImplLinkSuggestions(JSON.stringify({ links: picked }), valid);
+}
