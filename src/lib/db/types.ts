@@ -340,3 +340,73 @@ export interface EvalCriterionRow {
   state: EntityState;
   created_at: string;
 }
+
+// ── P3 Megoldás-dokumentáció (#15, 0012) ─────────────────────
+
+export type BuildLayerType = "process" | "infrastructure" | "personnel";
+export type ImplTargetType = "requirement" | "story" | "tobe_node" | "pain_point";
+
+/** build_components sora (K-nn) — a megépített megoldás komponense.
+ *  KÉT elkülönített kötés-fajta: EREDET (origin_component_id → P2
+ *  solution_components; NULL = manuális) és MEGVALÓSÍTÁS (impl_links). */
+export interface BuildComponentRow {
+  id: string;
+  project_id: string;
+  phase: string;
+  display_id: string;
+  name: string;
+  description: string;
+  layer_type: BuildLayerType;
+  /** P2-seed eredet (1-N); NULL = manuális, nincs P2-előzmény. */
+  origin_component_id: string | null;
+  state: EntityState;
+  source_input_ids: string[];
+  ord: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** impl_links sora — komponens ↔ terv-elem (N:M, 4 cél-típus, kétirányú
+ *  olvasat). A tobe_node target_id-ja a térkép jsonb STABIL node-id-ja.
+ *  ai_suggested (✦) csak emberi megerősítéssel válik aktívvá (E1). */
+export interface ImplLinkRow {
+  id: string;
+  component_id: string;
+  target_type: ImplTargetType;
+  target_id: string;
+  process_map_id: string | null;
+  state: EntityState;
+  created_at: string;
+}
+
+/** prompt_items sora (PR-nn) — komponenshez kötött prompt-elem (1-N). */
+export interface PromptItemRow {
+  id: string;
+  project_id: string;
+  component_id: string;
+  display_id: string;
+  name: string;
+  purpose: string;
+  prompt_text: string;
+  state: EntityState;
+  source_input_ids: string[];
+  ord: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** control_points sora — guardrail/HITL; TO-BE kötés opcionális (c-minta). */
+export interface ControlPointRow {
+  id: string;
+  project_id: string;
+  name: string;
+  kind: "guardrail" | "hitl";
+  description: string;
+  process_map_id: string | null;
+  node_id: string | null;
+  state: EntityState;
+  source_input_ids: string[];
+  ord: number;
+  created_at: string;
+  updated_at: string;
+}
