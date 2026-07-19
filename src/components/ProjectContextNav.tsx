@@ -101,6 +101,12 @@ export function ProjectContextNav({ nav }: { nav: ProjectNavData }) {
           <span className="flex-1">{t("solution")}</span>
         </Link>
         <Link
+          href={`${base}/builddoc`}
+          className={itemCls(pathname.startsWith(`${base}/builddoc`))}
+        >
+          <span className="flex-1">{t("builddoc")}</span>
+        </Link>
+        <Link
           href={`${base}/goldenset`}
           className={itemCls(pathname.startsWith(`${base}/goldenset`))}
         >
