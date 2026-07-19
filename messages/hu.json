@@ -10,7 +10,7 @@
     "loading": "Adatok betöltése…"
   },
   "nav": {
-    "brandTitle": "AI Consulting",
+    "brandTitle": "refounded",
     "brandSubtitle": "rendszer · P0–P6",
     "projects": "Projektek",
     "dashboard": "Vezérlőpult",
@@ -1284,7 +1284,7 @@
     "ovTitleAsis": "A teljes AS-IS folyamat egy térképen",
     "ovTitleTobe": "A teljes TO-BE folyamat egy térképen",
     "ovDescAsis": "Zöld pill a kezdő/záró állapot, kék rombusz a döntés, szürke kártya az emberi lépés, kék a rendszer-lépés. Minden lépés a nyers leiratból lett kivonatolva, és oda vissza is vezethető.",
-    "ovDescTobe": "A lila kártyák az AI-belépési pontok, a borostyán a kötelező emberi kontroll (HITL). A szaggatott keret chat-szerkesztéssel beszúrt új lépés.",
+    "ovDescTobe": "A kék kártyák az AI-belépési pontok, a borostyán a kötelező emberi kontroll (HITL). A szaggatott keret chat-szerkesztéssel beszúrt új lépés.",
     "keyNumbers": "KULCSSZÁMOK",
     "kpiSteps": "lépés · ebből {d} döntés",
     "kpiOpenPoints": "nyitott pont a lépéseken",

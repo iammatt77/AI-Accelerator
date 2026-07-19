@@ -163,7 +163,7 @@ export default async function StakeholderViewPage({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#8458B3] to-[#6C43A0] text-[20px] font-extrabold text-white">
+          <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#1F5AE8] to-[#163E9E] text-[20px] font-extrabold text-white">
             {initialsOf(stakeholder.name)}
           </div>
           <div className="min-w-0">

@@ -87,7 +87,7 @@ export default async function RequirementDetailPage({
       ? "border-[#EADFC0] bg-tint-gate text-gate-text"
       : req.level === "system"
         ? "border-[#C7DEEF] bg-tint-sky text-pivot"
-        : "border-[#C9B3E6] bg-tint-action text-action-deep";
+        : "border-[#B9CCF7] bg-tint-action text-action-deep";
 
   return (
     <div className="overflow-hidden rounded-shell border border-line bg-[#FBFBFD] shadow-card">
@@ -158,7 +158,7 @@ export default async function RequirementDetailPage({
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-ink">
               {t("acSection")}
             </span>
-            <span className="rounded-3 border border-[#D9C8EE] bg-tint-action px-2 py-px font-mono text-[9.5px] font-bold text-action-deep">
+            <span className="rounded-3 border border-[#CBD9F9] bg-tint-action px-2 py-px font-mono text-[9.5px] font-bold text-action-deep">
               {t("acSharedWithStories")}
             </span>
           </div>
@@ -172,7 +172,7 @@ export default async function RequirementDetailPage({
               <div className="flex items-center gap-2 border-b border-line-soft bg-[#F7F8FB] px-3.5 py-2">
                 <span className="shrink-0 font-mono text-[9.5px] font-bold text-ink-tertiary">AC-{i + 1}</span>
                 <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{ac.title}</span>
-                <span className="shrink-0 rounded-3 border border-[#D9C8EE] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
+                <span className="shrink-0 rounded-3 border border-[#CBD9F9] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
                   ◑ {storiesForAc(reqId) || t("acNoStoryYet")}
                 </span>
                 {req.level === "system" && <AcDeleteButton projectId={id} reqId={reqId} acId={ac.id} />}
@@ -181,7 +181,7 @@ export default async function RequirementDetailPage({
                 {(
                   [
                     ["GIVEN", "border-[#C7DEEF] bg-tint-sky text-pivot", ac.given_text],
-                    ["WHEN", "border-[#D9C8EE] bg-tint-action text-action-deep", ac.when_text],
+                    ["WHEN", "border-[#CBD9F9] bg-tint-action text-action-deep", ac.when_text],
                     ["THEN", "border-[#CDE7DA] bg-tint-done text-done-text", ac.then_text],
                   ] as const
                 ).map(([kw, cls, text]) => (
@@ -216,7 +216,7 @@ export default async function RequirementDetailPage({
               <Link
                 key={s.id}
                 href={`/project/${id}/requirements/s/${s.id}`}
-                className="mb-2 flex flex-col gap-1 rounded-tile border border-[#D9C8EE] border-l-[3px] border-l-action-deep bg-surface px-3 py-2.5"
+                className="mb-2 flex flex-col gap-1 rounded-tile border border-[#CBD9F9] border-l-[3px] border-l-action-deep bg-surface px-3 py-2.5"
               >
                 <span className="flex items-center gap-1.5">
                   <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint-action text-[8px] font-bold text-action-deep">US</span>
@@ -256,9 +256,9 @@ export default async function RequirementDetailPage({
             <div className="mb-2 font-mono text-[9.5px] font-bold uppercase tracking-[0.1em] text-ink-tertiary">
               {t("originSection")}
             </div>
-            <div className="flex items-center gap-2 rounded-4 border border-[#C9B3E6] bg-tint-action px-2.5 py-2">
+            <div className="flex items-center gap-2 rounded-4 border border-[#B9CCF7] bg-tint-action px-2.5 py-2">
               <span className="text-[13px]">{req.state === "manual" ? "✎" : "✦"}</span>
-              <span className="text-[11px] leading-[1.4] text-[#5B3C86]">
+              <span className="text-[11px] leading-[1.4] text-[#17357F]">
                 {req.state === "ai_suggested" && t("originAiPending")}
                 {req.state === "confirmed" && t.rich("originAiConfirmed", { b: (c) => <b>{c}</b> })}
                 {req.state === "manual" && t("originManual")}

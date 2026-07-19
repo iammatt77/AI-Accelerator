@@ -87,7 +87,7 @@ export const NODE_TYPE_STYLES: Record<string, NodeTypeStyle> = {
   human: { ...NEUTRAL },
   system: { c: "#256087", bg: "#E6F1F8", line: "#AAD0E6", fg: "#256087", labelKey: "system", shape: "card" },
   decide: { c: "#2E77A8", bg: "#DDF0F7", line: "#AAD0E6", fg: "#2E77A8", labelKey: "decide", shape: "diamond" },
-  ai_intervention: { c: "#8458B3", bg: "#F0EBF9", line: "#CBB8E8", fg: "#7A4FB0", labelKey: "ai_intervention", shape: "card" },
+  ai_intervention: { c: "#1F5AE8", bg: "#EAF1FE", line: "#BED0F8", fg: "#1E52D4", labelKey: "ai_intervention", shape: "card" },
   control_hitl: { c: "#B4801E", bg: "#FBF3E0", line: "#E6D2A0", fg: "#9A6A12", labelKey: "control_hitl", shape: "card" },
 };
 

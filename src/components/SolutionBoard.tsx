@@ -139,7 +139,7 @@ export function SolutionBoard({
               : t("allDone")}
           </span>
           {stats.aiSuggestedCount > 0 && (
-            <span className="shrink-0 rounded-pill border border-[#D9C8EE] bg-tint-action px-2.5 py-0.5 font-mono text-[10px] font-bold text-action-deep">
+            <span className="shrink-0 rounded-pill border border-[#CBD9F9] bg-tint-action px-2.5 py-0.5 font-mono text-[10px] font-bold text-action-deep">
               {t("aiCountChip", { n: stats.aiSuggestedCount })}
             </span>
           )}
@@ -165,7 +165,7 @@ export function SolutionBoard({
               <div
                 key={s.nodeId}
                 data-testid={`spine-${s.num}`}
-                className="rounded-tile border border-[#D9C8EE] bg-surface px-3.5 py-2.5 shadow-card-sm"
+                className="rounded-tile border border-[#CBD9F9] bg-surface px-3.5 py-2.5 shadow-card-sm"
               >
                 <div className="font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-action-deep">
                   {t("stepChip", { num: s.num })}
@@ -180,7 +180,7 @@ export function SolutionBoard({
               const docked = dockedComponents(s.nodeId, components, links);
               return (
                 <div key={`dock-${s.nodeId}`} className="flex min-w-0 flex-col items-stretch">
-                  <div className="mx-auto h-4 w-px bg-[#C9B3E6]" />
+                  <div className="mx-auto h-4 w-px bg-[#B9CCF7]" />
                   {docked.length > 0 ? (
                     <div className="flex flex-col gap-2.5">
                       {docked.map((c) => (
@@ -202,7 +202,7 @@ export function SolutionBoard({
                         <button
                           type="button"
                           onClick={() => setPanelOpen(true)}
-                          className="rounded-3 border border-[#C9B3E6] bg-surface px-2 py-0.5 font-mono text-[9.5px] font-bold text-action-deep hover:bg-accent-tint"
+                          className="rounded-3 border border-[#B9CCF7] bg-surface px-2 py-0.5 font-mono text-[9.5px] font-bold text-action-deep hover:bg-accent-tint"
                         >
                           +
                         </button>
@@ -217,7 +217,7 @@ export function SolutionBoard({
 
         {empty ? (
           /* ── Üres állapot (5. jelenet): CTA az első komponensre ── */
-          <div className="mt-6 flex flex-col items-center gap-3 rounded-shell border-[1.5px] border-dashed border-[#C9B3E6] bg-[#FBF9FE] px-5 py-8 text-center">
+          <div className="mt-6 flex flex-col items-center gap-3 rounded-shell border-[1.5px] border-dashed border-[#B9CCF7] bg-[#F7FAFE] px-5 py-8 text-center">
             <span className="flex h-9 w-9 items-center justify-center rounded-shell bg-tint-action text-[18px] font-bold text-action">+</span>
             <span className="text-[15px] font-extrabold tracking-[-0.01em]">{t("emptyTitle")}</span>
             <p className="max-w-[560px] text-[12.5px] leading-[1.5] text-ink-secondary">{t("emptyText")}</p>
@@ -233,7 +233,7 @@ export function SolutionBoard({
                 <button
                   type="submit"
                   disabled={genPending}
-                  className="rounded-control border border-[#C9B3E6] bg-surface px-4 py-2 text-[12.5px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
+                  className="rounded-control border border-[#B9CCF7] bg-surface px-4 py-2 text-[12.5px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
                 >
                   {genPending ? t("generating") : `✦ ${t("emptyGenCta")}`}
                 </button>

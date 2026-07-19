@@ -76,7 +76,7 @@ export function DeriveStoryPanel({
     bold?: boolean,
   ) => (
     <div className="flex items-center gap-2">
-      <span className="min-w-[56px] rounded-4 border border-[#D9C8EE] bg-tint-action px-2 py-1 text-center font-mono text-[9.5px] font-bold text-action-deep">
+      <span className="min-w-[56px] rounded-4 border border-[#CBD9F9] bg-tint-action px-2 py-1 text-center font-mono text-[9.5px] font-bold text-action-deep">
         {label}
       </span>
       <input
@@ -97,7 +97,7 @@ export function DeriveStoryPanel({
         className="w-full max-w-[580px] overflow-hidden rounded-shell border border-line bg-surface shadow-card"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2.5 border-b border-line bg-[#FBF9FE] px-5 py-3">
+        <div className="flex items-center gap-2.5 border-b border-line bg-[#F7FAFE] px-5 py-3">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-action-deep text-[11px] font-bold text-white">↳</span>
           <span className="text-[14px] font-bold">{t("panelDeriveTitle")}</span>
           <span className="font-mono text-[10px] text-action-deep">requirement → story</span>
@@ -185,9 +185,9 @@ export function DeriveStoryPanel({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 rounded-tile border border-[#C9B3E6] bg-tint-action px-3 py-2.5">
+          <div className="flex items-center gap-2.5 rounded-tile border border-[#B9CCF7] bg-tint-action px-3 py-2.5">
             <span className="text-[13px]">✦</span>
-            <span className="min-w-0 flex-1 text-[11px] leading-[1.4] text-[#5B3C86]">
+            <span className="min-w-0 flex-1 text-[11px] leading-[1.4] text-[#17357F]">
               {t.rich("panelAiNote", { b: (c) => <b>{c}</b> })}
             </span>
             <button
@@ -195,7 +195,7 @@ export function DeriveStoryPanel({
               formAction={draftAction}
               formNoValidate
               disabled={draftPending || covered.length === 0}
-              className="rounded-control border border-[#C9B3E6] bg-surface px-3 py-1.5 text-[11.5px] font-semibold text-action-deep disabled:opacity-60"
+              className="rounded-control border border-[#B9CCF7] bg-surface px-3 py-1.5 text-[11.5px] font-semibold text-action-deep disabled:opacity-60"
             >
               {draftPending ? t("drafting") : `✦ ${t("panelAiDraftCta")}`}
             </button>

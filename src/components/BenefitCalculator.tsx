@@ -142,21 +142,21 @@ export function BenefitCalculator({
       <Connector />
 
       {/* STAGE 2 · A FÉK (lila döntési pont, csak emberi) */}
-      <div className="rounded-shell border-[1.5px] border-[#C9B3E6] bg-[#FAF8FD] p-4 shadow-[0_6px_18px_rgba(108,67,160,0.08)]">
+      <div className="rounded-shell border-[1.5px] border-[#B9CCF7] bg-[#F6F9FE] p-4 shadow-[0_6px_18px_rgba(22, 62, 158,0.08)]">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-[#7A4FB0]">
+          <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-[#1E52D4]">
             {t("stage2")}
           </span>
-          <span className="rounded-3 bg-[#EDE6F7] px-1.5 py-0.5 font-mono text-[8.5px] font-bold text-[#7A4FB0]">
+          <span className="rounded-3 bg-[#E7EEFD] px-1.5 py-0.5 font-mono text-[8.5px] font-bold text-[#1E52D4]">
             {t("stage2Tag")}
           </span>
         </div>
         <div className="mt-3 flex items-center gap-5">
           <div className="flex shrink-0 items-baseline gap-1">
-            <span className="font-mono text-[34px] font-bold leading-none tracking-tight text-[#7A4FB0]">
+            <span className="font-mono text-[34px] font-bold leading-none tracking-tight text-[#1E52D4]">
               {fekSet ? fek : "—"}
             </span>
-            <span className="font-mono text-[18px] font-bold text-[#7A4FB0]">%</span>
+            <span className="font-mono text-[18px] font-bold text-[#1E52D4]">%</span>
           </div>
           <div className="flex-1">
             <input
@@ -170,7 +170,7 @@ export function BenefitCalculator({
                 setFek(Number(e.target.value));
                 setFekSet(true);
               }}
-              className="w-full accent-[#8458B3]"
+              className="w-full accent-[#1F5AE8]"
               aria-label={t("stage2")}
             />
             <div className="mt-1 flex justify-between font-mono text-[9.5px] text-neutral-450">
@@ -179,8 +179,8 @@ export function BenefitCalculator({
             </div>
           </div>
         </div>
-        <p className="mt-2.5 border-t border-[#EAE3F3] pt-2.5 text-[11.5px] leading-relaxed text-ink-secondary">
-          {t("fekHint")} <b className="text-[#7A4FB0]">{t("fekCredibility")}</b>
+        <p className="mt-2.5 border-t border-[#E5ECFD] pt-2.5 text-[11.5px] leading-relaxed text-ink-secondary">
+          {t("fekHint")} <b className="text-[#1E52D4]">{t("fekCredibility")}</b>
         </p>
       </div>
 
@@ -207,8 +207,8 @@ export function BenefitCalculator({
           <DerivedRow
             label={t("realizaltLabel")}
             note={t("realizaltNote", { n: fek })}
-            noteCls="text-[#7A4FB0]"
-            bg="bg-[#F7F4FC]"
+            noteCls="text-[#1E52D4]"
+            bg="bg-[#F4F8FE]"
             value={`${formatFt(d.realizalt_ft_ev)} ${t("ftEv")}`}
             valueCls="text-ink"
           />
@@ -231,12 +231,12 @@ export function BenefitCalculator({
                 <span className="font-mono text-[13px] text-done">{t("ftEv")}</span>
               </div>
             </div>
-            <div className="bg-[#FBF9FE] p-[14px_16px]">
-              <div className="font-mono text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#7A4FB0]">
+            <div className="bg-[#F7FAFE] p-[14px_16px]">
+              <div className="font-mono text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#1E52D4]">
                 {t("megterulesLabel")}
               </div>
               <div className="mt-1.5 flex items-baseline gap-1.5">
-                <span className="font-mono text-[26px] font-bold leading-none tracking-tight text-[#7A4FB0]">
+                <span className="font-mono text-[26px] font-bold leading-none tracking-tight text-[#1E52D4]">
                   {d.megterules_ho !== null ? Math.round(d.megterules_ho) : "—"}
                 </span>
                 <span className="font-mono text-[13px] text-action">{t("megterulesUnit")}</span>
@@ -291,7 +291,7 @@ function StageHeader({ label, hint }: { label: string; hint: string }) {
 function Connector() {
   return (
     <div className="flex justify-center py-2.5" aria-hidden>
-      <svg width="14" height="18" viewBox="0 0 14 18" className="text-[#C9B3E6]">
+      <svg width="14" height="18" viewBox="0 0 14 18" className="text-[#B9CCF7]">
         <path
           d="M7 1 L7 13 M3 9.5 L7 14 L11 9.5"
           fill="none"

@@ -69,6 +69,8 @@
   /* fontok */
   --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+  /* csak a „refounded" sidebar-wordmarkhoz — a UI-betűk (sans/mono) változatlanok */
+  --font-brand: var(--font-bricolage), sans-serif;
 
   /* tipó-skála → text-display / text-title / text-body / text-metric / text-mono-sm */
   --text-display: var(--type-display-size);

@@ -256,7 +256,7 @@ export function ClientsPortfolio({
                   <span
                     className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-5 font-mono text-[13px] font-extrabold ${
                       needsAttention(r.attention)
-                        ? "bg-gradient-to-br from-[#8458B3] to-[#6C43A0] text-white"
+                        ? "bg-gradient-to-br from-[#1F5AE8] to-[#163E9E] text-white"
                         : "bg-neutral-150 text-ink-secondary"
                     }`}
                   >

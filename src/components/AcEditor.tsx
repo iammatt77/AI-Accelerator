@@ -50,7 +50,7 @@ export function AcEditor({ projectId, reqId }: { projectId: string; reqId: strin
             <button
               type="submit"
               disabled={genPending}
-              className="rounded-control border border-[#C9B3E6] bg-surface px-3 py-1.5 text-[12px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
+              className="rounded-control border border-[#B9CCF7] bg-surface px-3 py-1.5 text-[12px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
             >
               {genPending ? t("generating") : `✦ ${t("acDraftCta")}`}
             </button>
@@ -74,7 +74,7 @@ export function AcEditor({ projectId, reqId }: { projectId: string; reqId: strin
           {(
             [
               ["GIVEN", "border-[#C7DEEF] bg-tint-sky text-pivot", "given"],
-              ["WHEN", "border-[#D9C8EE] bg-tint-action text-action-deep", "when"],
+              ["WHEN", "border-[#CBD9F9] bg-tint-action text-action-deep", "when"],
               ["THEN", "border-[#CDE7DA] bg-tint-done text-done-text", "then"],
             ] as const
           ).map(([kw, cls, name]) => (

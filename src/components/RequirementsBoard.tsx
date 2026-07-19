@@ -60,7 +60,7 @@ export function MoscowChip({ moscow, small }: { moscow: Moscow | null; small?: b
     return <span className={`rounded-3 bg-action font-mono ${sz} py-px font-bold text-white`}>{t("moscow.must")}</span>;
   if (moscow === "should")
     return (
-      <span className={`rounded-3 border border-[#D9C8EE] bg-tint-action font-mono ${sz} py-px font-bold text-action-deep`}>
+      <span className={`rounded-3 border border-[#CBD9F9] bg-tint-action font-mono ${sz} py-px font-bold text-action-deep`}>
         {t("moscow.should")}
       </span>
     );
@@ -80,7 +80,7 @@ export function MoscowChip({ moscow, small }: { moscow: Moscow | null; small?: b
   return (
     <span
       title={t("moscowUnsetHint")}
-      className={`rounded-3 border border-dashed border-[#C9B3E6] font-mono ${sz} py-px font-bold text-action-deep`}
+      className={`rounded-3 border border-dashed border-[#B9CCF7] font-mono ${sz} py-px font-bold text-action-deep`}
     >
       —
     </span>
@@ -191,7 +191,7 @@ export function RequirementsBoard({
             }`}
           >
             {!agileUnlocked && <span aria-hidden>🔒</span>}
-            <span className="h-[9px] w-[9px] rounded-full bg-[#A585CE]" />
+            <span className="h-[9px] w-[9px] rounded-full bg-[#6D98F6]" />
             {t("viewAgile")} <span className="font-mono text-[10px] opacity-70">Agile</span>
           </button>
         </div>
@@ -219,7 +219,7 @@ export function RequirementsBoard({
 
       {/* ── Infó-sáv: lineage (BA) / származtatás-jegyzet (Agile) ── */}
       {view === "ba" ? (
-        <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#FAF8FD] px-5 py-2.5">
+        <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#F6F9FE] px-5 py-2.5">
           <span className="shrink-0 font-mono text-[9.5px] font-bold uppercase tracking-[0.1em] text-action-deep">
             {t("lineageLabel")}
           </span>
@@ -228,7 +228,7 @@ export function RequirementsBoard({
               {selLineage.map((r, i) => (
                 <span key={r.id} className="flex items-center gap-2">
                   {i > 0 && <span className="text-ink-tertiary">→</span>}
-                  <span className="flex items-center gap-1.5 rounded-4 border border-[#C9B3E6] bg-surface px-2.5 py-1">
+                  <span className="flex items-center gap-1.5 rounded-4 border border-[#B9CCF7] bg-surface px-2.5 py-1">
                     <span className="font-mono text-[10px] font-bold text-action-deep">{r.display_id}</span>
                     <span className="max-w-[220px] truncate text-ink">{r.text}</span>
                   </span>
@@ -244,9 +244,9 @@ export function RequirementsBoard({
           </span>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#FAF8FD] px-5 py-2.5">
+        <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[#F6F9FE] px-5 py-2.5">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-4 bg-action-deep text-[11px] text-white">↳</span>
-          <span className="text-[12.5px] leading-snug text-[#5B3C86]">{t.rich("agileNote", { b: (c) => <b>{c}</b> })}</span>
+          <span className="text-[12.5px] leading-snug text-[#17357F]">{t.rich("agileNote", { b: (c) => <b>{c}</b> })}</span>
           <div className="flex-1" />
           <span className="font-mono text-[10px] text-ink-tertiary">
             {t("agileCounts", { e: epics.length, s: stories.length })}
@@ -376,7 +376,7 @@ function BaLanes({
       <div className="grid grid-cols-[1fr_1fr_1.55fr] bg-[#F4F5F9]">
         <div className="flex flex-col gap-3 border-r border-line p-4">
           <LaneHead dotCls="bg-action-deep" label={t("laneBusiness")} sub={t("laneBusinessSub")} count={0} />
-          <div className="flex flex-col items-center gap-2.5 rounded-tile border-[1.5px] border-dashed border-[#C9B3E6] bg-[#FBF9FE] px-3.5 py-4 text-center">
+          <div className="flex flex-col items-center gap-2.5 rounded-tile border-[1.5px] border-dashed border-[#B9CCF7] bg-[#F7FAFE] px-3.5 py-4 text-center">
             <span className="flex h-[30px] w-[30px] items-center justify-center rounded-shell bg-tint-action text-[17px] font-bold text-action">+</span>
             <span className="text-[12.5px] font-bold">{t("emptyBizTitle")}</span>
             <span className="text-[11.5px] leading-[1.45] text-ink-tertiary">{t("emptyBizText")}</span>
@@ -415,7 +415,7 @@ function BaLanes({
             <button
               type="submit"
               disabled={genPending}
-              className="rounded-control border border-[#C9B3E6] bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
+              className="rounded-control border border-[#B9CCF7] bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
             >
               {genPending ? t("generating") : `✦ ${t("aiTreeCta")}`}
             </button>
@@ -538,7 +538,7 @@ function EmptyCell({ label, addLabel, onAdd }: { label: string; addLabel: string
       <button
         type="button"
         onClick={onAdd}
-        className="shrink-0 rounded-3 border border-[#C9B3E6] bg-surface px-2 py-0.5 font-mono text-[9.5px] font-bold text-action-deep hover:bg-accent-tint"
+        className="shrink-0 rounded-3 border border-[#B9CCF7] bg-surface px-2 py-0.5 font-mono text-[9.5px] font-bold text-action-deep hover:bg-accent-tint"
       >
         + {addLabel}
       </button>
@@ -676,7 +676,7 @@ function ReqCard({
               </span>
             )}
             {storyCount > 0 ? (
-              <span className="rounded-3 border border-[#D9C8EE] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
+              <span className="rounded-3 border border-[#CBD9F9] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
                 ◑ {t("storyBadge", { n: storyCount })}
               </span>
             ) : (
@@ -722,7 +722,7 @@ function ReqCard({
         <div className="flex flex-wrap items-center gap-1.5 border-t border-dashed border-line-soft pt-2">
           <span className="font-mono text-[8.5px] uppercase text-ink-tertiary">{t("implementedBy")}</span>
           {selStories.map((d) => (
-            <span key={d} className="rounded-3 border border-[#D9C8EE] bg-tint-action px-1.5 py-px font-mono text-[9px] font-bold text-action-deep">
+            <span key={d} className="rounded-3 border border-[#CBD9F9] bg-tint-action px-1.5 py-px font-mono text-[9px] font-bold text-action-deep">
               {d}
             </span>
           ))}
@@ -779,7 +779,7 @@ function AgileLanes({
           <button
             type="submit"
             disabled={genStPending}
-            className="rounded-control border border-[#C9B3E6] bg-surface px-4 py-2 text-[12.5px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
+            className="rounded-control border border-[#B9CCF7] bg-surface px-4 py-2 text-[12.5px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
           >
             {genStPending ? t("generating") : `✦ ${t("genStoriesCta")}`}
           </button>
@@ -794,7 +794,7 @@ function AgileLanes({
     const epicUncovered = uncovered.length > 0 && epic !== null;
     return (
       <div key={epic?.id ?? "none"} className="overflow-hidden rounded-shell border border-line bg-surface">
-        <div className="flex flex-wrap items-center gap-2.5 border-b border-[#E9E1F5] bg-[#FBF9FE] px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 border-b border-[#E3ECFD] bg-[#F7FAFE] px-4 py-2.5">
           <span className="rounded-3 bg-action-deep px-2 py-0.5 font-mono text-[9px] font-bold text-white">
             {epic?.display_id ?? "—"}
           </span>
@@ -823,7 +823,7 @@ function AgileLanes({
             <button
               type="button"
               onClick={() => onDerive([uncovered[0].id])}
-              className="flex flex-col items-center justify-center gap-2 rounded-tile border-[1.5px] border-dashed border-[#C9B3E6] p-3.5 text-center"
+              className="flex flex-col items-center justify-center gap-2 rounded-tile border-[1.5px] border-dashed border-[#B9CCF7] p-3.5 text-center"
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-control bg-tint-action text-[14px] font-bold text-action-deep">+</span>
               <span className="text-[11.5px] leading-[1.4] text-ink-tertiary">
@@ -905,7 +905,7 @@ function StoryCard({
       data-testid={`story-${story.display_id}`}
       className={`flex cursor-pointer flex-col gap-2 rounded-tile border bg-surface p-3.5 text-left transition-opacity ${
         selected || coversSelected
-          ? "border-[1.5px] border-action-deep border-t-[3px] shadow-[0_8px_20px_rgba(108,67,160,0.14)]"
+          ? "border-[1.5px] border-action-deep border-t-[3px] shadow-[0_8px_20px_rgba(22, 62, 158,0.14)]"
           : "border-line border-t-[3px] border-t-action-deep shadow-card-sm"
       } ${dim ? "opacity-40" : ""}`}
     >

@@ -10,7 +10,7 @@
     "loading": "Loading…"
   },
   "nav": {
-    "brandTitle": "AI Consulting",
+    "brandTitle": "refounded",
     "brandSubtitle": "system · P0–P6",
     "projects": "Projects",
     "dashboard": "Dashboard",
@@ -1284,7 +1284,7 @@
     "ovTitleAsis": "The whole AS-IS process on one map",
     "ovTitleTobe": "The whole TO-BE process on one map",
     "ovDescAsis": "Green pill for start/end, blue diamond for decisions, grey card for human steps, blue for system steps. Every step was extracted from the raw transcript and can be traced back to it.",
-    "ovDescTobe": "Purple cards are AI entry points, amber is mandatory human control (HITL). A dashed border marks a step inserted via chat editing.",
+    "ovDescTobe": "Blue cards are AI entry points, amber is mandatory human control (HITL). A dashed border marks a step inserted via chat editing.",
     "keyNumbers": "KEY NUMBERS",
     "kpiSteps": "steps · incl. {d} decisions",
     "kpiOpenPoints": "open points on steps",

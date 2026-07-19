@@ -292,7 +292,7 @@ export function ProcessMapViewer({
             className={`rounded-control border px-3 py-1.5 text-[12px] font-semibold ${
               chatOpen
                 ? "border-action bg-action text-white"
-                : "border-[rgba(132,88,179,.7)] bg-[rgba(255,255,255,.04)] text-[#C9B3E6]"
+                : "border-[rgba(31, 90, 232,.7)] bg-[rgba(255,255,255,.04)] text-[#B9CCF7]"
             }`}
           >
             ✦ {t("chatBtn")}
@@ -316,11 +316,11 @@ export function ProcessMapViewer({
         {mode === "to_be" && toBe && (
           <>
             {toBe.toBeOrigin === "ai_suggested" ? (
-              <span className="rounded-pill border border-[#C9B3E6] bg-tint-action px-2.5 py-1 text-[11.5px] font-bold text-action-deep">
+              <span className="rounded-pill border border-[#B9CCF7] bg-tint-action px-2.5 py-1 text-[11.5px] font-bold text-action-deep">
                 ✦ {t("originAi")}
               </span>
             ) : (
-              <span className="rounded-pill border border-[#C9B3E6] bg-tint-action px-2.5 py-1 text-[11.5px] font-bold text-action-deep">
+              <span className="rounded-pill border border-[#B9CCF7] bg-tint-action px-2.5 py-1 text-[11.5px] font-bold text-action-deep">
                 {t("originDoc")}
               </span>
             )}
@@ -605,7 +605,7 @@ function World({
             <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#C7CAD6" strokeWidth="2.2" />
           </marker>
           <marker id="pfArrV" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="userSpaceOnUse">
-            <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#8458B3" strokeWidth="2.4" />
+            <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#1F5AE8" strokeWidth="2.4" />
           </marker>
         </defs>
         {edges.map((e) => {
@@ -617,7 +617,7 @@ function World({
               key={e.id}
               d={g.d}
               fill="none"
-              stroke={isV ? "#8458B3" : "#C7CAD6"}
+              stroke={isV ? "#1F5AE8" : "#C7CAD6"}
               strokeWidth={isV ? 3.5 : 2.5}
               markerEnd={isV ? "url(#pfArrV)" : "url(#pfArr)"}
             />
@@ -637,7 +637,7 @@ function World({
               left: g.labelAt[0],
               top: g.labelAt[1],
               transform: "translate(-50%,-50%)",
-              color: isV ? "#7A4FB0" : "#8B90A3",
+              color: isV ? "#1E52D4" : "#8B90A3",
             }}
           >
             {e.label}
@@ -651,17 +651,17 @@ function World({
         const isNew = n.diff === "new";
         const isDiamond = st.shape === "diamond";
         const shadow = isCur
-          ? "0 0 0 4px rgba(132,88,179,.24), 0 14px 34px rgba(108,67,160,.2)"
+          ? "0 0 0 4px rgba(31, 90, 232,.24), 0 14px 34px rgba(22, 62, 158,.2)"
           : "0 1px 2px rgba(35,38,47,.05), 0 6px 18px rgba(35,38,47,.06)";
         // Állapot-függő keretszín (a kanonikus alak/szín ProcessNodeShape-ben).
         const borderColor = isDiamond
           ? isCur
             ? "#2E77A8"
             : visited.has(n.id)
-              ? "#8458B3"
+              ? "#1F5AE8"
               : st.line
           : isNew
-            ? "#8458B3"
+            ? "#1F5AE8"
             : isCur
               ? st.c
               : st.line;
@@ -776,8 +776,8 @@ function ProcessNodeShape({
           <span
             className="rounded-3 px-1.5 py-px font-mono text-[8px] font-bold"
             style={{
-              color: isNew ? "#7A4FB0" : "#9A6A12",
-              background: isNew ? "#EDE6F7" : "#FBF3E0",
+              color: isNew ? "#1E52D4" : "#9A6A12",
+              background: isNew ? "#E7EEFD" : "#FBF3E0",
             }}
           >
             {isNew ? t("badgeNewChat") : t("badgeModified")}
@@ -839,7 +839,7 @@ function CompareView({
               <div key={n.id} className="absolute" style={{ left: n.x, top: n.y, transform: "translate(-50%,-50%)" }}>
                 <ProcessNodeShape
                   node={n}
-                  borderColor={isNew ? "#8458B3" : st.line}
+                  borderColor={isNew ? "#1F5AE8" : st.line}
                   dashed={st.shape !== "diamond" && isNew}
                   t={t}
                 />
@@ -893,7 +893,7 @@ function OverviewInspector({
         <div className="rounded-tile border border-line bg-soft px-3 py-2.5">
           <div
             className="font-mono text-[18px] font-bold"
-            style={{ color: tobe ? "#7A4FB0" : stats.open > 0 ? "#C0455A" : "#2E7050" }}
+            style={{ color: tobe ? "#1E52D4" : stats.open > 0 ? "#C0455A" : "#2E7050" }}
           >
             {tobe ? `${stats.ai} + ${stats.hitl}` : stats.open}
           </div>
@@ -1001,7 +1001,7 @@ function NodeInspector({
       {diffNote && (
         <>
           <SectionRule label={t("changeSection")} tone="accent" />
-          <div className="rounded-tile border border-[#DDD0EE] bg-accent-tint px-3 py-2.5 text-[12.5px] leading-[1.55] text-ink">
+          <div className="rounded-tile border border-[#CFDBF9] bg-accent-tint px-3 py-2.5 text-[12.5px] leading-[1.55] text-ink">
             {diffNote}
           </div>
         </>
@@ -1106,9 +1106,9 @@ function CompareInspector({
               <div
                 key={n.id}
                 className="flex gap-2 rounded-5 border border-line px-3 py-2 text-[12.5px] leading-[1.5]"
-                style={{ borderLeft: `3px solid ${n.type === "control_hitl" ? "#B4801E" : "#8458B3"}` }}
+                style={{ borderLeft: `3px solid ${n.type === "control_hitl" ? "#B4801E" : "#1F5AE8"}` }}
               >
-                <b className="shrink-0" style={{ color: n.type === "control_hitl" ? "#9A6A12" : "#7A4FB0" }}>
+                <b className="shrink-0" style={{ color: n.type === "control_hitl" ? "#9A6A12" : "#1E52D4" }}>
                   +
                 </b>
                 <span>
@@ -1176,7 +1176,7 @@ function LegendOverlay({
       {row(sq("#F4F5F9", "#8B90A3"), t("legendHuman"))}
       {row(sq("#E6F1F8", "#256087"), t("legendSystem"))}
       {row(sq("#DDF0F7", "#2E77A8", "rotate-45"), t("legendDecide"))}
-      {row(sq("#F0EBF9", "#8458B3"), t("legendAi"))}
+      {row(sq("#EAF1FE", "#1F5AE8"), t("legendAi"))}
       {row(sq("#FBF3E0", "#B4801E"), t("legendHitl"))}
       <div className="mb-1 mt-3 font-mono text-[11px] uppercase tracking-[0.05em] text-ink-tertiary">
         {t("legendOpenPoints")}

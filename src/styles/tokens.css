@@ -6,8 +6,8 @@
  * hivatkoznak ezekre. Literál hex az alap-chrome-ban TILOS —
  * csak ebben a fájlban szerepelhet.
  *
- * A Master token-referenciája (kötelező):
- *   accent/active #8458B3 · done #3E9E6E · gate #B4801E ·
+ * A Master token-referenciája (kötelező, „refounded" rebrand után):
+ *   accent/active #1F5AE8 · done #3E9E6E · gate #B4801E ·
  *   source/info #2E77A8 · stalled/high #C0455A · text #23262F ·
  *   muted #8B90A3 · app bg #ECEEF4 · surface #FFFFFF
  * Felületek: tömör fehér, EGY árnyék-token, lapos háttér —
@@ -22,7 +22,7 @@
   --surface-sunken: #f4f5f9;
   --surface-rail: #f6f7fa; /* ikon-rail / sín-hátterek (Master) */
   --surface-soft: #fafafc; /* oldalsó sávok, lágy panelek */
-  --surface-context: #faf8fd; /* projekt-kontextus oszlop / összegző sávok */
+  --surface-context: #f6f9fe; /* projekt-kontextus oszlop / összegző sávok */
 
   --ink-primary: #23262f;
   --ink-secondary: #55596b;
@@ -32,17 +32,17 @@
   --border-soft: #e7e9f0; /* belső elválasztók */
   --border-row: #f2f3f7; /* sor-elválasztók */
 
-  --action-primary: #8458b3; /* accent / active */
-  --action-hover: #9b6bce;
-  --action-deep: #7a4fb0; /* linkek / aktív szöveg (Master kéttónusú lila) */
-  --action-light: #d0bdf4;
-  --accent-fill: #ede6f7; /* aktív nav-elem / kiemelt háttér */
-  --accent-tint: #f3eefa; /* accent-kártya háttér */
-  --accent-deeptext: #6c43a0; /* accent-kártyán nagy szám */
+  --action-primary: #1f5ae8; /* accent / active („refounded" kék) */
+  --action-hover: #4e86ff;
+  --action-deep: #1e52d4; /* linkek / aktív szöveg (Master kéttónusú kék) */
+  --action-light: #c3d3fb;
+  --accent-fill: #e7eefd; /* aktív nav-elem / kiemelt háttér */
+  --accent-tint: #eef3fe; /* accent-kártya háttér */
+  --accent-deeptext: #163e9e; /* accent-kártyán nagy szám */
 
   --status-done: #3e9e6e;
   --status-done-text: #2e8b5e; /* zöld SZÖVEG világos alapon (Master) */
-  --status-active: #8458b3;
+  --status-active: #1f5ae8;
   --status-gate: #b4801e;
   --status-gate-text: #9a6a12; /* borostyán SZÖVEG világos alapon */
   --status-pivot: #2e77a8; /* source / info */
@@ -61,7 +61,7 @@
   --neutral-500: #a9aebd;
 
   /* ── STÁTUSZ-FÁTYOL RECEPTEK (halvány hátterek, a Masterből) ── */
-  --tint-action: rgba(132, 88, 179, 0.12);
+  --tint-action: rgba(31, 90, 232, 0.12);
   --tint-gate: #fbf3e0; /* borostyán jelvény-háttér */
   --tint-gate-band: #fbf7ee; /* borostyán sáv-háttér */
   --tint-gate-border: #ebd9b4;
@@ -73,8 +73,8 @@
   --tint-done-chip: #e4f1ea; /* zöld mini-tag */
   --tint-error: #fbecef; /* piros jelvény-háttér */
   --tint-error-border: #e9d2d6;
-  --accent-box: #fbf5ff; /* lila blokk-doboz háttér (kártyán) */
-  --accent-box-border: #e3d3f5;
+  --accent-box: #f6f9fe; /* kék blokk-doboz háttér (kártyán) */
+  --accent-box-border: #d7e1fb;
 
   /* ── TIPÓ ──
    * display: Hanken Grotesk 34/800 · title: 19/700 · body: 13.5/400
@@ -130,8 +130,8 @@
    * + accent/CTA változatok a Master mockupjaiból. Blur/üveg NINCS. */
   --shadow-card: 0 1px 2px rgba(35, 38, 47, 0.05), 0 8px 22px rgba(35, 38, 47, 0.07);
   --shadow-card-sm: 0 1px 2px rgba(35, 38, 47, 0.04);
-  --shadow-accent: 0 1px 2px rgba(35, 38, 47, 0.05), 0 8px 22px rgba(108, 67, 160, 0.12);
-  --shadow-action: 0 4px 12px rgba(132, 88, 179, 0.3);
+  --shadow-accent: 0 1px 2px rgba(35, 38, 47, 0.05), 0 8px 22px rgba(22, 62, 158, 0.12);
+  --shadow-action: 0 4px 12px rgba(31, 90, 232, 0.3);
   --shadow-gate-pill: 0 4px 12px rgba(180, 128, 30, 0.3);
   --shadow-done-pill: 0 4px 12px rgba(62, 158, 110, 0.3);
   --shadow-shell: 0 1px 2px rgba(35, 38, 47, 0.05), 0 20px 56px rgba(35, 38, 47, 0.12);

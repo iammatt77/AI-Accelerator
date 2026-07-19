@@ -73,7 +73,7 @@ export default async function StoryDetailPage({
       {/* fejléc */}
       <div className="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-5 py-3.5">
         <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-tint-action text-[9px] font-bold text-action-deep">US</span>
-        <span className="rounded-4 border border-[#D9C8EE] bg-tint-action px-2.5 py-1 font-mono text-[11px] font-bold text-action-deep">
+        <span className="rounded-4 border border-[#CBD9F9] bg-tint-action px-2.5 py-1 font-mono text-[11px] font-bold text-action-deep">
           {story.display_id}
         </span>
         {epic && (
@@ -92,17 +92,17 @@ export default async function StoryDetailPage({
         </span>
       </div>
       {/* a story-mondat */}
-      <div className="border-b border-line bg-[#FBF9FE] px-5 py-5">
+      <div className="border-b border-line bg-[#F7FAFE] px-5 py-5">
         <p className="max-w-[820px] text-[19px] font-semibold leading-[1.5] tracking-[-0.01em]">
-          <span className="mr-1 rounded-4 border border-[#D9C8EE] bg-surface px-2 py-0.5 align-middle font-mono text-[11px] font-bold text-action-deep">
+          <span className="mr-1 rounded-4 border border-[#CBD9F9] bg-surface px-2 py-0.5 align-middle font-mono text-[11px] font-bold text-action-deep">
             {t("asA")}
           </span>{" "}
           <span className="font-extrabold text-action-deep">{story.role}</span>{" "}
-          <span className="mx-1 rounded-4 border border-[#D9C8EE] bg-surface px-2 py-0.5 align-middle font-mono text-[11px] font-bold text-action-deep">
+          <span className="mx-1 rounded-4 border border-[#CBD9F9] bg-surface px-2 py-0.5 align-middle font-mono text-[11px] font-bold text-action-deep">
             {t("iWant")}
           </span>{" "}
           {story.want},{" "}
-          <span className="mx-1 rounded-4 border border-[#D9C8EE] bg-surface px-2 py-0.5 align-middle font-mono text-[11px] font-bold text-action-deep">
+          <span className="mx-1 rounded-4 border border-[#CBD9F9] bg-surface px-2 py-0.5 align-middle font-mono text-[11px] font-bold text-action-deep">
             {t("soThatKw")}
           </span>{" "}
           {story.so_that}.
@@ -186,9 +186,9 @@ export default async function StoryDetailPage({
             <div className="mb-2 font-mono text-[9.5px] font-bold uppercase tracking-[0.1em] text-ink-tertiary">
               {t("originSection")}
             </div>
-            <div className="flex items-center gap-2 rounded-4 border border-[#C9B3E6] bg-tint-action px-2.5 py-2">
+            <div className="flex items-center gap-2 rounded-4 border border-[#B9CCF7] bg-tint-action px-2.5 py-2">
               <span className="text-[13px]">{story.state === "manual" ? "✎" : "✦"}</span>
-              <span className="text-[11px] leading-[1.4] text-[#5B3C86]">
+              <span className="text-[11px] leading-[1.4] text-[#17357F]">
                 {story.state === "ai_suggested" && t("originStoryAiPending")}
                 {story.state === "confirmed" && t.rich("originStoryAi", { b: (c) => <b>{c}</b> })}
                 {story.state === "manual" && t("originManual")}
@@ -205,7 +205,7 @@ export default async function StoryDetailPage({
               {t("acSection")}
             </span>
             {covered[0] && (
-              <span className="rounded-3 border border-[#D9C8EE] bg-tint-action px-2 py-px font-mono text-[9.5px] font-bold text-action-deep">
+              <span className="rounded-3 border border-[#CBD9F9] bg-tint-action px-2 py-px font-mono text-[9.5px] font-bold text-action-deep">
                 {t("acSharedFrom", { id: covered[0].display_id })}
               </span>
             )}
@@ -229,7 +229,7 @@ export default async function StoryDetailPage({
                 {(
                   [
                     ["GIVEN", "border-[#C7DEEF] bg-tint-sky text-pivot", ac.given_text],
-                    ["WHEN", "border-[#D9C8EE] bg-tint-action text-action-deep", ac.when_text],
+                    ["WHEN", "border-[#CBD9F9] bg-tint-action text-action-deep", ac.when_text],
                     ["THEN", "border-[#CDE7DA] bg-tint-done text-done-text", ac.then_text],
                   ] as const
                 ).map(([kw, cls, text]) => (
@@ -243,9 +243,9 @@ export default async function StoryDetailPage({
               </div>
             </div>
           ))}
-          <div className="mt-4 flex items-center gap-2.5 rounded-tile border border-[#C9B3E6] bg-[#F6F1FC] px-3.5 py-3">
+          <div className="mt-4 flex items-center gap-2.5 rounded-tile border border-[#B9CCF7] bg-[#F2F6FE] px-3.5 py-3">
             <span className="text-[14px]">🔗</span>
-            <span className="text-[12.5px] leading-[1.45] text-[#5B3C86]">
+            <span className="text-[12.5px] leading-[1.45] text-[#17357F]">
               {t.rich("sharedAcBridge", { b: (c) => <b>{c}</b> })}
             </span>
           </div>

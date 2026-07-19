@@ -173,7 +173,7 @@ export function MatrixCard({
               <div className="relative aspect-square w-full overflow-hidden rounded-6 border border-line-soft">
                 {/* kvadráns-tintek */}
                 <div className="absolute left-0 top-0 h-1/2 w-1/2 bg-[#FAF4E8]" />
-                <div className="absolute right-0 top-0 h-1/2 w-1/2 bg-[#F3EEFA]" />
+                <div className="absolute right-0 top-0 h-1/2 w-1/2 bg-[#EEF3FE]" />
                 <div className="absolute bottom-0 left-0 h-1/2 w-1/2 bg-[#F4F5F8]" />
                 <div className="absolute bottom-0 right-0 h-1/2 w-1/2 bg-[#EAF1F7]" />
                 {/* osztók */}
@@ -183,7 +183,7 @@ export function MatrixCard({
                 <div className="absolute left-2 top-[7px] font-mono text-[8.5px] font-bold leading-[1.2] text-[#9A6A12]">
                   {t("quadrant.keep_satisfied.label")}
                 </div>
-                <div className="absolute right-2 top-[7px] text-right font-mono text-[8.5px] font-bold leading-[1.2] text-[#7A4FB0]">
+                <div className="absolute right-2 top-[7px] text-right font-mono text-[8.5px] font-bold leading-[1.2] text-[#1E52D4]">
                   {t("quadrant.manage_closely.label")}
                 </div>
                 <div className="absolute bottom-[7px] left-2 font-mono text-[8.5px] font-bold leading-[1.2] text-[#A9AEBD]">
@@ -205,9 +205,9 @@ export function MatrixCard({
                     <div
                       aria-hidden
                       className="absolute left-1/2 top-1/2 h-[34px] w-[34px] -translate-x-1/2 -translate-y-1/2 rounded-pill"
-                      style={{ background: "rgba(132,88,179,0.18)" }}
+                      style={{ background: "rgba(31, 90, 232,0.18)" }}
                     />
-                    <div className="relative flex h-[22px] w-[22px] items-center justify-center rounded-pill border-[3px] border-white bg-action shadow-[0_3px_8px_rgba(108,67,160,0.4)]">
+                    <div className="relative flex h-[22px] w-[22px] items-center justify-center rounded-pill border-[3px] border-white bg-action shadow-[0_3px_8px_rgba(22, 62, 158,0.4)]">
                       <span className="font-mono text-[8px] font-bold text-white">{initials}</span>
                     </div>
                   </div>
@@ -252,7 +252,7 @@ function ScoreReadout({
   return (
     <div
       className={`rounded-5 border px-[11px] py-2 ${
-        infl ? "border-[#E1D3F3] bg-[#F3EEFA]" : "border-[#CFE0EC] bg-[#EAF1F7]"
+        infl ? "border-[#D5E0FA] bg-[#EEF3FE]" : "border-[#CFE0EC] bg-[#EAF1F7]"
       }`}
     >
       <div
@@ -262,11 +262,11 @@ function ScoreReadout({
       </div>
       <div className="mt-0.5 flex items-baseline gap-[3px]">
         <span
-          className={`font-mono text-[20px] font-bold ${infl ? "text-[#6C43A0]" : "text-[#256087]"}`}
+          className={`font-mono text-[20px] font-bold ${infl ? "text-[#163E9E]" : "text-[#256087]"}`}
         >
           {value ?? "—"}
         </span>
-        <span className={`font-mono text-[11px] ${infl ? "text-[#A98BD0]" : "text-[#84AECB]"}`}>
+        <span className={`font-mono text-[11px] ${infl ? "text-[#7FA5F5]" : "text-[#84AECB]"}`}>
           / 5
         </span>
       </div>

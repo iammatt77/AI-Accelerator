@@ -143,7 +143,7 @@ export function ComponentDetail({
           {component.description || "—"}
         </p>
         {options.length > 0 && aiOptionCount > 0 && (
-          <div className="flex max-w-[380px] items-start gap-2 rounded-tile border border-[#D9C8EE] bg-tint-action px-3.5 py-2.5 text-[12px] leading-[1.5] text-[#5B3C86]">
+          <div className="flex max-w-[380px] items-start gap-2 rounded-tile border border-[#CBD9F9] bg-tint-action px-3.5 py-2.5 text-[12px] leading-[1.5] text-[#17357F]">
             <span aria-hidden>✦</span>
             <span>{t.rich("aiProposedNote", { n: aiOptionCount, b: (c) => <b>{c}</b> })}</span>
           </div>
@@ -214,7 +214,7 @@ export function ComponentDetail({
               <button
                 type="submit"
                 disabled={genPending}
-                className="rounded-control border border-[#C9B3E6] bg-surface px-3 py-1.5 text-[12px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
+                className="rounded-control border border-[#B9CCF7] bg-surface px-3 py-1.5 text-[12px] font-semibold text-action-deep hover:bg-accent-tint disabled:opacity-60"
               >
                 {genPending ? t("generating") : `✦ ${t("genOptionsCta")}`}
               </button>
@@ -271,7 +271,7 @@ function OptionMatrix({
   const keys = criteriaKeysOf(options);
   const letters = "ABCDEFGH";
   const parsed = options.map((o) => parseCriteriaValues(o.criteria_values));
-  const winnerCls = (id: string) => (id === selectedId ? "bg-[#FBF9FE]" : "bg-surface");
+  const winnerCls = (id: string) => (id === selectedId ? "bg-[#F7FAFE]" : "bg-surface");
 
   return (
     <div className="overflow-x-auto rounded-tile border border-line bg-surface shadow-card-sm">
@@ -293,7 +293,7 @@ function OptionMatrix({
                     </span>
                   )}
                   {o.ai_recommended && o.id !== selectedId && (
-                    <span className="rounded-3 border border-[#D9C8EE] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
+                    <span className="rounded-3 border border-[#CBD9F9] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
                       ✦ {t("aiRecommendBadge")}
                     </span>
                   )}
@@ -342,7 +342,7 @@ function OptionMatrix({
                 {t("rationaleLabel")}
               </td>
               {options.map((o) => (
-                <td key={o.id} className={`border-l border-line px-3.5 py-3 align-top text-[11.5px] leading-[1.5] ${winnerCls(o.id)} ${o.id === selectedId ? "font-semibold text-[#5B3C86]" : "text-ink-secondary"}`}>
+                <td key={o.id} className={`border-l border-line px-3.5 py-3 align-top text-[11.5px] leading-[1.5] ${winnerCls(o.id)} ${o.id === selectedId ? "font-semibold text-[#17357F]" : "text-ink-secondary"}`}>
                   {o.rationale || "—"}
                 </td>
               ))}
@@ -384,7 +384,7 @@ function MiniOptions({ options, selectedId }: { options: ComponentOptionRow[]; s
                 </span>
               )}
               {o.ai_recommended && !isSel && (
-                <span className="rounded-3 border border-[#D9C8EE] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
+                <span className="rounded-3 border border-[#CBD9F9] bg-tint-action px-1.5 py-px font-mono text-[8.5px] font-bold text-action-deep">
                   ✦ {t("aiRecommendBadge")}
                 </span>
               )}
@@ -442,12 +442,12 @@ function DecisionZone({
     return (
       <div
         data-testid="decision-recorded"
-        className="mt-4 flex flex-wrap items-center gap-3 rounded-tile border border-[#D9C8EE] bg-tint-action px-4 py-3"
+        className="mt-4 flex flex-wrap items-center gap-3 rounded-tile border border-[#CBD9F9] bg-tint-action px-4 py-3"
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-action-deep font-mono text-[11px] font-bold text-white">
           {initials}
         </span>
-        <span className="min-w-0 flex-1 text-[12.5px] leading-[1.5] text-[#5B3C86]">
+        <span className="min-w-0 flex-1 text-[12.5px] leading-[1.5] text-[#17357F]">
           {t.rich("decisionRecorded", {
             name: selected.name,
             by: selected.selected_by ?? "?",
@@ -457,10 +457,10 @@ function DecisionZone({
           <span className="font-mono text-[10.5px]">{matches ? t("matchesAi") : t("differsAi")}</span>
         </span>
         <span className="flex shrink-0 flex-wrap items-center gap-1.5">
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.08em] text-[#7A5FA0]">{t("traceLabel")}</span>
+          <span className="font-mono text-[9.5px] uppercase tracking-[0.08em] text-[#1C50CD]">{t("traceLabel")}</span>
           {sourceChips.length > 0 ? (
             sourceChips.map((c) => (
-              <span key={c.n} className="rounded-3 border border-[#C9B3E6] bg-surface px-1.5 py-px font-mono text-[9.5px] font-bold text-action-deep">
+              <span key={c.n} className="rounded-3 border border-[#B9CCF7] bg-surface px-1.5 py-px font-mono text-[9.5px] font-bold text-action-deep">
                 [{c.n}] {c.title.slice(0, 28)}
               </span>
             ))
@@ -490,7 +490,7 @@ function DecisionZone({
         ● {t("decideHead", { n: options.length })}
       </div>
       {recommended && (
-        <div className="mb-3 flex items-start gap-2 rounded-tile border border-[#D9C8EE] bg-tint-action px-3.5 py-2.5 text-[12px] leading-[1.5] text-[#5B3C86]">
+        <div className="mb-3 flex items-start gap-2 rounded-tile border border-[#CBD9F9] bg-tint-action px-3.5 py-2.5 text-[12px] leading-[1.5] text-[#17357F]">
           <span aria-hidden>✦</span>
           <span>{t.rich("aiRecommendNote", { name: recommended.name, b: (c) => <b>{c}</b> })}</span>
         </div>
@@ -529,7 +529,7 @@ function SelectForms({
             onClick={() => setPickedId(o.id)}
             className={`rounded-tile border px-3.5 py-2 text-left text-[12.5px] font-semibold ${
               o.id === pickedId
-                ? "border-[1.5px] border-action-deep bg-[#FBF9FE] text-action-deep"
+                ? "border-[1.5px] border-action-deep bg-[#F7FAFE] text-action-deep"
                 : "border-neutral-350 bg-surface text-ink-secondary hover:bg-soft"
             }`}
           >

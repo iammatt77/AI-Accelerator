@@ -62,7 +62,7 @@ function ProposalCard({
       <div
         className={`rounded-tile border px-3 py-2.5 ${
           status === "pending"
-            ? "border-[#C9B3E6] bg-accent-tint"
+            ? "border-[#B9CCF7] bg-accent-tint"
             : "border-line bg-soft opacity-80"
         }`}
       >
@@ -155,9 +155,9 @@ export function ProcessChatDrawer({
   }, [sendState]);
 
   return (
-    <div className="absolute bottom-0 right-0 top-0 z-30 flex w-[420px] flex-col border-l-[1.5px] border-[#C9B3E6] bg-surface shadow-[-14px_0_34px_rgba(35,38,47,0.14)]">
+    <div className="absolute bottom-0 right-0 top-0 z-30 flex w-[420px] flex-col border-l-[1.5px] border-[#B9CCF7] bg-surface shadow-[-14px_0_34px_rgba(35,38,47,0.14)]">
       {/* Fejléc */}
-      <div className="flex items-center gap-2.5 border-b border-line-soft bg-[#FAF8FD] px-4 py-3">
+      <div className="flex items-center gap-2.5 border-b border-line-soft bg-[#F6F9FE] px-4 py-3">
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control bg-action text-[12px] text-white">
           ✦
         </span>
