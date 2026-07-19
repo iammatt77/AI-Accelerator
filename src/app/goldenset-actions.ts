@@ -642,9 +642,12 @@ export async function syncReportAction(
   if (!typeDef) return { ok: false, error: t("errSave", { message: "typedef" }) };
 
   const tv = await getTranslations("goldenset");
-  const failLines = failedCaseLines(cases)
-    .map((f) => `${f.displayId} (${tv(`verdict.${f.verdict}`)}): ${f.note}`)
-    .join("\n");
+  // A hibak_javitasok kötelező mező — 0 bukott esetnél explicit „nincs hiba"
+  // sor kerül bele, különben a 100%-os riport sosem lenne Approved-olható.
+  const failLines =
+    failedCaseLines(cases)
+      .map((f) => `${f.displayId} (${tv(`verdict.${f.verdict}`)}): ${f.note}`)
+      .join("\n") || tv("fieldNoFailures");
   const resultText = tv("fieldResultText", {
     total: stats.total,
     passed: stats.passed,

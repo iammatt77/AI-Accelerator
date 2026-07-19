@@ -1758,6 +1758,7 @@
     "noUseCaseCta": "Open the P2 workspace",
     "fieldResultText": "Use case: {useCase}. {total} test cases · {passed} passed · {partial} partial · {failed} failed · {open} open.",
     "fieldThreshold": "threshold {t}%",
+    "fieldNoFailures": "No failed or partial cases — every recorded golden set case passed.",
     "errNoUseCase": "No selected use case — a shortlisted use case in P2 is needed first.",
     "errSave": "Save error: {message}",
     "errLlm": "AI error: {message}",

@@ -1657,7 +1657,7 @@
     "verdict": {
       "passed": "megfelelt",
       "partial": "részleges",
-      "failed": "nem"
+      "failed": "nem felelt meg"
     },
     "aiFromBadge": "AI-javaslatból",
     "editHuman": "ember szerkeszti",
@@ -1758,6 +1758,7 @@
     "noUseCaseCta": "P2 munkafelület megnyitása",
     "fieldResultText": "Use case: {useCase}. {total} teszteset · {passed} megfelelt · {partial} részleges · {failed} nem · {open} nyitott.",
     "fieldThreshold": "küszöb {t}%",
+    "fieldNoFailures": "Nincs bukott vagy részleges eset — a golden set minden rögzített esete átment.",
     "errNoUseCase": "Nincs kiválasztott use case — előbb a P2-ben kell egy shortlistre tett use case.",
     "errSave": "Mentési hiba: {message}",
     "errLlm": "AI-hiba: {message}",
