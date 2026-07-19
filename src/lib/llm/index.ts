@@ -1751,3 +1751,320 @@ function mockSuggestOptions(component: { name: string; type: string }): OptionPr
   };
   return parseOptionProposals(JSON.stringify(raw));
 }
+
+// ═════════════════ P3 Golden set + Tesztriport (#14) ═════════════════
+
+import {
+  parseEvalCaseProposals,
+  parseVerdictSuggestion,
+  parseResidualRisk,
+  type EvalCaseProposal,
+  type VerdictSuggestion,
+  type ResidualRiskSuggestion,
+} from "@/lib/goldenset/parse";
+export type {
+  EvalCaseProposal,
+  VerdictSuggestion,
+  ResidualRiskSuggestion,
+} from "@/lib/goldenset/parse";
+
+const EVAL_CASES_SHAPE = [
+  `{ "cases": [ { "input": "<teszt-bemenet, a use case tényleges bemenet-formájában>",`,
+  `"answer_type": "free_text" | "choice_single" | "choice_multi" | "number_scale" | "yes_no",`,
+  `"answer_config": { "options": ["<opció>", "..."] } VAGY { "min": 0, "max": 100, "label": "<mit mér>" } VAGY {},`,
+  `"criteria": ["<elfogadási kritérium — mikor jó a válasz>", "..."],`,
+  `"expected": { "text"|"choice"|"choices"|"value": ... } | null,`,
+  `"source_indices": [<támasztó forrás sorszáma>] } ] }`,
+].join(" ");
+
+/**
+ * Golden set javaslat (#14, AC2 — E1): az Approved P2 use case-ből +
+ * forrásokból tesztesetek (bemenet + 1-N kritérium + válasz-típus +
+ * OPCIONÁLIS elvárt kimenet). A javaslat ai_suggested — semmi nem kerül
+ * aktív állapotba emberi megerősítés nélkül. c-minta: expected CSAK
+ * egyértelmű egyetlen-jó-válasz esetén; nyílt esetnél null.
+ */
+export async function suggestEvalCases(
+  sources: LlmSource[],
+  useCase: { title: string; description: string | null },
+): Promise<EvalCaseProposal[]> {
+  if (isMock()) {
+    return mockSuggestEvalCases(sources);
+  }
+
+  const system = [
+    "Minőségbiztosítási (QA) tervező vagy egy AI-implementációs tanácsadói",
+    "rendszerben. Egy megépített AI-megoldáshoz állítasz össze GOLDEN SET",
+    "teszteseteket a use case és a források alapján. Minden esethez: input",
+    "(realisztikus teszt-bemenet), 1-N criteria (elfogadási kritérium — a",
+    "pass/fail fő alapja), answer_type (a megoldás kimenetének formája:",
+    "free_text=szabad szöveg · choice_single=egy kategória · choice_multi=",
+    "több címke · number_scale=szám egy skálán · yes_no=kétállású döntés),",
+    "és a típushoz tartozó answer_config (választósnál legalább 2 opció;",
+    "skálánál min/max/label). SZIGORÚ SZABÁLY: az expected (elvárt kimenet)",
+    "CSAK akkor tölthető, ha EGYETLEN jó válasz van (pl. a helyes kategória)",
+    "— nyílt/szabad-szöveges esetnél null, a kritérium dönt; értéket",
+    "fabrikálni TILOS. Vegyes típus-összetételt adj, a use case kockázatos",
+    "viselkedéseit (eszkaláció, hangnem, határesetek) is fedd le. A",
+    "source_indices a támasztó forrás(ok) sorszáma. KIZÁRÓLAG érvényes",
+    "JSON-t adsz vissza, magyarul.",
+  ].join(" ");
+
+  const srcLines = sources.map((s) => `[${s.index}] ${s.title}\n${s.text.slice(0, 1500)}`).join("\n\n");
+  const userPrompt = [
+    "── A use case ──",
+    `Cím: ${useCase.title}`,
+    useCase.description ? `Leírás: ${useCase.description}` : "",
+    "",
+    "── Számozott források ──",
+    srcLines,
+    "",
+    "Adj 6-10 tesztesetet pontosan ebben a JSON-alakban:",
+    EVAL_CASES_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 6000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseEvalCaseProposals(textFromMessage(message));
+}
+
+const VERDICT_SHAPE = [
+  `{ "verdict": "passed" | "partial" | "failed",`,
+  `"rationale": "<indok — a kritériumokra hivatkozva (K1, K2, ...)>",`,
+  `"criteria": [ { "ord": 1, "ok": true | false } ] }`,
+].join(" ");
+
+/**
+ * Besorolás-ajánlás (#14, AC3 — E1): a rögzített TÉNYLEGES kimenetet a
+ * kritériumokhoz méri. Az ajánlás KÜLÖN mezőbe kerül — a végső ítélet
+ * mindig emberi (elfogadás vagy felülírás).
+ */
+export async function suggestVerdict(input: {
+  inputText: string;
+  answerTypeLabel: string;
+  criteria: string[];
+  actualFormatted: string;
+  expectedFormatted: string | null;
+}): Promise<VerdictSuggestion | null> {
+  if (isMock()) {
+    return mockSuggestVerdict(input);
+  }
+
+  const system = [
+    "Minőségbiztosítási bíráló vagy egy AI-implementációs tanácsadói",
+    "rendszerben. Egy teszteset RÖGZÍTETT tényleges kimenetét mered az",
+    "elfogadási kritériumokhoz. Besorolás: passed (minden lényegi kritérium",
+    "teljesül) · partial (részben teljesül) · failed (lényegi kritérium",
+    "sérül). Az indoklás KONKRÉTAN a kritériumokra hivatkozik (K1, K2, …),",
+    "és a criteria tömbben kritériumonként jelzöd: ok=true/false. Ha van",
+    "elvárt kimenet, az eltérés releváns; ha nincs, KIZÁRÓLAG a kritériumok",
+    "döntenek. Ez AJÁNLÁS — a végső ítélet a tanácsadóé. KIZÁRÓLAG érvényes",
+    "JSON-t adsz vissza, magyarul.",
+  ].join(" ");
+
+  const critLines = input.criteria.map((c, i) => `K${i + 1}: ${c}`).join("\n");
+  const userPrompt = [
+    "── A teszteset ──",
+    `Bemenet: ${input.inputText}`,
+    `Válasz-típus: ${input.answerTypeLabel}`,
+    "",
+    "── Elfogadási kritériumok ──",
+    critLines,
+    "",
+    input.expectedFormatted ? `── Elvárt kimenet ──\n${input.expectedFormatted}\n` : "",
+    "── TÉNYLEGES kimenet (a megoldás kívül futtatott válasza) ──",
+    input.actualFormatted,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    VERDICT_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 1500,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseVerdictSuggestion(textFromMessage(message));
+}
+
+const RESIDUAL_SHAPE = `{ "level": "alacsony" | "közepes" | "magas", "text": "<1-3 mondat: mi a maradék kockázat és kezelhető-e pilotban>" }`;
+
+/**
+ * Maradék kockázat javaslat a Tesztriporthoz (#14, §7/3 — E1): a bukott
+ * esetekből. Emberi megerősítéssel kerül a riport-mezőbe.
+ */
+export async function suggestResidualRisk(
+  failed: { displayId: string; verdict: string; note: string }[],
+  stats: { pct: number; threshold: number | null },
+): Promise<ResidualRiskSuggestion | null> {
+  if (isMock()) {
+    return mockSuggestResidualRisk(failed);
+  }
+
+  const system = [
+    "Minőségbiztosítási tanácsadó vagy. A golden set bukott eseteiből",
+    "fogalmazol MARADÉK KOCKÁZAT összefoglalót a Tesztriporthoz: mi a",
+    "kockázat mintázata, és pilotban (emberi felügyelet mellett) kezelhető-e.",
+    "CSAK a megadott bukásokból dolgozz — új hibát kitalálni TILOS. Ez",
+    "javaslat, emberi megerősítéssel kerül a riportba. KIZÁRÓLAG érvényes",
+    "JSON-t adsz vissza, magyarul.",
+  ].join(" ");
+
+  const failLines = failed.length
+    ? failed.map((f) => `${f.displayId} (${f.verdict}): ${f.note}`).join("\n")
+    : "(nincs bukott eset)";
+  const userPrompt = [
+    "── Bukott esetek ──",
+    failLines,
+    "",
+    `── Arány ── ${stats.pct}%${stats.threshold !== null ? ` (küszöb: ${stats.threshold}%)` : ""}`,
+    "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    RESIDUAL_SHAPE,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 800,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseResidualRisk(textFromMessage(message));
+}
+
+// ── #14 mockok (determinisztikus — mind az 5 válasz-típus lefedve) ──
+
+function mockSuggestEvalCases(sources: LlmSource[]): EvalCaseProposal[] {
+  const src = sources.length ? [sources[0].index] : [];
+  const raw = {
+    cases: [
+      {
+        input: "„A rendelésem (#48210) két hete nem érkezett meg, kérek választ.”",
+        answer_type: "free_text",
+        answer_config: {},
+        criteria: [
+          "A válasz udvarias és bocsánatot kér a késedelemért.",
+          "Konkrét következő lépést ad (státusz-ellenőrzés vagy határidő).",
+        ],
+        expected: null,
+        source_indices: src,
+      },
+      {
+        input: "„Hibás a kazán kijelzője, garanciában van még?”",
+        answer_type: "choice_single",
+        answer_config: { options: ["Számlázás", "Szállítás", "Termékhiba", "Garancia", "Egyéb"] },
+        criteria: ["A megoldás a Garancia kategóriát adja."],
+        expected: { choice: "Garancia" },
+        source_indices: src,
+      },
+      {
+        input: "„Ez egy szégyen, azonnal intézzék, vagy feljelentem magukat!”",
+        answer_type: "yes_no",
+        answer_config: { label: "Durva hangnál eszkalált-e élő ügyintézőnek?" },
+        criteria: [
+          "Durva hangnál eszkalál élő ügyintézőnek.",
+          "Nem ígér jogilag kötelező érvényűt.",
+        ],
+        expected: { value: true },
+        source_indices: src,
+      },
+      {
+        input: "„Már harmadszor írok a szivárgó radiátor ügyében, kártérítést kérek.”",
+        answer_type: "choice_multi",
+        answer_config: { options: ["sürgős", "kártérítés-igény", "ismételt panasz"] },
+        criteria: [
+          "A válasz felismeri az ismétlődő panaszt (nem első kontaktusként kezeli).",
+          "Elismeri a kártérítési igényt és jelzi a továbbítást.",
+        ],
+        expected: null,
+        source_indices: src,
+      },
+      {
+        input: "„Mennyire biztos a rendszer a besorolásban? (konfidencia)”",
+        answer_type: "number_scale",
+        answer_config: { min: 0, max: 100, label: "A megoldás konfidenciája a besorolásban" },
+        criteria: ["A konfidencia legalább 70, egyértelmű bemenetnél."],
+        expected: null,
+        source_indices: src,
+      },
+      {
+        input: "„Kérek egy udvarias választ a késett alkatrész-szállításra.”",
+        answer_type: "free_text",
+        answer_config: {},
+        criteria: ["Udvarias, empatikus hangnem.", "Konkrét várható időpontot vagy értesítést ígér."],
+        expected: null,
+        source_indices: src,
+      },
+    ],
+  };
+  return parseEvalCaseProposals(JSON.stringify(raw));
+}
+
+function mockSuggestVerdict(input: {
+  criteria: string[];
+  actualFormatted: string;
+}): VerdictSuggestion | null {
+  const crits = input.criteria.map((_, i) => ({ ord: i + 1, ok: true }));
+  const actual = input.actualFormatted.toLowerCase();
+  // determinisztikus: „nem" kétállású bukás → failed; „hiány" → partial; egyébként passed
+  if (actual === "nem") {
+    if (crits.length > 0) crits[0] = { ord: 1, ok: false };
+    return parseVerdictSuggestion(
+      JSON.stringify({
+        verdict: "failed",
+        rationale:
+          "A tényleges kimenet sérti a K1-et: durva/fenyegető hang esetén a megoldásnak élő ügyintézőnek kell eszkalálnia, de nem tette. A többi kritérium teljesül, de a K1 kritikus — a besorolás nem.",
+        criteria: crits,
+      }),
+    );
+  }
+  if (actual.includes("hiány") || (actual.includes(",") && !actual.includes("ismételt"))) {
+    if (crits.length > 0) crits[0] = { ord: 1, ok: false };
+    return parseVerdictSuggestion(
+      JSON.stringify({
+        verdict: "partial",
+        rationale:
+          "A kimenet részben fedi a kritériumokat: a K1 (ismételt panasz felismerése) sérül, a többi teljesül — a besorolás részleges.",
+        criteria: crits,
+      }),
+    );
+  }
+  return parseVerdictSuggestion(
+    JSON.stringify({
+      verdict: "passed",
+      rationale: "A tényleges kimenet minden kritériumot teljesít (K1–K" + crits.length + " OK).",
+      criteria: crits,
+    }),
+  );
+}
+
+function mockSuggestResidualRisk(
+  failed: { displayId: string; verdict: string; note: string }[],
+): ResidualRiskSuggestion | null {
+  if (failed.length === 0) {
+    return parseResidualRisk(
+      JSON.stringify({ level: "alacsony", text: "A golden set nem tárt fel maradék kockázatot." }),
+    );
+  }
+  return parseResidualRisk(
+    JSON.stringify({
+      level: "közepes",
+      text: `Az eszkalációs logika megbízhatatlan (${failed.map((f) => f.displayId).join(", ")}). Pilotban emberi felügyelet mellett kezelhető, de éles bevezetés előtt javítandó.`,
+    }),
+  );
+}
