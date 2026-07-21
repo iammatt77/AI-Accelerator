@@ -1786,11 +1786,14 @@ const EVAL_CASES_SHAPE = [
 ].join(" ");
 
 /**
- * Golden set javaslat (#14, AC2 — E1): az Approved P2 use case-ből +
- * forrásokból tesztesetek (bemenet + 1-N kritérium + válasz-típus +
- * OPCIONÁLIS elvárt kimenet). A javaslat ai_suggested — semmi nem kerül
- * aktív állapotba emberi megerősítés nélkül. c-minta: expected CSAK
- * egyértelmű egyetlen-jó-válasz esetén; nyílt esetnél null.
+ * Golden set javaslat (#14, AC2 — E1): a JÓVÁHAGYOTT P2 use case-ből
+ * tesztesetek (bemenet + 1-N kritérium + válasz-típus + OPCIONÁLIS elvárt
+ * kimenet). A javaslat ai_suggested — semmi nem kerül aktív állapotba
+ * emberi megerősítés nélkül. c-minta: expected CSAK egyértelmű
+ * egyetlen-jó-válasz esetén; nyílt esetnél null.
+ * Csomag A (A4, S2-javítás): entitás-primer — az elsődleges tartalom a
+ * jóváhagyott use case; a nyers források CSAK `[index] cím` citációs
+ * listaként szerepelnek (a suggestRequirements mintája).
  */
 export async function suggestEvalCases(
   sources: LlmSource[],
@@ -1803,28 +1806,30 @@ export async function suggestEvalCases(
   const system = [
     "Minőségbiztosítási (QA) tervező vagy egy AI-implementációs tanácsadói",
     "rendszerben. Egy megépített AI-megoldáshoz állítasz össze GOLDEN SET",
-    "teszteseteket a use case és a források alapján. Minden esethez: input",
-    "(realisztikus teszt-bemenet), 1-N criteria (elfogadási kritérium — a",
-    "pass/fail fő alapja), answer_type (a megoldás kimenetének formája:",
-    "free_text=szabad szöveg · choice_single=egy kategória · choice_multi=",
-    "több címke · number_scale=szám egy skálán · yes_no=kétállású döntés),",
-    "és a típushoz tartozó answer_config (választósnál legalább 2 opció;",
-    "skálánál min/max/label). SZIGORÚ SZABÁLY: az expected (elvárt kimenet)",
-    "CSAK akkor tölthető, ha EGYETLEN jó válasz van (pl. a helyes kategória)",
-    "— nyílt/szabad-szöveges esetnél null, a kritérium dönt; értéket",
-    "fabrikálni TILOS. Vegyes típus-összetételt adj, a use case kockázatos",
-    "viselkedéseit (eszkaláció, hangnem, határesetek) is fedd le. A",
-    "source_indices a támasztó forrás(ok) sorszáma. KIZÁRÓLAG érvényes",
-    "JSON-t adsz vissza, magyarul.",
+    "teszteseteket. AZ ELSŐDLEGES ALAP A JÓVÁHAGYOTT USE CASE (cím +",
+    "leírás) — ebből vezeted le a teszteseteket. A számozott forrás-lista",
+    "CSAK citációs célra szolgál: a source_indices-be a támasztó forrás(ok)",
+    "sorszámát írod; a forrás-címekből tartalmat kitalálni TILOS. Minden",
+    "esethez: input (realisztikus teszt-bemenet), 1-N criteria (elfogadási",
+    "kritérium — a pass/fail fő alapja), answer_type (a megoldás kimenetének",
+    "formája: free_text=szabad szöveg · choice_single=egy kategória ·",
+    "choice_multi=több címke · number_scale=szám egy skálán · yes_no=",
+    "kétállású döntés), és a típushoz tartozó answer_config (választósnál",
+    "legalább 2 opció; skálánál min/max/label). SZIGORÚ SZABÁLY: az expected",
+    "(elvárt kimenet) CSAK akkor tölthető, ha EGYETLEN jó válasz van (pl. a",
+    "helyes kategória) — nyílt/szabad-szöveges esetnél null, a kritérium",
+    "dönt; értéket fabrikálni TILOS. Vegyes típus-összetételt adj, a use",
+    "case kockázatos viselkedéseit (eszkaláció, hangnem, határesetek) is",
+    "fedd le. KIZÁRÓLAG érvényes JSON-t adsz vissza, magyarul.",
   ].join(" ");
 
-  const srcLines = sources.map((s) => `[${s.index}] ${s.title}\n${s.text.slice(0, 1500)}`).join("\n\n");
+  const srcLines = sources.map((s) => `[${s.index}] ${s.title}`).join("\n");
   const userPrompt = [
-    "── A use case ──",
+    "── A jóváhagyott use case (elsődleges alap) ──",
     `Cím: ${useCase.title}`,
     useCase.description ? `Leírás: ${useCase.description}` : "",
     "",
-    "── Számozott források ──",
+    "── Számozott források (csak citációhoz) ──",
     srcLines,
     "",
     "Adj 6-10 tesztesetet pontosan ebben a JSON-alakban:",
@@ -2109,14 +2114,23 @@ const BUILD_DOC_SHAPE = [
 ].join(" ");
 
 /**
- * Struktúra-javaslat a feltöltött építési anyagból (#15, AC3 — E1):
- * komponensek (P2-eredettel, ahol felismerhető), prompt-elemek,
- * kontrollpontok. A tanácsadó szerkeszt és erősít meg.
+ * Struktúra-javaslat (#15, AC3 — E1): komponensek (P2-eredettel, ahol
+ * felismerhető), prompt-elemek, kontrollpontok. A tanácsadó szerkeszt és
+ * erősít meg.
+ * Csomag A (A3, S1-javítás): entitás-primer — az elsődleges tartalom a
+ * JÓVÁHAGYOTT P2 solution_components teljes tartalma (leírás + HITL-
+ * nyertes opció); a nyers források CSAK `[index] cím` citációs listaként
+ * szerepelnek (a suggestRequirements mintája).
  */
 export async function suggestBuildDoc(
   sources: LlmSource[],
   ctx: {
-    p2Components: { name: string; optionName: string | null }[];
+    p2Components: {
+      name: string;
+      description: string;
+      optionName: string | null;
+      optionDescription: string | null;
+    }[];
     tobeSteps: { num: string; title: string }[];
   },
 ): Promise<BuildDocProposal> {
@@ -2126,38 +2140,47 @@ export async function suggestBuildDoc(
 
   const system = [
     "Megoldás-dokumentáló vagy egy AI-implementációs tanácsadói rendszerben.",
-    "A tanácsadó a rendszeren KÍVÜL megépítette a megoldást; a feltöltött",
-    "építési anyagból strukturált dokumentációt draftolsz: build-komponensek",
-    "(réteg: process=folyamat-elem · infrastructure=átfogó infra ·",
-    "personnel=emberi/change elem), komponensenként a felismert prompt-elemek",
-    "(név + cél + szó szerinti prompt-szöveg, ha az anyagban szerepel), és",
-    "kontrollpontok (guardrail=szabály-korlát · hitl=emberi jóváhagyási",
-    "pont). EREDET: ha egy komponens egyértelműen a P2-lista egy eleméből",
-    "épült, add meg az origin_index-ét (1-alapú); ha nincs ilyen, null —",
-    "eredetet fabrikálni TILOS. A tobe_ord CSAK akkor tölthető, ha a",
-    "kontroll egyértelműen egy megadott TO-BE lépéshez tartozik. CSAK az",
-    "anyagban ténylegesen szereplő elemeket add vissza — kitalálni semmit",
-    "nem szabad. A source_indices a támasztó forrás(ok) sorszáma.",
-    "KIZÁRÓLAG érvényes JSON-t adsz vissza, magyarul.",
+    "A tanácsadó a rendszeren KÍVÜL megépítette a megoldást; strukturált",
+    "build-dokumentációt draftolsz. AZ ELSŐDLEGES ALAP A JÓVÁHAGYOTT P2",
+    "MEGOLDÁSKOMPONENS-LISTA (név + leírás + kiválasztott opció) — ebből",
+    "vezeted le a build-komponenseket (réteg: process=folyamat-elem ·",
+    "infrastructure=átfogó infra · personnel=emberi/change elem),",
+    "komponensenként a prompt-elemeket (név + cél + prompt-szöveg, ha a",
+    "komponens-leírásból következik), és a kontrollpontokat",
+    "(guardrail=szabály-korlát · hitl=emberi jóváhagyási pont). A számozott",
+    "forrás-lista CSAK citációs célra szolgál: a source_indices-be a",
+    "támasztó forrás(ok) sorszámát írod; a forrás-címekből tartalmat",
+    "kitalálni TILOS. EREDET: ha egy build-komponens a P2-lista egy",
+    "eleméből épül, add meg az origin_index-ét (1-alapú); ha nincs ilyen,",
+    "null — eredetet fabrikálni TILOS. A tobe_ord CSAK akkor tölthető, ha a",
+    "kontroll egyértelműen egy megadott TO-BE lépéshez tartozik. CSAK a",
+    "megadott entitásokban ténylegesen megalapozott elemeket add vissza —",
+    "kitalálni semmit nem szabad. KIZÁRÓLAG érvényes JSON-t adsz vissza,",
+    "magyarul.",
   ].join(" ");
 
   const p2Lines = ctx.p2Components.length
     ? ctx.p2Components
-        .map((c, i) => `${i + 1}. ${c.name}${c.optionName ? ` (kiválasztva: ${c.optionName})` : ""}`)
+        .map((c, i) => {
+          const opt = c.optionName
+            ? `\n   Kiválasztott opció: ${c.optionName}${c.optionDescription ? ` — ${c.optionDescription}` : ""}`
+            : "";
+          return `${i + 1}. ${c.name}${c.description ? ` — ${c.description}` : ""}${opt}`;
+        })
         .join("\n")
     : "(nincs P2-komponens)";
   const tobeLines = ctx.tobeSteps.length
     ? ctx.tobeSteps.map((s) => `${s.num}. ${s.title}`).join("\n")
     : "(nincs jóváhagyott TO-BE)";
-  const srcLines = sources.map((s) => `[${s.index}] ${s.title}\n${s.text.slice(0, 1500)}`).join("\n\n");
+  const srcLines = sources.map((s) => `[${s.index}] ${s.title}`).join("\n");
   const userPrompt = [
-    "── P2 kiválasztott komponensek (eredet-jelöltek) ──",
+    "── Jóváhagyott P2 megoldáskomponensek (elsődleges alap; eredet-jelöltek) ──",
     p2Lines,
     "",
     "── TO-BE lépések ──",
     tobeLines,
     "",
-    "── Számozott források (építési anyag) ──",
+    "── Számozott források (csak citációhoz) ──",
     srcLines,
     "",
     "Add vissza pontosan ebben a JSON-alakban:",

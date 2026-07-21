@@ -284,14 +284,23 @@ export async function generateBuildDocAction(
     (optData ?? []) as ComponentOptionRow[],
     existing,
   );
+  // Csomag A (A3): entitás-primer — a javaslat elsődleges alapja a
+  // JÓVÁHAGYOTT (confirmed/manual) P2-komponensek teljes tartalma; e nélkül
+  // a hívás blokkolt. Az origin_index is erre a szűrt listára képez.
+  const approvedCands = cands.filter(
+    (c) => c.component.state === "confirmed" || c.component.state === "manual",
+  );
+  if (approvedCands.length === 0) return { ok: false, error: t("errNeedApprovedComponents") };
   const { toBe, spine } = await loadPlanContext(supabase, projectId);
 
   let proposal;
   try {
     proposal = await suggestBuildDoc(loaded.sources, {
-      p2Components: cands.map((c) => ({
+      p2Components: approvedCands.map((c) => ({
         name: c.component.name,
+        description: c.component.description,
         optionName: c.selectedOption?.name ?? null,
+        optionDescription: c.selectedOption?.description ?? null,
       })),
       tobeSteps: spine.map((s) => ({ num: s.num, title: s.title })),
     });
@@ -340,7 +349,7 @@ export async function generateBuildDocAction(
         description: c.description,
         layer_type: c.layer_type,
         origin_component_id:
-          c.origin_index !== null ? (cands[c.origin_index - 1]?.component.id ?? null) : null,
+          c.origin_index !== null ? (approvedCands[c.origin_index - 1]?.component.id ?? null) : null,
         state: "ai_suggested",
         source_input_ids: indicesToInputIds(c.source_indices, loaded.inputIds),
         ord: ++maxOrd,

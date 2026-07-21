@@ -99,6 +99,11 @@ export async function generateEvalCasesAction(
 
   const useCase = await resolveUseCase(supabase, projectId);
   if (!useCase) return { ok: false, error: t("errNoUseCase") };
+  // Csomag A (A4): entitás-primer — a javaslat elsődleges alapja a
+  // JÓVÁHAGYOTT (confirmed/manual) use case; e nélkül a hívás blokkolt.
+  if (useCase.state !== "confirmed" && useCase.state !== "manual") {
+    return { ok: false, error: t("errNeedApprovedUseCase") };
+  }
   const set = await ensureGoldenSet(supabase, projectId, useCase.id);
   if ("error" in set) return { ok: false, error: t("errSave", { message: set.error }) };
 
