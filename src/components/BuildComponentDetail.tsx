@@ -14,6 +14,7 @@ import {
   updateComponentAction,
 } from "@/app/builddoc-actions";
 import { AiBadge, LayerChip } from "@/components/BuildDocBoard";
+import { StaleFlag } from "@/components/StaleFlag";
 import { byDisplayId, elementIndex, resolveLink, type PlanElement } from "@/lib/builddoc/model";
 import type { FormState } from "@/app/actions";
 import type {
@@ -39,6 +40,7 @@ export function BuildComponentDetail({
   links,
   prompts,
   originLabel,
+  drift = false,
   elements,
   onNavigate,
   onClose,
@@ -48,6 +50,9 @@ export function BuildComponentDetail({
   links: ImplLinkRow[];
   prompts: PromptItemRow[];
   originLabel: string | null;
+  /** Csomag A (A8): aktív origin_drift jelölő (a P2-eredet a seed után
+   *  változott, még nincs nyugtázva). */
+  drift?: boolean;
   elements: PlanElement[];
   onNavigate: (el: PlanElement) => void;
   onClose: () => void;
@@ -159,6 +164,16 @@ export function BuildComponentDetail({
                   </Link>
                 </div>
                 <p className="mt-1 text-[10.5px] leading-[1.5] text-ink-secondary">{t("originSeedNote")}</p>
+                {drift && (
+                  <div className="mt-2">
+                    <StaleFlag
+                      projectId={projectId}
+                      subjectType="build_component"
+                      subjectId={component.id}
+                      kind="origin_drift"
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="mt-1.5 rounded-tile border border-dashed border-neutral-350 bg-[#FBFBFD] px-3 py-2.5 text-[11.5px] text-ink-tertiary">

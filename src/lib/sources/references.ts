@@ -23,7 +23,16 @@ export interface ReferenceChip {
 }
 
 /** Egy forrás sora a tár számára (a szerver állítja össze, a kliens jeleníti). */
+/** Egy korábbi forrás-verzió a történethez (Csomag A, A8). */
+export interface SourceVersionRow {
+  id: string;
+  version: number;
+  dateLabel: string;
+  content: string;
+}
+
 export interface SourceRow {
+  /** A csoport LEGFRISSEBB verziójának id-ja (a sor ezt képviseli). */
   id: string;
   index: number;
   title: string;
@@ -38,6 +47,11 @@ export interface SourceRow {
   wordCount: number;
   refCount: number;
   references: ReferenceChip[];
+  /** Verzió-csoport (A8): a csoport kulcsa + az aktuális verziószám +
+   *  a korábbi verziók (csökkenő sorrendben). */
+  groupId: string;
+  version: number;
+  history: SourceVersionRow[];
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   rejectPromptAction,
 } from "@/app/builddoc-actions";
 import { BuildComponentDetail } from "@/components/BuildComponentDetail";
+import { StaleFlag } from "@/components/StaleFlag";
 import { BuildAddPanel, type SeedItem } from "@/components/BuildAddPanel";
 import { coverageRows, elementIndex, linksOfComponent, resolveLink, byDisplayId, type PlanElement } from "@/lib/builddoc/model";
 import type { FormState } from "@/app/actions";
@@ -53,6 +54,9 @@ export interface BuildDocBoardProps {
   seeds: SeedItem[];
   /** komponens-id → P2-komponens név (eredet-felirat). */
   originLabels: Record<string, string>;
+  /** Csomag A (A8): aktív origin_drift jelölésű komponens-id-k (a P2-eredet
+   *  a seed után változott és még nincs nyugtázva). */
+  driftIds?: string[];
   elements: PlanElement[];
   spine: SpineOption[];
   doc: { id: string; status: ArtifactStatus } | null;
@@ -141,6 +145,7 @@ export function BuildDocBoard({
   controls,
   seeds,
   originLabels,
+  driftIds = [],
   elements,
   spine,
   doc,
@@ -356,6 +361,17 @@ export function BuildDocBoard({
                       ) : (
                         <span className="font-mono text-[10px] italic text-ink-tertiary">{t("originManual")}</span>
                       )}
+                      {/* A8: a P2-eredet a seed után változott (origin_drift) */}
+                      {driftIds.includes(c.id) && (
+                        <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                          <StaleFlag
+                            projectId={projectId}
+                            subjectType="build_component"
+                            subjectId={c.id}
+                            kind="origin_drift"
+                          />
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-2.5 align-top">
                       <div className="flex flex-wrap items-center gap-1">
@@ -402,6 +418,7 @@ export function BuildDocBoard({
           links={links.filter((l) => l.component_id === detail.id)}
           prompts={prompts.filter((p) => p.component_id === detail.id)}
           originLabel={originLabels[detail.id] ?? null}
+          drift={driftIds.includes(detail.id)}
           elements={elements}
           onNavigate={jumpToElement}
           onClose={() => setDetailId(null)}

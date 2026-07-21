@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -8,6 +8,9 @@ import {
   type SourceKind,
   type SourceRow,
 } from "@/lib/sources/references";
+import { newSourceVersionAction } from "@/app/staleness-actions";
+import type { FormState } from "@/app/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 // ─────────────────────────────────────────────────────────────
 // Forrástár — mester–részlet (ref_forrastar.html). Bal: kereshető/szűrhető
@@ -82,9 +85,11 @@ function initialsColor(i: number): string {
 }
 
 export function SourcesLibrary({
+  projectId,
   projectName,
   rows,
 }: {
+  projectId: string;
   projectName: string;
   rows: SourceRow[];
 }) {
@@ -218,6 +223,11 @@ export function SourcesLibrary({
                     <span className="flex items-center gap-1.5">
                       <span className="font-mono text-[10px] font-bold text-pivot">[{r.index}]</span>
                       <span className="truncate text-[13.5px] font-bold">{r.title}</span>
+                      {r.version > 1 && (
+                        <span className="shrink-0 rounded-3 bg-tint-done px-1.5 py-px font-mono text-[9px] font-bold text-done-text">
+                          v{r.version}
+                        </span>
+                      )}
                     </span>
                     <span className="mt-0.5 block truncate text-[11.5px] text-ink-tertiary">
                       {r.preview}
@@ -260,6 +270,7 @@ export function SourcesLibrary({
           </div>
         ) : (
           <ReaderPane
+            projectId={projectId}
             row={selected}
             rawView={rawView}
             onToggleRaw={() => setRawView((v) => !v)}
@@ -273,12 +284,14 @@ export function SourcesLibrary({
 }
 
 function ReaderPane({
+  projectId,
   row,
   rawView,
   onToggleRaw,
   copied,
   onCopy,
 }: {
+  projectId: string;
   row: SourceRow;
   rawView: boolean;
   onToggleRaw: () => void;
@@ -302,6 +315,11 @@ function ReaderPane({
             <div className="flex items-center gap-2">
               <span className="font-mono text-[11px] font-bold text-pivot">[{row.index}]</span>
               <span className="truncate text-[19px] font-extrabold tracking-tight">{row.title}</span>
+              {/* A8: verzió-chip — a kanonikus [n] a csoporté, a chip a
+                  megjelenített (legfrissebb) verziót mutatja. */}
+              <span className="shrink-0 rounded-4 bg-tint-done px-2 py-0.5 font-mono text-[10.5px] font-bold text-done-text">
+                v{row.version}
+              </span>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <span className={`rounded-4 px-2 py-0.5 font-mono text-[10.5px] font-bold ${kindBox(row.kind)}`}>
@@ -386,8 +404,102 @@ function ReaderPane({
               {row.content}
             </pre>
           )}
+
+          {/* ── A8: korábbi verziók (a régi sorok megmaradnak — a [n] a
+              csoporté, a citációk élnek) ── */}
+          {row.history.length > 0 && (
+            <div className="mt-6 border-t border-line pt-4">
+              <div className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-ink-tertiary">
+                {t("historyTitle")} · {row.history.length}
+              </div>
+              <div className="mt-2 flex flex-col gap-1.5">
+                {row.history.map((v) => (
+                  <details
+                    key={v.id}
+                    className="rounded-tile border border-line-soft bg-soft px-3 py-2"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center gap-2 text-[12px]">
+                      <span className="font-mono text-[10.5px] font-bold text-ink-secondary">
+                        v{v.version}
+                      </span>
+                      <span className="font-mono text-[10.5px] text-ink-tertiary">
+                        {v.dateLabel}
+                      </span>
+                      <span className="ml-auto text-[10.5px] text-ink-tertiary">
+                        {t("historyOpenHint")}
+                      </span>
+                    </summary>
+                    <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap border-t border-line-soft pt-2 font-sans text-[12.5px] leading-[1.6] text-ink-secondary">
+                      {v.content}
+                    </pre>
+                  </details>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── A8: új verzió — a frissítés ÚJ sor a csoportban, a régi
+              megmarad; a kanonikus [n] nem mozdul ── */}
+          <NewVersionForm key={row.groupId} projectId={projectId} groupId={row.groupId} />
         </div>
       </div>
     </>
+  );
+}
+
+const initialFormState: FormState = { ok: false, error: null };
+
+function NewVersionForm({ projectId, groupId }: { projectId: string; groupId: string }) {
+  const t = useTranslations("sourcesPage");
+  const [open, setOpen] = useState(false);
+  const [state, formAction] = useActionState(
+    newSourceVersionAction.bind(null, projectId, groupId),
+    initialFormState,
+  );
+
+  return (
+    <div className="mt-6 border-t border-line pt-4">
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded-control border border-neutral-350 bg-surface px-3 py-1.5 text-[12px] font-semibold hover:bg-neutral-50"
+        >
+          {t("newVersionCta")}
+        </button>
+      ) : (
+        <form action={formAction} className="space-y-2">
+          <p className="text-[12px] font-semibold">{t("newVersionTitle")}</p>
+          <textarea
+            key={state.nonce ?? 0}
+            name="rawText"
+            required
+            rows={6}
+            defaultValue={state.values?.rawText ?? ""}
+            placeholder={t("newVersionPlaceholder")}
+            className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
+          />
+          {state.error && (
+            <p role="alert" className="text-mono-sm text-danger">
+              {state.error}
+            </p>
+          )}
+          {state.ok && <p className="text-body text-done">{t("newVersionDone")}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <SubmitButton variant="secondary" pendingLabel={t("newVersionSaving")}>
+              {t("newVersionSave")}
+            </SubmitButton>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-control px-3 py-1.5 text-body text-ink-secondary hover:bg-sunken"
+            >
+              {t("newVersionCancel")}
+            </button>
+          </div>
+          <p className="text-mono-sm text-ink-tertiary">{t("newVersionHint")}</p>
+        </form>
+      )}
+    </div>
   );
 }

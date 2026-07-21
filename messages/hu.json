@@ -967,6 +967,12 @@
     "aiSuggestionLabel": "AI-JAVASLAT — MEGERŐSÍTÉSRE VÁR",
     "painLinkedLabel": "Kapcsolt:"
   },
+  "stale": {
+    "source_updated": "Forrás frissült",
+    "origin_drift": "P2-eredet változott",
+    "doc_stale": "Entitás-változás a szinkron után",
+    "ackCta": "Ellenőrizve"
+  },
   "sourcesPage": {
     "title": "Források",
     "lead": "A projekt nyersanyagai kereshető könyvtárként — bal oldalt a lista, jobbra a kiválasztott forrás olvasó-nézete. Az új bemenet felvétele a fázis-munkafelület Input zónájában történik.",
@@ -983,6 +989,16 @@
     "noMatch": "Nincs a szűrőre illeszkedő forrás.",
     "addHint": "Új bemenet felvétele a fázis-munkafelület Input zónájában történik.",
     "readerEmpty": "Válassz forrást a listából az olvasó-nézethez.",
+    "historyTitle": "Korábbi verziók",
+    "historyOpenHint": "kattints a megnyitáshoz",
+    "newVersionCta": "Új verzió feltöltése",
+    "newVersionTitle": "Új verzió — a korábbi megmarad, a [n] hivatkozások nem törnek el.",
+    "newVersionPlaceholder": "A forrás frissített tartalma…",
+    "newVersionSave": "Verzió mentése",
+    "newVersionSaving": "Mentés…",
+    "newVersionCancel": "Mégse",
+    "newVersionDone": "Új verzió mentve — a kanonikus [n] változatlan.",
+    "newVersionHint": "A frissítés új sort hoz létre ugyanabban a verzió-csoportban (v+1); az érintett entitásokon „forrás frissült” jelölő jelenik meg.",
     "refCountShort": "hivatkozva {n}×",
     "referencedBy": "Hivatkozva:",
     "noReferences": "— még egyetlen deliverable vagy stakeholder sem hivatkozik rá",

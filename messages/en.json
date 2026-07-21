@@ -967,6 +967,12 @@
     "aiSuggestionLabel": "AI SUGGESTION — NEEDS YOUR CONFIRM",
     "painLinkedLabel": "Linked:"
   },
+  "stale": {
+    "source_updated": "Source updated",
+    "origin_drift": "P2 origin changed",
+    "doc_stale": "Entity change after sync",
+    "ackCta": "Reviewed"
+  },
   "sourcesPage": {
     "title": "Sources",
     "lead": "The project's raw materials as a searchable library — the list on the left, the selected source's reading view on the right. New inputs are added in the phase workspace Input zone.",
@@ -983,6 +989,16 @@
     "noMatch": "No source matches the filter.",
     "addHint": "New inputs are added in the phase workspace Input zone.",
     "readerEmpty": "Select a source from the list to open the reading view.",
+    "historyTitle": "Earlier versions",
+    "historyOpenHint": "click to open",
+    "newVersionCta": "Upload new version",
+    "newVersionTitle": "New version — the earlier one is kept and [n] citations do not break.",
+    "newVersionPlaceholder": "Updated content of the source…",
+    "newVersionSave": "Save version",
+    "newVersionSaving": "Saving…",
+    "newVersionCancel": "Cancel",
+    "newVersionDone": "New version saved — the canonical [n] is unchanged.",
+    "newVersionHint": "The update creates a new row in the same version group (v+1); affected entities get a “source updated” flag.",
     "refCountShort": "referenced {n}×",
     "referencedBy": "Referenced by:",
     "noReferences": "— no deliverable or stakeholder references it yet",

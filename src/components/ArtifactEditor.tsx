@@ -95,6 +95,7 @@ export function ArtifactEditor({
   nextVersion,
   savedAtLabel,
   syncedAtLabel,
+  staleBadge,
   structuredFields,
 }: {
   projectId: string;
@@ -121,6 +122,9 @@ export function ArtifactEditor({
   /** Csomag A (A1): az utolsó modul-szinkron formázott bélyege (null = még
    *  nem volt sync) — a modul-birtokolt mezők read-only sorában jelenik meg. */
   syncedAtLabel?: string | null;
+  /** Csomag A (A8): derivált doc_stale jelvény (StaleFlag) a fejlécbe —
+   *  a szerver számítja; null/undefined = nincs aktív jelölő. */
+  staleBadge?: React.ReactNode;
   /** P2 (#9): mező-kulcs → strukturált törzs (kalkulátor / sikerdefiníció),
    *  a sima textarea helyett a nyitott accordion-mezőben. */
   structuredFields?: Record<string, React.ReactNode>;
@@ -456,6 +460,7 @@ export function ArtifactEditor({
           </div>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-3">
+          {staleBadge}
           <StatusFlow status={status} />
           {status === "approved" ? (
             <a

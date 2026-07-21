@@ -21,8 +21,12 @@ import type {
   PainPointRow,
   PainPointStakeholderRow,
   StakeholderRow,
+  StaleAckRow,
   UseCaseRow,
 } from "@/lib/db/types";
+import { numberSourceRows } from "@/lib/sources";
+import { activeStaleSince, sourceUpdatedSince } from "@/lib/staleness";
+import { StaleFlag } from "@/components/StaleFlag";
 import {
   ExtractForm,
   FieldCard,
@@ -195,9 +199,32 @@ export async function PhaseWorkspace({
       painStakeholderMap.set(row.pain_point_id, list);
     }
   }
-  const inputPos = new Map(inputs.map((row, i) => [row.id, i + 1]));
+  // Kanonikus [n] (A8): csoport-alapú — bármely verzió-id a csoport indexére
+  // oldódik, így a chipek a szerkesztő/források számozásával azonosak.
+  const numberedInputs = numberSourceRows(inputs);
+  const inputPos = numberedInputs.aliasIndex;
   const toIndices = (ids: string[]) =>
-    ids.map((id) => inputPos.get(id)).filter((n): n is number => typeof n === "number");
+    [...new Set(ids.map((id) => inputPos.get(id)).filter((n): n is number => typeof n === "number"))];
+  // A ① lista sorai: csoport-képviselők (legfrissebb verzió), kanonikus
+  // sorrendben — a verzió-emelés nem szaporítja a listát, csak vN-t vált.
+  const sourceRows = numberedInputs.inputIds
+    .map((sid) => inputs.find((r) => r.id === sid))
+    .filter((r): r is InputItemRow => Boolean(r));
+
+  // A8: elavulás-nyugták (a jelölők deriváltak; itt csak a P1-kártyákhoz
+  // kell — source_updated).
+  const { data: ackData } = isP1
+    ? await supabase.from("stale_acks").select("*").eq("project_id", projectId)
+    : { data: [] as StaleAckRow[] };
+  const staleAcks = (ackData ?? []) as StaleAckRow[];
+  const sourceUpdatedFlag = (subjectType: string, subjectId: string, ids: string[]) =>
+    activeStaleSince(
+      sourceUpdatedSince(ids, inputs),
+      staleAcks,
+      subjectType,
+      subjectId,
+      "source_updated",
+    );
   const painTitleById = new Map(allPains.map((p) => [p.id, p.title]));
 
   // Megerősített stakeholderek (a kötés csak ezekre mutathat) + kártya-adat.
@@ -228,6 +255,16 @@ export async function PhaseWorkspace({
   // Fájdalompont-részlet: a kártya + a stakeholder-kötés (many-to-many, #8).
   const renderPainDetail = (p: PainPointRow) => (
     <div className="space-y-3">
+      {/* A8: derivált forrás-frissült jelölő (a hivatkozott forrásnak újabb
+          verziója van) + beépített „Ellenőrizve" nyugta. */}
+      {sourceUpdatedFlag("pain_point", p.id, p.source_input_ids) && (
+        <StaleFlag
+          projectId={projectId}
+          subjectType="pain_point"
+          subjectId={p.id}
+          kind="source_updated"
+        />
+      )}
       <PainPointProposalCard projectId={projectId} painPoint={toPainCard(p)} embedded />
       <div className="border-t border-line pt-3">
         <PainStakeholderBinder
@@ -504,7 +541,9 @@ export async function PhaseWorkspace({
         </p>
       ) : (
         <ul className="mt-3 space-y-2">
-          {inputs.map((input, i) => (
+          {/* A8: egy sor = egy verzió-csoport (legfrissebb verzió); a [n] a
+              kanonikus csoport-index, a vN a verziószám. */}
+          {sourceRows.map((input, i) => (
             <li key={input.id} className="card-sunken px-3 py-2">
               <div className="flex items-start justify-between gap-2">
                 <span className="min-w-0 text-body font-medium">
@@ -512,6 +551,11 @@ export async function PhaseWorkspace({
                     [{i + 1}]
                   </span>
                   {input.type}
+                  {(input.version ?? 1) > 1 && (
+                    <span className="ml-1.5 rounded-3 bg-tint-done px-1.5 py-px font-mono text-[9.5px] font-bold text-done-text">
+                      v{input.version}
+                    </span>
+                  )}
                 </span>
                 {input.phase && (
                   <span className="shrink-0 rounded-pill border border-line bg-surface px-1.5 py-px font-mono text-[10px] text-ink-secondary">
@@ -657,7 +701,17 @@ export async function PhaseWorkspace({
                           />
                         }
                         detail={
-                          <UseCaseCard projectId={projectId} useCase={toUseCaseCard(u)} embedded />
+                          <div className="space-y-3">
+                            {sourceUpdatedFlag("use_case", u.id, u.source_input_ids) && (
+                              <StaleFlag
+                                projectId={projectId}
+                                subjectType="use_case"
+                                subjectId={u.id}
+                                kind="source_updated"
+                              />
+                            )}
+                            <UseCaseCard projectId={projectId} useCase={toUseCaseCard(u)} embedded />
+                          </div>
                         }
                       />
                     </div>
@@ -916,8 +970,9 @@ export async function PhaseWorkspace({
       label: stripLabel(tGates("zoneInput")),
       tone: inputs.length > 0 ? "done" : "active",
       chip: inputs.length > 0 ? t("zoneReady") : undefined,
+      // (A8: a metrika a csoport-számot mutatja — a verzió-emelés nem növeli)
       chipTone: "done",
-      metric: `${inputs.length}`,
+      metric: `${sourceRows.length}`,
       metricLabel: t("zoneRawLabel"),
     },
     {

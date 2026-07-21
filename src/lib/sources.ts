@@ -24,25 +24,11 @@ export interface NumberedSources {
   rows: InputItemRow[];
 }
 
-/** A projekt bemenetei csoportonként számozva. A source_input_ids az
- *  entitáson/artefaktumon a mindenkori legfrissebb verzió-id-t rögzíti; a
- *  korábbi verziókra mutató régi hivatkozásokat az aliasIndex oldja fel. */
-export async function loadNumberedSources(
-  supabase: SupabaseClient,
-  projectId: string,
-): Promise<NumberedSources | { error: string }> {
-  const { data, error } = await supabase
-    .from("input_items")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
-  if (error) return { error: error.message ?? "?" };
-  const rows = (data ?? []) as InputItemRow[];
-
-  // Csoportosítás: kulcs a group_id (defenzív: régi sor group_id nélkül →
-  // saját id a csoportja). A csoport-sorrend az ELSŐ betöltött (legkorábbi
-  // created_at-ú) tag pozíciója — verzió-emelés nem mozdítja a számozást.
+/** Tiszta számozó a MÁR betöltött sorokon (a sorrend: created_at, id).
+ *  Csoportosítás: kulcs a group_id (defenzív: régi sor group_id nélkül →
+ *  saját id a csoportja). A csoport-sorrend az ELSŐ betöltött (legkorábbi
+ *  created_at-ú) tag pozíciója — verzió-emelés nem mozdítja a számozást. */
+export function numberSourceRows(rows: InputItemRow[]): NumberedSources {
   const groupOrder: string[] = [];
   const byGroup = new Map<string, InputItemRow[]>();
   for (const row of rows) {
@@ -65,6 +51,23 @@ export async function loadNumberedSources(
     for (const v of versions) aliasIndex.set(v.id, i + 1);
   }
   return { sources, inputIds, aliasIndex, rows };
+}
+
+/** A projekt bemenetei csoportonként számozva. A source_input_ids az
+ *  entitáson/artefaktumon a mindenkori legfrissebb verzió-id-t rögzíti; a
+ *  korábbi verziókra mutató régi hivatkozásokat az aliasIndex oldja fel. */
+export async function loadNumberedSources(
+  supabase: SupabaseClient,
+  projectId: string,
+): Promise<NumberedSources | { error: string }> {
+  const { data, error } = await supabase
+    .from("input_items")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) return { error: error.message ?? "?" };
+  return numberSourceRows((data ?? []) as InputItemRow[]);
 }
 
 /** 1-alapú forrás-indexek → input-id-k (a csoport LEGFRISSEBB verziója).

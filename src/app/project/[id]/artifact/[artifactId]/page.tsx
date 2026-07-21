@@ -17,7 +17,9 @@ import {
 } from "@/components/ArtifactEditor";
 import { BenefitCalculator } from "@/components/BenefitCalculator";
 import { PilotSuccessDefinition } from "@/components/PilotSuccessDefinition";
-import type { ArtifactRow, InputItemRow, ProjectRow } from "@/lib/db/types";
+import { StaleFlag } from "@/components/StaleFlag";
+import { activeStaleSince, docStaleSince, latestChangeOf } from "@/lib/staleness";
+import type { ArtifactRow, InputItemRow, ProjectRow, StaleAckRow } from "@/lib/db/types";
 
 export const dynamic = "force-dynamic";
 
@@ -219,6 +221,79 @@ export default async function ArtifactEditorPage({
       })
     : null;
 
+  // Csomag A (A8): derivált doc_stale — a modul-entitások az utolsó szinkron
+  // után változtak. Csak a szinkronizált (entitás-forrású / modul-mezős)
+  // típusokra értelmezett; az ack a stale_acks-ben, az újabb változás újra jelöl.
+  let staleBadge: React.ReactNode = null;
+  if (artifact.synced_at) {
+    let entityLatest: string | null = null;
+    if (artifact.type === "Megoldás-dokumentáció") {
+      const [{ data: bc }, { data: pi }, { data: cp }] = await Promise.all([
+        supabase.from("build_components").select("updated_at").eq("project_id", id),
+        supabase.from("prompt_items").select("updated_at").eq("project_id", id),
+        supabase.from("control_points").select("updated_at").eq("project_id", id),
+      ]);
+      entityLatest = latestChangeOf([
+        ...((bc ?? []) as { updated_at: string }[]),
+        ...((pi ?? []) as { updated_at: string }[]),
+        ...((cp ?? []) as { updated_at: string }[]),
+      ]);
+    } else if (artifact.type === "Tesztriport") {
+      const { data: gs } = await supabase
+        .from("golden_sets")
+        .select("id, updated_at")
+        .eq("project_id", id);
+      const sets = (gs ?? []) as { id: string; updated_at: string }[];
+      let cases: { updated_at: string }[] = [];
+      if (sets.length > 0) {
+        const { data: ec } = await supabase
+          .from("eval_cases")
+          .select("updated_at")
+          .in(
+            "golden_set_id",
+            sets.map((s) => s.id),
+          );
+        cases = (ec ?? []) as { updated_at: string }[];
+      }
+      entityLatest = latestChangeOf([...sets, ...cases]);
+    } else if (artifact.type === "Megoldási javaslat") {
+      const { data: sc } = await supabase
+        .from("solution_components")
+        .select("updated_at")
+        .eq("project_id", id);
+      entityLatest = latestChangeOf((sc ?? []) as { updated_at: string }[]);
+    }
+    const since = docStaleSince(artifact.synced_at, entityLatest);
+    if (since) {
+      const { data: ackData } = await supabase
+        .from("stale_acks")
+        .select("*")
+        .eq("project_id", id);
+      const active = activeStaleSince(
+        since,
+        (ackData ?? []) as StaleAckRow[],
+        "artifact",
+        artifact.id,
+        "doc_stale",
+      );
+      if (active) {
+        staleBadge = (
+          <StaleFlag
+            projectId={id}
+            subjectType="artifact"
+            subjectId={artifact.id}
+            kind="doc_stale"
+            dateLabel={new Date(active).toLocaleDateString(dateLocale, {
+              timeZone: "Europe/Budapest",
+              month: "short",
+              day: "numeric",
+            })}
+          />
+        );
+      }
+    }
+  }
+
   const backHref = typeDef
     ? `/project/${id}/phase/${typeDef.phase}`
     : `/project/${id}`;
@@ -265,6 +340,7 @@ export default async function ArtifactEditorPage({
         nextVersion={headVersion + 1}
         savedAtLabel={savedAtLabel}
         syncedAtLabel={syncedAtLabel}
+        staleBadge={staleBadge}
       />
     </div>
   );

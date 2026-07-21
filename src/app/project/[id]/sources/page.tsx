@@ -9,7 +9,9 @@ import {
   wordCount,
   type ReferenceChip,
   type SourceRow,
+  type SourceVersionRow,
 } from "@/lib/sources/references";
+import { numberSourceRows } from "@/lib/sources";
 import { getTypeDef, parseArtifactFields } from "@/lib/artifacts/config";
 import type { ArtifactRow, InputItemRow, ProjectRow, StakeholderRow } from "@/lib/db/types";
 
@@ -65,9 +67,19 @@ export default async function ProjectSourcesPage({
       day: "numeric",
     });
 
-  // Kanonikus [n]: a workspace számozásával azonos (created_at, id).
-  const indexOfId = new Map(inputs.map((row, i) => [row.id, i + 1]));
-  const idOfIndex = new Map(inputs.map((row, i) => [i + 1, row.id]));
+  // Kanonikus [n] (Csomag A, A8): verzió-CSOPORTONKÉNT — a lista egy sora
+  // egy csoport, a legfrissebb verzióval; a régi verzió-id-k az aliasIndex-en
+  // át ugyanarra az [n]-re oldódnak (a citációk nem törnek el).
+  const numbered = numberSourceRows(inputs);
+  const indexOfId = numbered.aliasIndex;
+  const idOfIndex = new Map(numbered.inputIds.map((rid, i) => [i + 1, rid]));
+  const byGroup = new Map<string, InputItemRow[]>();
+  for (const row of inputs) {
+    const gid = row.group_id ?? row.id;
+    byGroup.set(gid, [...(byGroup.get(gid) ?? []), row]);
+  }
+  const groupIdsOf = (row: InputItemRow): string[] =>
+    (byGroup.get(row.group_id ?? row.id) ?? [row]).map((r) => r.id);
 
   // ── Fordított aggregáció: melyik deliverable / stakeholder hivatkozik egy inputra ──
   type ArtRow = Pick<ArtifactRow, "id" | "type" | "version" | "source_input_ids" | "fields">;
@@ -110,11 +122,13 @@ export default async function ProjectSourcesPage({
   type StkRow = Pick<StakeholderRow, "id" | "name" | "source_input_ids">;
   const stakeholders = (stakeholderData ?? []) as StkRow[];
 
-  // input → chipek (az input stakeholder_source_id-ja is számít).
+  // Csoport → chipek: BÁRMELY verzió-id-ra mutató hivatkozás a csoport
+  // sorához tartozik (A8: a régi verzióra írt citáció is élő).
   function referencesFor(input: InputItemRow): ReferenceChip[] {
+    const versionIds = groupIdsOf(input);
     const chips: ReferenceChip[] = [];
     for (const [type, entry] of typeHead) {
-      if (entry.inputIds.has(input.id)) {
+      if (versionIds.some((vid) => entry.inputIds.has(vid))) {
         chips.push({
           key: `art:${type}`,
           kind: "artifact",
@@ -125,7 +139,7 @@ export default async function ProjectSourcesPage({
     }
     for (const s of stakeholders) {
       const linked =
-        (s.source_input_ids ?? []).includes(input.id) ||
+        versionIds.some((vid) => (s.source_input_ids ?? []).includes(vid)) ||
         input.stakeholder_source_id === s.id;
       if (linked) {
         chips.push({
@@ -139,7 +153,21 @@ export default async function ProjectSourcesPage({
     return chips;
   }
 
-  const rows: SourceRow[] = inputs.map((input) => {
+  // Egy sor = egy verzió-csoport, a LEGFRISSEBB verzióval; a korábbi
+  // verziók a history-ban (csökkenő sorrendben).
+  const rows: SourceRow[] = numbered.inputIds.map((latestId) => {
+    const input = inputs.find((r) => r.id === latestId)!;
+    const versions = (byGroup.get(input.group_id ?? input.id) ?? [input]).sort(
+      (a, b) => (b.version ?? 1) - (a.version ?? 1),
+    );
+    const history: SourceVersionRow[] = versions
+      .filter((v) => v.id !== input.id)
+      .map((v) => ({
+        id: v.id,
+        version: v.version ?? 1,
+        dateLabel: shortDate(v.created_at),
+        content: v.raw_text,
+      }));
     const references = referencesFor(input);
     return {
       id: input.id,
@@ -155,6 +183,9 @@ export default async function ProjectSourcesPage({
       wordCount: wordCount(input.raw_text),
       refCount: references.length,
       references,
+      groupId: input.group_id ?? input.id,
+      version: input.version ?? 1,
+      history,
     };
   });
 
@@ -171,7 +202,7 @@ export default async function ProjectSourcesPage({
           {t("empty")}
         </div>
       ) : (
-        <SourcesLibrary projectName={project.name} rows={rows} />
+        <SourcesLibrary projectId={id} projectName={project.name} rows={rows} />
       )}
     </div>
   );

@@ -17,8 +17,10 @@ import type {
   PromptItemRow,
   RequirementRow,
   SolutionComponentRow,
+  StaleAckRow,
   UserStoryRow,
 } from "@/lib/db/types";
+import { activeStaleSince, originDriftSince } from "@/lib/staleness";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +120,25 @@ export default async function BuildDocPage({ params }: { params: Promise<{ id: s
     if (label) originLabels[c.id] = label;
   }
 
+  // Csomag A (A8): derivált origin_drift — a P2-eredet a seed-átvétel után
+  // változott; csak a még nem nyugtázott jelölők aktívak.
+  const { data: ackData } = await supabase
+    .from("stale_acks")
+    .select("*")
+    .eq("project_id", id);
+  const staleAcks = (ackData ?? []) as StaleAckRow[];
+  const p2ById = new Map(p2Components.map((c) => [c.id, c]));
+  const driftIds = components
+    .filter((c) => {
+      if (!c.origin_component_id) return false;
+      const since = originDriftSince(
+        c.seeded_at,
+        p2ById.get(c.origin_component_id)?.updated_at,
+      );
+      return activeStaleSince(since, staleAcks, "build_component", c.id, "origin_drift") !== null;
+    })
+    .map((c) => c.id);
+
   const artifact = artData as ArtifactRow | null;
   let docExtras = { architektura: false, integracio: false };
   if (artifact) {
@@ -142,6 +163,7 @@ export default async function BuildDocPage({ params }: { params: Promise<{ id: s
         controls={controls}
         seeds={seeds}
         originLabels={originLabels}
+        driftIds={driftIds}
         elements={elements}
         spine={spine.map((s) => ({ nodeId: s.nodeId, label: `TO-BE·${s.num}`, title: s.title }))}
         doc={artifact ? { id: artifact.id, status: artifact.status } : null}
