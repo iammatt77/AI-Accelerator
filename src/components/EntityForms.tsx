@@ -19,7 +19,10 @@ import {
   scoreUseCaseAction,
   shortlistUseCaseAction,
 } from "@/app/entity-actions";
-import { generateShortlistFromEntitiesAction } from "@/app/artifact-actions";
+import {
+  generateShortlistFromEntitiesAction,
+  generateSolutionPlanFromEntitiesAction,
+} from "@/app/artifact-actions";
 import {
   AiActPanel,
   AiSuitabilityPanel,
@@ -752,6 +755,31 @@ export function GenerateShortlistFieldsForm({ projectId }: { projectId: string }
         {t("generateShortlistCta")}
       </SubmitButton>
       <p className="text-mono-sm text-ink-tertiary">{t("generateShortlistHint")}</p>
+    </form>
+  );
+}
+
+// ── ③ Megoldási javaslat mezői az entitásokból (Csomag A, A5) ─
+
+export function GenerateSolutionPlanForm({ projectId }: { projectId: string }) {
+  const t = useTranslations("entities");
+  const [state, formAction] = useActionState(
+    generateSolutionPlanFromEntitiesAction.bind(null, projectId),
+    initialState,
+  );
+
+  return (
+    <form action={formAction} className="space-y-2">
+      <ErrorAlert error={state.error} />
+      <NoticeAlert notice={state.notice} />
+      {state.ok && !state.notice && (
+        <p className="text-body text-done">{t("solutionPlanFieldsDone")}</p>
+      )}
+      {/* Mezők entitásból = döntés-előkészítő generálás → lila (törvény 3) */}
+      <SubmitButton pendingLabel={t("generatingSolutionPlan")}>
+        {t("generateSolutionPlanCta")}
+      </SubmitButton>
+      <p className="text-mono-sm text-ink-tertiary">{t("generateSolutionPlanHint")}</p>
     </form>
   );
 }

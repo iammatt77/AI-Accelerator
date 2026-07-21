@@ -286,12 +286,18 @@ const PILOT_TERV = deliverable("Pilot-terv", "pilotTerv", "P2", true, [
   f("pilotplan", "meresi_mod", "Mérési mód", true, "Hogyan és milyen forrásból mérünk a pilot alatt."),
 ]);
 
-const MEGOLDASI_JAVASLAT = deliverable("Megoldási javaslat", "megoldasiJavaslat", "P2", false, [
-  f("solution", "valasztott_use_case", "Választott use case", true, "A kiválasztott use case és a választás háttere."),
-  f("solution", "megoldas_leiras", "Megoldás-leírás", true, "A javasolt megoldás működésének leírása."),
-  f("solution", "opcio_osszevetes", "Opció-összevetés", true, "A mérlegelt opciók összevetése."),
-  f("solution", "dontesi_kriterium", "Döntési kritérium", true, "A döntést vezérlő kritériumok."),
-]);
+// Csomag A (A5): entitás-forrású — a mezőket a JÓVÁHAGYOTT solution_
+// components + HITL-nyertes opciók töltik determinisztikusan (D2-átkötés);
+// a szabad-szöveges kivonatolási út erre a típusra megszűnt.
+const MEGOLDASI_JAVASLAT: ArtifactTypeDef = {
+  ...deliverable("Megoldási javaslat", "megoldasiJavaslat", "P2", false, [
+    f("solution", "valasztott_use_case", "Választott use case", true, "A kiválasztott use case és a választás háttere."),
+    f("solution", "megoldas_leiras", "Megoldás-leírás", true, "A javasolt megoldás működésének leírása."),
+    f("solution", "opcio_osszevetes", "Opció-összevetés", true, "A mérlegelt opciók összevetése."),
+    f("solution", "dontesi_kriterium", "Döntési kritérium", true, "A döntést vezérlő kritériumok."),
+  ]),
+  entitySourced: true,
+};
 
 const TO_BE_TERV = {
   // Csomag A (A6): kivezetve — a TO-BE igazság-forrása a Folyamattérkép

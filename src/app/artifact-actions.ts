@@ -17,11 +17,20 @@ import { isPhaseId } from "@/lib/phases/config";
 import { parseAiAct } from "@/lib/entities/evaluators";
 import { loadNumberedSources } from "@/lib/sources";
 import { evaluateApprove } from "@/lib/goldenset/model";
+import {
+  criteriaKeysOf,
+  customCriterionLabel,
+  optionsOf,
+  parseCriteriaValues,
+  selectedOption,
+} from "@/lib/solution/model";
 import type {
   ArtifactRow,
+  ComponentOptionRow,
   EvalCaseRow,
   GoldenSetRow,
   InputItemRow,
+  SolutionComponentRow,
   UseCaseRow,
 } from "@/lib/db/types";
 import type { FormState } from "./actions";
@@ -137,6 +146,11 @@ export async function extractAction(
   if (!typeDef) {
     return { ok: false, error: tErrors("typeNotFound", { type: typeKey }) };
   }
+  // Csomag A (A6): kivezetett típusra nem készül új draft — a meglévő sorok
+  // olvashatók maradnak, de a kivonatolási/létrehozási út zárt.
+  if (typeDef.retired) {
+    return { ok: false, error: tErrors("typeRetired") };
+  }
   // Review-lelet (#7a): az entitás-forrású típus SZERVEROLDALON is tiltott a
   // generikus kivonatolásra — a UI-elrejtés önmagában megkerülhető, és a
   // szabad-szöveges extract a mezőket + a source_input_ids-t (unió →
@@ -250,7 +264,7 @@ async function insertNewArtifact(
   supabase: SupabaseClient,
   projectId: string,
   typeDef: ArtifactTypeDef,
-  extra: { fields: ArtifactFields; source_input_ids: string[] },
+  extra: { fields: ArtifactFields; source_input_ids: string[]; synced_at?: string },
 ): Promise<{ error: string | null }> {
   const tErrors = await getTranslations("errors");
   const { data } = await supabase
@@ -271,6 +285,7 @@ async function insertNewArtifact(
     body: "",
     fields: extra.fields,
     source_input_ids: extra.source_input_ids,
+    ...(extra.synced_at ? { synced_at: extra.synced_at } : {}),
   });
   if (error) {
     if (error.code === "23505") {
@@ -597,6 +612,10 @@ export async function newVersionAction(
   if (artifact.status !== "approved") {
     return { ok: false, error: tErrors("newVersionOnlyApproved") };
   }
+  // Csomag A (A6): kivezetett típusból új verzió (= új sor) sem készül.
+  if (getTypeDef(artifact.type)?.retired) {
+    return { ok: false, error: tErrors("typeRetired") };
+  }
 
   const { data, error } = await supabase.rpc("new_artifact_version", {
     p_artifact_id: artifactId,
@@ -816,6 +835,211 @@ export async function generateShortlistFromEntitiesAction(
     "generate_shortlist_fields",
     `Shortlist-mezők entitásokból: ${ranked.length} shortlist-elem, ` +
       `${quickWins.length} quick win, ${excluded.length} kizárt, ${unionIds.length} forrás.`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null };
+}
+
+// ── ③ Megoldási javaslat az ENTITÁSOKBÓL (Csomag A, A5) ──────
+// A D2-átkötés: a mezők a JÓVÁHAGYOTT (confirmed/manual) solution_
+// components + HITL-nyertes opciók DETERMINISZTIKUS kompozíciója — a
+// szabad-szöveges kivonatolási út erre a típusra megszűnt (entitySourced).
+// Nyertes-szabály: MINDEN jóváhagyott komponenshez kell kiválasztott opció
+// — különben blokk a hiányzók felsorolásával. A [n] citációk az érintett
+// entitások forrás-inputjainak UNIÓJÁBÓL oldódnak fel (shortlist-minta).
+
+const SOLUTION_PLAN_TYPE_KEY = "Megoldási javaslat";
+
+// A dokumentum nyelve magyar (a UI-nyelvtől független) — az alap-szempontok
+// magyar feliratai a determinisztikus kompozícióhoz.
+const CRITERIA_HU: Record<string, string> = {
+  cost: "költség",
+  lead_time: "átfutás",
+  risk: "kockázat",
+  data_need: "adatigény",
+  fit: "illeszkedés",
+};
+
+export async function generateSolutionPlanFromEntitiesAction(
+  projectId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const typeDef = getTypeDef(SOLUTION_PLAN_TYPE_KEY);
+  if (!typeDef) {
+    return { ok: false, error: tErrors("typeNotFound", { type: SOLUTION_PLAN_TYPE_KEY }) };
+  }
+
+  const supabase = createServiceSupabaseClient();
+
+  const [{ data: compData, error: compErr }, { data: optData }, { data: ucData }] =
+    await Promise.all([
+      supabase
+        .from("solution_components")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true }),
+      supabase.from("component_options").select("*"),
+      supabase
+        .from("use_cases")
+        .select("*")
+        .eq("project_id", projectId)
+        .in("state", ["confirmed", "manual"])
+        .in("list_status", ["selected", "shortlist"])
+        .order("created_at", { ascending: true }),
+    ]);
+  if (compErr) {
+    return { ok: false, error: tErrors("entityFetchFailed", { message: errMessage(compErr) }) };
+  }
+  const components = (compData ?? []) as SolutionComponentRow[];
+  const options = (optData ?? []) as ComponentOptionRow[];
+
+  // KIZÁRÓLAG emberi kontrollon átment komponensek (E1) — e nélkül blokk.
+  const approved = components.filter((c) => c.state === "confirmed" || c.state === "manual");
+  if (approved.length === 0) {
+    return { ok: false, error: tErrors("solutionPlanNeedsComponents") };
+  }
+
+  // Nyertes-szabály (A5): minden jóváhagyott komponenshez kell HITL-nyertes.
+  const missingWinner = approved.filter((c) => !selectedOption(c.id, options));
+  if (missingWinner.length > 0) {
+    return {
+      ok: false,
+      error: tErrors("solutionPlanMissingWinners", {
+        components: missingWinner.map((c) => c.name).join(", "),
+      }),
+    };
+  }
+
+  // A választott use case: selected előnyben, különben az első shortlist —
+  // csak jóváhagyott (a lekérdezés már szűrt). Ha nincs, a mező missing
+  // marad, az approve-blokk jelez (c-minta: nem fabrikálunk).
+  const ucRows = (ucData ?? []) as UseCaseRow[];
+  const chosenUc = ucRows.find((u) => u.list_status === "selected") ?? ucRows[0] ?? null;
+
+  // Citációk: az érintett entitások forrás-inputjainak uniója, a projekt
+  // kanonikus sorrendjében (pozicionális [n] — mint a shortlistnél).
+  const loaded = await loadNumberedSources(supabase, projectId);
+  if ("error" in loaded) {
+    return { ok: false, error: tErrors("inputsFetchFailed") + `: ${loaded.error}` };
+  }
+  const involvedIds = new Set([
+    ...approved.flatMap((c) => c.source_input_ids),
+    ...(chosenUc?.source_input_ids ?? []),
+  ]);
+  const unionIds = loaded.inputIds.filter((sid) => involvedIds.has(sid));
+  const posInUnion = new Map(unionIds.map((sid, i) => [sid, i + 1]));
+  const indicesOfIds = (ids: string[]): number[] =>
+    [
+      ...new Set(ids.map((sid) => posInUnion.get(sid)).filter((n): n is number => typeof n === "number")),
+    ].sort((a, b) => a - b);
+
+  // Mezőértékek determinisztikusan az entitásokból (magyarul).
+  const layerHu: Record<string, string> = {
+    process: "folyamat",
+    infrastructure: "infrastruktúra",
+    personnel: "személyi",
+  };
+  const useCaseValue = chosenUc
+    ? `${chosenUc.title}${chosenUc.description ? `\n${chosenUc.description}` : ""}`
+    : "";
+  const solutionValue = approved
+    .map((c, i) => {
+      const winner = selectedOption(c.id, options)!;
+      const head = `${i + 1}. ${c.name} [${layerHu[c.type] ?? c.type}]${c.description ? ` — ${c.description}` : ""}`;
+      const opt = `   Kiválasztott opció: ${winner.name}${winner.description ? ` — ${winner.description}` : ""}`;
+      return `${head}\n${opt}`;
+    })
+    .join("\n");
+  const comparisonValue = approved
+    .map((c) => {
+      const compOptions = optionsOf(c.id, options);
+      const lines = compOptions.map((o) => {
+        const marks: string[] = [];
+        if (o.is_selected) marks.push("KIVÁLASZTOTT");
+        const crit = parseCriteriaValues(o.criteria_values);
+        const critParts = Object.entries(crit)
+          .filter(([, v]) => v.value)
+          .map(([k, v]) => `${v.label ?? CRITERIA_HU[k] ?? k}: ${v.value}`);
+        const tail = [
+          marks.join(" "),
+          critParts.join(" · "),
+          o.is_selected && o.rationale ? `Indoklás: ${o.rationale}` : "",
+        ]
+          .filter(Boolean)
+          .join(" — ");
+        return `   - ${o.name}${tail ? ` — ${tail}` : ""}`;
+      });
+      return `${c.name}:\n${lines.join("\n")}`;
+    })
+    .join("\n");
+  const usedCriteria = criteriaKeysOf(options.filter((o) => approved.some((c) => c.id === o.component_id)));
+  const criteriaValue =
+    `A döntés szempontjai: ${usedCriteria
+      .map((k) => customCriterionLabel(options, k) ?? CRITERIA_HU[k] ?? k)
+      .join(" · ")}. ` +
+    "A nyertes opció kiválasztása minden komponensnél emberi (HITL) döntés — az AI legfeljebb ajánl.";
+
+  const compIndices = indicesOfIds(approved.flatMap((c) => c.source_input_ids));
+  const confirmedField = (value: string, indices: number[]): ArtifactFields[string] =>
+    value !== ""
+      ? { value, source_indices: indices, state: "confirmed" }
+      : { ...EMPTY_FIELD };
+  const fields: ArtifactFields = {
+    valasztott_use_case: confirmedField(
+      useCaseValue,
+      indicesOfIds(chosenUc?.source_input_ids ?? []),
+    ),
+    megoldas_leiras: confirmedField(solutionValue, compIndices),
+    opcio_osszevetes: confirmedField(comparisonValue, compIndices),
+    dontesi_kriterium: confirmedField(criteriaValue, []),
+  };
+
+  // Mentés a shortlist-minta szerint: draft fej → frissítés; approved fej →
+  // új draft-verzió mellé; in_review → nem módosítható. A synced_at az
+  // entitás-szinkron bélyege (A8: doc_stale származtatásához).
+  const nowIso = new Date().toISOString();
+  const latest = await loadLatestArtifact(supabase, projectId, SOLUTION_PLAN_TYPE_KEY);
+  if (latest && latest.status === "in_review") {
+    return { ok: false, error: tErrors("artifactNotDraft") };
+  }
+  if (latest && latest.status === "draft") {
+    const { data, error } = await supabase
+      .from("artifacts")
+      .update({
+        fields,
+        source_input_ids: unionIds,
+        synced_at: nowIso,
+        updated_at: nowIso,
+      })
+      .eq("id", latest.id)
+      .eq("status", "draft") // optimista guard
+      .select("id");
+    if (error || (data ?? []).length === 0) {
+      return {
+        ok: false,
+        error: error
+          ? tErrors("artifactSaveFailed", { message: errMessage(error) })
+          : tErrors("artifactNotDraft"),
+      };
+    }
+  } else {
+    const created = await insertNewArtifact(supabase, projectId, typeDef, {
+      fields,
+      source_input_ids: unionIds,
+      synced_at: nowIso,
+    });
+    if (created.error) return { ok: false, error: created.error };
+  }
+
+  await logDecision(
+    supabase,
+    projectId,
+    "generate_solution_plan_fields",
+    `Megoldási javaslat entitásokból: ${approved.length} jóváhagyott komponens ` +
+      `nyertes opcióval, ${unionIds.length} forrás.`,
   );
   revalidateWorkspace(projectId);
   return { ok: true, error: null };

@@ -35,6 +35,7 @@ import {
   DeriveUseCasesForm,
   ExtractPainPointsForm,
   GenerateShortlistFieldsForm,
+  GenerateSolutionPlanForm,
   PainPointProposalCard,
   UseCaseCard,
   type PainPointCardData,
@@ -364,7 +365,13 @@ export async function PhaseWorkspace({
           )}
           {typeDef.entitySourced && (!latest || latest.status !== "in_review") && (
             <div className="mt-3">
-              <GenerateShortlistFieldsForm projectId={projectId} />
+              {/* Típus-specifikus entitás-generátor: shortlist (#7a F4) vagy
+                  Megoldási javaslat (Csomag A, A5). */}
+              {typeDef.key === "Megoldási javaslat" ? (
+                <GenerateSolutionPlanForm projectId={projectId} />
+              ) : (
+                <GenerateShortlistFieldsForm projectId={projectId} />
+              )}
             </div>
           )}
           {latest && (

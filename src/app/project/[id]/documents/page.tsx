@@ -4,9 +4,11 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import {
   completeness,
+  getTypeDef,
   missingRequiredFields,
   parseArtifactFields,
   typesForPhase,
+  typesForPhaseAll,
   type ArtifactTypeDef,
 } from "@/lib/artifacts/config";
 import { loadPhaseBoard } from "@/lib/phases/service";
@@ -112,7 +114,12 @@ export default async function DocumentsHubPage({
           : stateRaw === "open"
             ? "open"
             : "locked";
-    const configured = typesForPhase(phase);
+    // Csomag A (A6): a kivezetett (retired) típus a tárban CSAK akkor
+    // jelenik meg, ha van meglévő artifact-sora — az adat olvasható marad,
+    // de üres „tervezett" sorként nem hirdetjük.
+    const configured = typesForPhaseAll(phase).filter(
+      (td) => !td.retired || (byType.get(td.key) ?? []).length > 0,
+    );
 
     const rows: RepoRow[] = configured.map((td) => {
       const versions = byType.get(td.key) ?? [];
@@ -328,11 +335,8 @@ export default async function DocumentsHubPage({
             {latestApproved
               ? t("exportLatest", {
                   name: (() => {
-                    const td = typesForPhase(
-                      PHASE_IDS.find((p) =>
-                        typesForPhase(p).some((x) => x.key === latestApproved.type),
-                      ) ?? "P0",
-                    ).find((x) => x.key === latestApproved.type);
+                    // getTypeDef a retired típust is feloldja (A6).
+                    const td = getTypeDef(latestApproved.type);
                     return td ? typeName(td) : latestApproved.type;
                   })(),
                   v: latestApproved.version,
