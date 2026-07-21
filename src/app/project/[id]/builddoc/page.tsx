@@ -5,12 +5,13 @@ import { BuildDocBoard } from "@/components/BuildDocBoard";
 import { originLabel, planElements, seedCandidates } from "@/lib/builddoc/model";
 import { resolveApprovedToBe, spineFromMap } from "@/lib/solution/model";
 import { getTypeDef, parseArtifactFields } from "@/lib/artifacts/config";
+import { implLinksFrom } from "@/lib/links";
 import type {
   ArtifactRow,
   BuildComponentRow,
+  ComponentLinkRow,
   ComponentOptionRow,
   ControlPointRow,
-  ImplLinkRow,
   PainPointRow,
   ProcessMapRow,
   ProjectRow,
@@ -54,7 +55,7 @@ export default async function BuildDocPage({ params }: { params: Promise<{ id: s
   ] = await Promise.all([
     supabase.from("projects").select("*").eq("id", id).maybeSingle(),
     supabase.from("build_components").select("*").eq("project_id", id).order("ord"),
-    supabase.from("impl_links").select("*"),
+    supabase.from("component_links").select("*"),
     supabase.from("prompt_items").select("*").eq("project_id", id).order("ord"),
     supabase.from("control_points").select("*").eq("project_id", id).order("ord"),
     supabase
@@ -92,7 +93,9 @@ export default async function BuildDocPage({ params }: { params: Promise<{ id: s
 
   const components = (compData ?? []) as BuildComponentRow[];
   const compIds = new Set(components.map((c) => c.id));
-  const links = ((linkData ?? []) as ImplLinkRow[]).filter((l) => compIds.has(l.component_id));
+  const links = implLinksFrom((linkData ?? []) as ComponentLinkRow[]).filter((l) =>
+    compIds.has(l.component_id),
+  );
   const prompts = (promptData ?? []) as PromptItemRow[];
   const controls = (ctrlData ?? []) as ControlPointRow[];
   const p2Components = (p2Data ?? []) as SolutionComponentRow[];

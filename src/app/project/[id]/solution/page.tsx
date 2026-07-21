@@ -4,9 +4,10 @@ import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { SolutionBoard } from "@/components/SolutionBoard";
 import { resolveApprovedToBe, spineFromMap } from "@/lib/solution/model";
+import { stepLinksFrom } from "@/lib/links";
 import type {
+  ComponentLinkRow,
   ComponentOptionRow,
-  ComponentStepLinkRow,
   ProcessMapRow,
   ProjectRow,
   SolutionComponentRow,
@@ -39,7 +40,7 @@ export default async function SolutionPage({ params }: { params: Promise<{ id: s
         .select("*")
         .eq("project_id", id)
         .order("created_at", { ascending: true }),
-      supabase.from("component_step_links").select("*"),
+      supabase.from("component_links").select("*"),
       supabase.from("component_options").select("*"),
     ]);
   if (!projectData) notFound();
@@ -70,7 +71,9 @@ export default async function SolutionPage({ params }: { params: Promise<{ id: s
   const components = (compData ?? []) as SolutionComponentRow[];
   const compIds = new Set(components.map((c) => c.id));
   // A globálisan betöltött kapcsoló-táblákat a projekt komponenseire szűkítjük.
-  const links = ((linkData ?? []) as ComponentStepLinkRow[]).filter((l) => compIds.has(l.component_id));
+  const links = stepLinksFrom((linkData ?? []) as ComponentLinkRow[]).filter((l) =>
+    compIds.has(l.component_id),
+  );
   const options = ((optData ?? []) as ComponentOptionRow[]).filter((o) => compIds.has(o.component_id));
 
   return (

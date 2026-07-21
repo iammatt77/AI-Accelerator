@@ -254,9 +254,11 @@ export interface SolutionComponentRow {
 }
 
 /**
- * component_step_links sora — a komponens ↔ TO-BE lépés kötés a process_map
- * jsonb-jén BELÜLI stabil node-id-re (a node-ok `id` mezője; a szerkesztés
- * és a verzió-emelés megőrzi). A process_map_id provenance.
+ * APP-VETÍTÉS (A7): a P2 dokkolás-kötés nézete a component_links egységes
+ * kötéstáblából (solution-owner sorok). A node_id a process_map jsonb-jén
+ * BELÜLI stabil node-id (a node-ok `id` mezője; a szerkesztés és a
+ * verzió-emelés megőrzi). A process_map_id provenance. A vetítést a
+ * lib/links stepLinksFrom() állítja elő.
  */
 export interface ComponentStepLinkRow {
   component_id: string;
@@ -355,7 +357,8 @@ export type ImplTargetType = "requirement" | "story" | "tobe_node" | "pain_point
 
 /** build_components sora (K-nn) — a megépített megoldás komponense.
  *  KÉT elkülönített kötés-fajta: EREDET (origin_component_id → P2
- *  solution_components; NULL = manuális) és MEGVALÓSÍTÁS (impl_links). */
+ *  solution_components; NULL = manuális) és MEGVALÓSÍTÁS (component_links,
+ *  build-owner sorok — A7). */
 export interface BuildComponentRow {
   id: string;
   project_id: string;
@@ -375,12 +378,31 @@ export interface BuildComponentRow {
   updated_at: string;
 }
 
-/** impl_links sora — komponens ↔ terv-elem (N:M, 4 cél-típus, kétirányú
- *  olvasat). A tobe_node target_id-ja a térkép jsonb STABIL node-id-ja.
- *  ai_suggested (✦) csak emberi megerősítéssel válik aktívvá (E1). */
+/** APP-VETÍTÉS (A7): a P3 megvalósítás-kötés nézete a component_links
+ *  egységes kötéstáblából (build-owner sorok; component_id = a
+ *  build-komponens). N:M, 4 cél-típus, kétirányú olvasat; a tobe_node
+ *  target_id-ja a térkép jsonb STABIL node-id-ja. ai_suggested (✦) csak
+ *  emberi megerősítéssel válik aktívvá (E1). A vetítést a lib/links
+ *  implLinksFrom() állítja elő. */
 export interface ImplLinkRow {
   id: string;
   component_id: string;
+  target_type: ImplTargetType;
+  target_id: string;
+  process_map_id: string | null;
+  state: EntityState;
+  created_at: string;
+}
+
+/** component_links sora (A7) — az EGYSÉGES kötéstábla. Pontosan EGY owner
+ *  kitöltött: solution_component_id = P2 dokkolás (cél mindig tobe_node),
+ *  build_component_id = P3 megvalósítás-kötés (4 cél-típus). A cél soft-ref
+ *  (target_id szövegként: uuid VAGY TO-BE node-id) — a 4 cél-típus miatt
+ *  polimorf célra nincs Postgres-FK; az ownerekre valódi FK + cascade. */
+export interface ComponentLinkRow {
+  id: string;
+  solution_component_id: string | null;
+  build_component_id: string | null;
   target_type: ImplTargetType;
   target_id: string;
   process_map_id: string | null;

@@ -3,9 +3,10 @@ import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { ComponentDetail } from "@/components/ComponentDetail";
 import { loadNumberedSources, inputIdsToIndices } from "@/lib/sources";
 import { resolveApprovedToBe, spineFromMap } from "@/lib/solution/model";
+import { stepLinksFrom } from "@/lib/links";
 import type {
+  ComponentLinkRow,
   ComponentOptionRow,
-  ComponentStepLinkRow,
   ProcessMapRow,
   ProjectRow,
   SolutionComponentRow,
@@ -42,7 +43,7 @@ export default async function ComponentDetailPage({
         .eq("project_id", id)
         .eq("kind", "to_be")
         .order("version", { ascending: false }),
-      supabase.from("component_step_links").select("*").eq("component_id", componentId),
+      supabase.from("component_links").select("*").eq("solution_component_id", componentId),
       supabase
         .from("component_options")
         .select("*")
@@ -55,7 +56,7 @@ export default async function ComponentDetailPage({
 
   const toBe = resolveApprovedToBe((mapData ?? []) as ProcessMapRow[]);
   const steps = toBe ? spineFromMap(toBe) : [];
-  const links = (linkData ?? []) as ComponentStepLinkRow[];
+  const links = stepLinksFrom((linkData ?? []) as ComponentLinkRow[]);
   const options = (optData ?? []) as ComponentOptionRow[];
 
   // Forrás-chipek a kanonikus [n] számozással (traceability)

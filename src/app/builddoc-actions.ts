@@ -15,13 +15,14 @@ import {
   seedCandidates,
 } from "@/lib/builddoc/model";
 import { getTypeDef, parseArtifactFields, type ArtifactFields } from "@/lib/artifacts/config";
+import { implLinksFrom } from "@/lib/links";
 import type {
   ArtifactRow,
   BuildComponentRow,
   BuildLayerType,
+  ComponentLinkRow,
   ComponentOptionRow,
   ControlPointRow,
-  ImplLinkRow,
   ImplTargetType,
   PainPointRow,
   ProcessMapRow,
@@ -421,19 +422,21 @@ async function runLinkSuggestion(
   if (suggestions.length === 0) return 0;
 
   const { data: linkData } = await supabase
-    .from("impl_links")
+    .from("component_links")
     .select("*")
-    .eq("component_id", component.id);
+    .eq("build_component_id", component.id);
   const existing = new Set(
-    ((linkData ?? []) as ImplLinkRow[]).map((l) => `${l.target_type}:${l.target_id}`),
+    implLinksFrom((linkData ?? []) as ComponentLinkRow[]).map(
+      (l) => `${l.target_type}:${l.target_id}`,
+    ),
   );
   const byLabel = new Map(elements.map((e) => [`${e.targetType}:${e.label}`, e]));
   let created = 0;
   for (const s of suggestions) {
     const el = byLabel.get(`${s.target_type}:${s.label}`);
     if (!el || existing.has(`${el.targetType}:${el.targetId}`)) continue;
-    const { error } = await supabase.from("impl_links").insert({
-      component_id: component.id,
+    const { error } = await supabase.from("component_links").insert({
+      build_component_id: component.id,
       target_type: el.targetType,
       target_id: el.targetId,
       process_map_id: el.targetType === "tobe_node" && toBe ? toBe.id : null,
@@ -491,8 +494,8 @@ export async function addLinkAction(
   const el = elements.find((e) => e.targetType === targetType && e.targetId === targetId);
   if (!el) return { ok: false, error: t("errTargetUnknown") };
 
-  const { error } = await supabase.from("impl_links").insert({
-    component_id: componentId,
+  const { error } = await supabase.from("component_links").insert({
+    build_component_id: componentId,
     target_type: targetType,
     target_id: targetId,
     process_map_id: targetType === "tobe_node" && toBe ? toBe.id : null,
@@ -513,7 +516,7 @@ export async function confirmLinkAction(
   const t = await getTranslations("builddoc");
   const supabase = createServiceSupabaseClient();
   const { error } = await supabase
-    .from("impl_links")
+    .from("component_links")
     .update({ state: "confirmed" })
     .eq("id", linkId)
     .eq("state", "ai_suggested");
@@ -531,7 +534,7 @@ export async function deleteLinkAction(
 ): Promise<FormState> {
   const t = await getTranslations("builddoc");
   const supabase = createServiceSupabaseClient();
-  const { error } = await supabase.from("impl_links").delete().eq("id", linkId);
+  const { error } = await supabase.from("component_links").delete().eq("id", linkId);
   if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
   revalidatePath(base(projectId));
   return { ok: true, error: null };
@@ -730,7 +733,7 @@ export async function syncDocAction(
   const [{ data: compData }, { data: linkData }, { data: promptData }, { data: ctrlData }] =
     await Promise.all([
       supabase.from("build_components").select("*").eq("project_id", projectId),
-      supabase.from("impl_links").select("*"),
+      supabase.from("component_links").select("*"),
       supabase.from("prompt_items").select("*").eq("project_id", projectId),
       supabase.from("control_points").select("*").eq("project_id", projectId),
     ]);
@@ -740,7 +743,7 @@ export async function syncDocAction(
   );
   if (components.length === 0) return { ok: false, error: t("errNoComponentsToSync") };
   const compIds = new Set(components.map((c) => c.id));
-  const links = ((linkData ?? []) as ImplLinkRow[]).filter(
+  const links = implLinksFrom((linkData ?? []) as ComponentLinkRow[]).filter(
     (l) => compIds.has(l.component_id) && l.state !== "ai_suggested",
   );
   const prompts = byDisplayId(

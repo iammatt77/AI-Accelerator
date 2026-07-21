@@ -6,9 +6,10 @@ import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { suggestComponents, suggestOptions } from "@/lib/llm";
 import { loadNumberedSources, indicesToInputIds } from "@/lib/sources";
 import { resolveApprovedToBe, spineFromMap, linkedStepsOf, optionsOf } from "@/lib/solution/model";
+import { stepLinksFrom } from "@/lib/links";
 import type {
+  ComponentLinkRow,
   ComponentOptionRow,
-  ComponentStepLinkRow,
   ComponentType,
   CriterionValue,
   PainPointRow,
@@ -126,10 +127,13 @@ export async function generateComponentsAction(
     if (error || !data) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
     const cid = (data as { id: string }).id;
     for (const nodeId of p.step_ids) {
-      const { error: linkErr } = await supabase.from("component_step_links").insert({
-        component_id: cid,
+      // A7: dokkolás az egységes kötéstáblába — solution-owner, tobe_node cél.
+      const { error: linkErr } = await supabase.from("component_links").insert({
+        solution_component_id: cid,
+        target_type: "tobe_node",
+        target_id: nodeId,
         process_map_id: toBe.id,
-        node_id: nodeId,
+        state: "manual",
       });
       if (linkErr) return { ok: false, error: t("errSave", { message: errMessage(linkErr) }) };
     }
@@ -170,12 +174,12 @@ export async function generateOptionsAction(
   const toBe = await loadApprovedToBe(supabase, projectId);
   const steps = toBe ? spineFromMap(toBe) : [];
   const { data: linkData } = await supabase
-    .from("component_step_links")
+    .from("component_links")
     .select("*")
-    .eq("component_id", componentId);
+    .eq("solution_component_id", componentId);
   const stepTitles = linkedStepsOf(
     componentId,
-    (linkData ?? []) as ComponentStepLinkRow[],
+    stepLinksFrom((linkData ?? []) as ComponentLinkRow[]),
     steps,
   ).map((s) => `TO-BE ${s.num} ${s.title}`);
 
@@ -304,10 +308,13 @@ export async function addComponentAction(
   if (error || !data) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
   const cid = (data as { id: string }).id;
   for (const nodeId of nodeIds) {
-    const { error: linkErr } = await supabase.from("component_step_links").insert({
-      component_id: cid,
+    // A7: dokkolás az egységes kötéstáblába — solution-owner, tobe_node cél.
+    const { error: linkErr } = await supabase.from("component_links").insert({
+      solution_component_id: cid,
+      target_type: "tobe_node",
+      target_id: nodeId,
       process_map_id: toBe.id,
-      node_id: nodeId,
+      state: "manual",
     });
     if (linkErr) return { ok: false, error: t("errSave", { message: errMessage(linkErr) }) };
   }
