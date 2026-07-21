@@ -795,7 +795,7 @@ export async function syncDocAction(
     syncField(fields, "guardrail_hitl", ctrlLines);
     const { error } = await supabase
       .from("artifacts")
-      .update({ fields, updated_at: new Date().toISOString() })
+      .update({ fields, synced_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", artifact.id);
     if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
   } else if (!artifact) {
@@ -810,6 +810,7 @@ export async function syncDocAction(
       status: "draft",
       body: "",
       fields,
+      synced_at: new Date().toISOString(),
       source_input_ids: [],
     });
     if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };

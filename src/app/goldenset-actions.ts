@@ -677,7 +677,7 @@ export async function syncReportAction(
     syncField(fields, "hibak_javitasok", failLines);
     const { error } = await supabase
       .from("artifacts")
-      .update({ fields, updated_at: new Date().toISOString() })
+      .update({ fields, synced_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", artifact.id);
     if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
   } else if (!artifact) {
@@ -692,6 +692,7 @@ export async function syncReportAction(
       status: "draft",
       body: "",
       fields,
+      synced_at: new Date().toISOString(),
       source_input_ids: [],
     });
     if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
@@ -756,6 +757,13 @@ export async function suggestResidualRiskAction(
 
   const typeDef = getTypeDef(TESZTRIPORT_TYPE);
   const fields = typeDef ? parseArtifactFields(typeDef, artifact.fields) : ({} as ArtifactFields);
+  // A2 state-őr (D3): a maradek_kockazat DOC-mező, gazdája az ember — a
+  // javaslat CSAK üres vagy ai_filled mezőt tölthet; manual/confirmed
+  // tartalmat SOHA nem ír felül.
+  const currentRisk = fields.maradek_kockazat;
+  if (currentRisk && (currentRisk.state === "manual" || currentRisk.state === "confirmed")) {
+    return { ok: true, error: null, notice: t("noticeRiskKept") };
+  }
   fields.maradek_kockazat = {
     value: `${suggestion.level ? `[${suggestion.level}] ` : ""}${suggestion.text}`,
     source_indices: fields.maradek_kockazat?.source_indices ?? [],

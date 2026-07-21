@@ -34,6 +34,8 @@ export function EditorFieldAccordion({
   editable,
   open,
   onToggle,
+  moduleOwned = false,
+  syncedAtLabel,
   customBody,
   renderCitations,
 }: {
@@ -46,6 +48,12 @@ export function EditorFieldAccordion({
   editable: boolean;
   open: boolean;
   onToggle: () => void;
+  /** Csomag A (A1): modul-birtokolt mező — CSAK a szinkron írja; a
+   *  szerkesztőben read-only („a modulból frissül" + utolsó sync). */
+  moduleOwned?: boolean;
+  /** Az artefaktum utolsó modul-szinkronjának formázott bélyege (vagy null,
+   *  ha még nem volt sync) — csak modul-mezőn jelenik meg. */
+  syncedAtLabel?: string | null;
   /** P2 (#9): strukturált mező-törzs (kalkulátor / sikerdefiníció) a sima
    *  textarea helyett — a nyitott kártya body-jában. */
   customBody?: React.ReactNode;
@@ -86,6 +94,14 @@ export function EditorFieldAccordion({
     </span>
   ) : null;
 
+  // Modul-mező jelvény (A1): a mező forrása a modul-szinkron, nem az E1-lánc.
+  const moduleBadge = moduleOwned ? (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-tint-pivot px-2.5 py-[3px] text-[11px] font-semibold text-pivot">
+      <span aria-hidden>⟳</span>
+      {tWs("moduleFieldBadge")}
+    </span>
+  ) : null;
+
   const reqTag = required ? (
     <span className="shrink-0 rounded-3 bg-tint-gate px-1.5 py-px font-mono text-[9.5px] font-bold text-gate-text">
       {t("requiredTag")}
@@ -123,6 +139,7 @@ export function EditorFieldAccordion({
         <span className="min-w-0 flex-1 truncate text-[12px] text-ink-tertiary">
           {hasValue ? field.value : emptyRequired ? t("emptyRequiredHint") : t("emptyOptionalHint")}
         </span>
+        {moduleBadge}
         {statusPill}
       </button>
     );
@@ -146,6 +163,7 @@ export function EditorFieldAccordion({
         <span className="text-[14px] font-bold">{label}</span>
         {reqTag}
         <span className="ml-auto" />
+        {moduleBadge}
         {statusPill}
       </button>
 
@@ -191,9 +209,9 @@ export function EditorFieldAccordion({
             }`}
           >
             <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink-tertiary">
-              {t("fillPrompt", { field: label })}
+              {moduleOwned ? tWs("moduleFieldEmptyHint") : t("fillPrompt", { field: label })}
             </p>
-            {editable && (
+            {editable && !moduleOwned && (
               <button
                 type="button"
                 onClick={() => setEditing(true)}
@@ -219,7 +237,15 @@ export function EditorFieldAccordion({
           </div>
         )}
 
-        {editable && !editing && hasValue && (
+        {moduleOwned && (
+          <p className="font-mono text-mono-sm text-ink-tertiary">
+            {syncedAtLabel
+              ? tWs("moduleFieldSynced", { date: syncedAtLabel })
+              : tWs("moduleFieldNotSynced")}
+          </p>
+        )}
+
+        {editable && !moduleOwned && !editing && hasValue && (
           <div className="flex flex-wrap gap-2">
             {field.state === "ai_filled" && (
               <form action={confirmAction}>

@@ -463,6 +463,18 @@ export async function PhaseWorkspace({
                 required={fieldDef.required}
                 field={fields[fieldDef.key]}
                 editable={editable}
+                moduleOwned={fieldDef.moduleOwned}
+                syncedAtLabel={
+                  latest.synced_at
+                    ? new Date(latest.synced_at).toLocaleString(dateLocale, {
+                        timeZone: "Europe/Budapest",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : null
+                }
               />
             ))}
           </div>

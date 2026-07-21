@@ -133,6 +133,8 @@ export function FieldCard({
   required,
   field,
   editable,
+  moduleOwned = false,
+  syncedAtLabel,
 }: {
   projectId: string;
   artifactId: string;
@@ -141,6 +143,11 @@ export function FieldCard({
   required: boolean;
   field: ArtifactFieldValue;
   editable: boolean;
+  /** Csomag A (A1): modul-birtokolt mező — CSAK a szinkron írja; itt
+   *  read-only („a modulból frissül" + utolsó sync). */
+  moduleOwned?: boolean;
+  /** Az utolsó modul-szinkron formázott bélyege (null = még nem volt). */
+  syncedAtLabel?: string | null;
 }) {
   const t = useTranslations("workspace");
   const [editing, setEditing] = useState(false);
@@ -174,7 +181,15 @@ export function FieldCard({
             {required ? t("requiredMark") : t("optionalMark")}
           </span>
         </span>
-        <FieldStateBadge state={field.state} label={t(`fieldState.${field.state}`)} />
+        <span className="flex items-center gap-1.5">
+          {moduleOwned && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-tint-pivot px-2 py-[3px] text-[11px] font-semibold text-pivot">
+              <span aria-hidden>⟳</span>
+              {t("moduleFieldBadge")}
+            </span>
+          )}
+          <FieldStateBadge state={field.state} label={t(`fieldState.${field.state}`)} />
+        </span>
       </div>
 
       {/* Érték + forrás-jelölés */}
@@ -191,6 +206,13 @@ export function FieldCard({
               ? field.source_indices.map((n) => `[${n}]`).join(" ")
               : t("noSourceMark")}
           </p>
+          {moduleOwned && (
+            <p className="mt-1 font-mono text-mono-sm text-ink-tertiary">
+              {syncedAtLabel
+                ? t("moduleFieldSynced", { date: syncedAtLabel })
+                : t("moduleFieldNotSynced")}
+            </p>
+          )}
         </>
       )}
 
@@ -225,8 +247,9 @@ export function FieldCard({
       <ErrorAlert error={confirmState.error} />
       <ErrorAlert error={dismissState.error} />
 
-      {/* Akciók — csak draft artefaktumon (E1: megerősítés emberi lépés) */}
-      {editable && !editing && (
+      {/* Akciók — csak draft artefaktumon (E1: megerősítés emberi lépés);
+          modul-mezőn soha (A1: a mezőt csak a szinkron írja). */}
+      {editable && !moduleOwned && !editing && (
         <div className="mt-2 flex flex-wrap gap-2">
           {field.state === "ai_filled" && (
             <form action={confirmAction}>

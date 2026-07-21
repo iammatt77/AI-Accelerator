@@ -43,6 +43,8 @@ export interface EditorFieldData {
   label: string;
   required: boolean;
   field: ArtifactFieldValue;
+  /** Csomag A (A1): modul-birtokolt mező — a szerkesztőben read-only. */
+  moduleOwned?: boolean;
 }
 
 export interface EditorSource {
@@ -92,6 +94,7 @@ export function ArtifactEditor({
   inputsCount,
   nextVersion,
   savedAtLabel,
+  syncedAtLabel,
   structuredFields,
 }: {
   projectId: string;
@@ -115,6 +118,9 @@ export function ArtifactEditor({
   inputsCount: number;
   nextVersion: number;
   savedAtLabel: string;
+  /** Csomag A (A1): az utolsó modul-szinkron formázott bélyege (null = még
+   *  nem volt sync) — a modul-birtokolt mezők read-only sorában jelenik meg. */
+  syncedAtLabel?: string | null;
   /** P2 (#9): mező-kulcs → strukturált törzs (kalkulátor / sikerdefiníció),
    *  a sima textarea helyett a nyitott accordion-mezőben. */
   structuredFields?: Record<string, React.ReactNode>;
@@ -557,6 +563,8 @@ export function ArtifactEditor({
                 editable={editable}
                 open={openField === f.key}
                 onToggle={() => setOpenField(openField === f.key ? null : f.key)}
+                moduleOwned={f.moduleOwned}
+                syncedAtLabel={syncedAtLabel}
                 customBody={structuredFields?.[f.key]}
                 renderCitations={renderWithCitations}
               />

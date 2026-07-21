@@ -113,10 +113,13 @@ export async function extract(
     "A kinyert értékek magyarul készülnek.",
   ].join(" ");
 
-  const fieldLines = typeDef.fields
+  // Csomag A (A1/A2): a modul-tulajdonú mezők NEM részei az extract-
+  // sémának — azokat kizárólag a modul-sync írja.
+  const extractable = typeDef.fields.filter((f) => !f.moduleOwned);
+  const fieldLines = extractable
     .map((f) => `- "${f.key}": ${f.promptHint}`)
     .join("\n");
-  const exampleShape = `{ ${typeDef.fields
+  const exampleShape = `{ ${extractable
     .map((f) => `"${f.key}": { "value": "<szöveg>", "source_indices": [1] } | null`)
     .join(", ")} }`;
 
@@ -520,6 +523,11 @@ function mockExtract(sources: LlmSource[], typeDef: ArtifactTypeDef): ExtractRes
   const validIndices = new Set(sources.map((s) => s.index));
   const result: ExtractResult = {};
   for (const fieldDef of typeDef.fields) {
+    // A1/A2 partíció: modul-mezőre a mock sem javasol (extract-séma szűrés).
+    if (fieldDef.moduleOwned) {
+      result[fieldDef.key] = null;
+      continue;
+    }
     // A charter-fixture SPECIÁLIS: a missing-viselkedést demonstrálja
     // (szponzor/sikerkritérium/stakeholderek nincs → missing).
     if (typeDef.key === "Projekt-charter") {

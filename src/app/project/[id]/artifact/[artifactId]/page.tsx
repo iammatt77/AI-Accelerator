@@ -139,6 +139,7 @@ export default async function ArtifactEditorPage({
           label: tFields(fieldDef.labelKey.replace(/^fields\./, "")),
           required: fieldDef.required,
           field: parsedFields[fieldDef.key],
+          moduleOwned: fieldDef.moduleOwned,
         }))
       : [];
   const done =
@@ -207,6 +208,17 @@ export default async function ArtifactEditorPage({
     { timeZone: "Europe/Budapest", month: "short", day: "numeric" },
   );
 
+  // Csomag A (A1): az utolsó modul-szinkron bélyege a read-only modul-mezőkhöz.
+  const syncedAtLabel = artifact.synced_at
+    ? new Date(artifact.synced_at).toLocaleString(dateLocale, {
+        timeZone: "Europe/Budapest",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
   const backHref = typeDef
     ? `/project/${id}/phase/${typeDef.phase}`
     : `/project/${id}`;
@@ -252,6 +264,7 @@ export default async function ArtifactEditorPage({
         inputsCount={sources.length}
         nextVersion={headVersion + 1}
         savedAtLabel={savedAtLabel}
+        syncedAtLabel={syncedAtLabel}
       />
     </div>
   );

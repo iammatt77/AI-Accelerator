@@ -175,10 +175,16 @@ export async function extractAction(
   }
 
   // Merge: confirmed/manual mező NEM íródik felül; ai_filled/missing frissül.
+  // A1/A2 (D3-partíció): a modul-tulajdonú mező GAZDÁJA a modul-sync — az
+  // extract érintetlenül hagyja, bármilyen állapotban van.
   const current: ArtifactFields = parseArtifactFields(typeDef, latest?.fields ?? {});
   const merged: ArtifactFields = {};
   for (const fieldDef of typeDef.fields) {
     const existing = current[fieldDef.key] ?? { ...EMPTY_FIELD };
+    if (fieldDef.moduleOwned) {
+      merged[fieldDef.key] = existing;
+      continue;
+    }
     if (existing.state === "confirmed" || existing.state === "manual") {
       merged[fieldDef.key] = existing;
       continue;
@@ -485,9 +491,16 @@ export async function approveArtifactAction(
     return { ok: false, error: tErrors("approveOnlyFromReview") };
   }
 
+  // A1 (tudatos poka-yoke): modul-tulajdonú mezős típus az ELSŐ modul-sync
+  // előtt nem hagyható jóvá — a dokumentum ne legyen Approved modul-tartalom
+  // nélkül. (A synced_at-ot a syncDoc/syncReport/D2-generátor írja.)
+  const typeDef = getTypeDef(artifact.type);
+  if (typeDef?.fields.some((f) => f.moduleOwned) && artifact.synced_at === null) {
+    return { ok: false, error: tErrors("approveNeedsSync") };
+  }
+
   // Artefaktum-szintű poka-yoke: hiányzó kötelező mező → kemény blokk,
   // a hiányzók i18n-elt felsorolásával.
-  const typeDef = getTypeDef(artifact.type);
   if (typeDef) {
     const fields = parseArtifactFields(typeDef, artifact.fields);
     const missing = missingRequiredFields(typeDef, fields);
