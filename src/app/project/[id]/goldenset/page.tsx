@@ -99,7 +99,7 @@ export default async function GoldenSetPage({ params }: { params: Promise<{ id: 
   if (!("error" in loaded)) {
     const titleByIndex = new Map(loaded.sources.map((s) => [s.index, s.title]));
     for (const c of cases) {
-      sourceChipsByCase[c.id] = inputIdsToIndices(c.source_input_ids ?? [], loaded.inputIds).map(
+      sourceChipsByCase[c.id] = inputIdsToIndices(c.source_input_ids ?? [], loaded.aliasIndex).map(
         (n) => ({ n, title: titleByIndex.get(n) ?? "" }),
       );
     }

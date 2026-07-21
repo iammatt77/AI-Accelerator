@@ -77,7 +77,7 @@ export default async function RequirementDetailPage({
   const sourceChips =
     "error" in loaded
       ? []
-      : inputIdsToIndices(req.source_input_ids, loaded.inputIds).map((n) => ({
+      : inputIdsToIndices(req.source_input_ids, loaded.aliasIndex).map((n) => ({
           n,
           title: loaded.sources[n - 1]?.title ?? "?",
         }));

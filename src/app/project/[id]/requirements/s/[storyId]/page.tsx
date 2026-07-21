@@ -63,7 +63,7 @@ export default async function StoryDetailPage({
   const sourceChips =
     "error" in loaded
       ? []
-      : inputIdsToIndices(story.source_input_ids, loaded.inputIds).map((n) => ({
+      : inputIdsToIndices(story.source_input_ids, loaded.aliasIndex).map((n) => ({
           n,
           title: loaded.sources[n - 1]?.title ?? "?",
         }));

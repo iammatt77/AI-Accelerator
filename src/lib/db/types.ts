@@ -38,6 +38,10 @@ export interface InputItemRow {
   phase: string | null;
   /** Melyik stakeholdertől jött az input (0006, #8); null = nem köthető. */
   stakeholder_source_id: string | null;
+  /** Verzió-csoport (0013, A8): a forrás frissítése új sor ugyanabban a
+   *  csoportban; a kanonikus [n] számozás csoportonként él. */
+  group_id: string;
+  version: number;
   created_at: string;
 }
 
@@ -53,6 +57,9 @@ export interface ArtifactRow {
   fields: unknown;
   /** P2 haszon-kalkulátor jsonb (0007, #9) — defenzív parse: parseBenefitCalc. */
   benefit_calc: unknown;
+  /** Az utolsó modul-sync / entitás-generálás időbélyege (0013, A1/A8);
+   *  NULL = még nem futott — az approve-sync-őr és a doc-elavulás alapja. */
+  synced_at: string | null;
   /** P2 pilot sikerdefiníció jsonb (0007, #9) — defenzív parse: parsePilotSuccess. */
   pilot_success: unknown;
   updated_at: string;
@@ -359,6 +366,8 @@ export interface BuildComponentRow {
   layer_type: BuildLayerType;
   /** P2-seed eredet (1-N); NULL = manuális, nincs P2-előzmény. */
   origin_component_id: string | null;
+  /** A seed időbélyege (0013, A8) — a drift-jelölő alapja. */
+  seeded_at: string | null;
   state: EntityState;
   source_input_ids: string[];
   ord: number;
@@ -409,4 +418,19 @@ export interface ControlPointRow {
   ord: number;
   created_at: string;
   updated_at: string;
+}
+
+// ── Csomag A (0013): elavulás-feloldás napló ─────────────────
+
+export type StaleKind = "source_updated" | "origin_drift" | "doc_stale";
+
+/** stale_acks sora — a jelölők DERIVÁLTAK (időbélyeg-összevetés), csak a
+ *  feloldás tárolódik; az ack utáni újabb változás újra jelöl. */
+export interface StaleAckRow {
+  id: string;
+  project_id: string;
+  subject_type: string;
+  subject_id: string;
+  kind: StaleKind;
+  acked_at: string;
 }

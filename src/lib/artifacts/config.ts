@@ -39,6 +39,10 @@ export interface ArtifactFieldDef {
   required: boolean;
   /** Rövid magyar leírás a promptnak: mit jelent a mező. */
   promptHint: string;
+  /** Csomag A (A1/A2) D3-partíció: a mező GAZDÁJA a modul-sync
+   *  (syncDoc/syncReport) — a field-extract NEM javasol rá, a szerkesztőben
+   *  read-only („a modulból frissül"). Doc-mezőn nincs beállítva. */
+  moduleOwned?: boolean;
 }
 
 export interface BodySection {
@@ -73,6 +77,10 @@ export interface ArtifactTypeDef {
    *  mezőket a „…az entitásokból" akció tölti (confirmed állapottal).
    *  A mezőséma változatlan, csak a mezők FORRÁSA más. */
   entitySourced?: boolean;
+  /** Csomag A (A6) kivezetés: a típus NEM hozható létre és nem jelenik meg
+   *  a fázis-munkaterületen/csempéken, de a getTypeDef feloldja — a meglévő
+   *  artifact-sorok a tárban/olvasóban működnek (adat nem törlődik). */
+  retired?: boolean;
 }
 
 /** Generikus body-sablon szabály (#6): egyedi sablon híján a szekciók =
@@ -197,8 +205,16 @@ function f(
   labelHu: string,
   required: boolean,
   promptHint: string,
+  moduleOwned?: boolean,
 ): ArtifactFieldDef {
-  return { key, labelKey: `fields.${slug}.${key}`, labelHu, required, promptHint };
+  return {
+    key,
+    labelKey: `fields.${slug}.${key}`,
+    labelHu,
+    required,
+    promptHint,
+    ...(moduleOwned ? { moduleOwned: true } : {}),
+  };
 }
 
 function deliverable(
@@ -277,27 +293,32 @@ const MEGOLDASI_JAVASLAT = deliverable("Megoldási javaslat", "megoldasiJavaslat
   f("solution", "dontesi_kriterium", "Döntési kritérium", true, "A döntést vezérlő kritériumok."),
 ]);
 
-const TO_BE_TERV = deliverable("TO-BE terv", "toBeTerv", "P2", false, [
+const TO_BE_TERV = {
+  // Csomag A (A6): kivezetve — a TO-BE igazság-forrása a Folyamattérkép
+  // TO-BE entitása (process_maps); a párhuzamos, összekötetlen dokumentum-
+  // reprezentáció megszűnik. Meglévő sorok olvashatók maradnak (retired).
+  retired: true,
+  ...deliverable("TO-BE terv", "toBeTerv", "P2", false, [
   f("tobe", "to_be_lepesek", "TO-BE lépések", true, "A cél-folyamat lépései sorrendben."),
   f("tobe", "beavatkozasi_pontok", "Beavatkozási pontok", true, "Hol változik a folyamat az AS-IS-hez képest."),
   f("tobe", "hitl_kontrollok", "HITL-kontrollok", true, "Az emberi ellenőrzési pontok a folyamatban."),
   f("tobe", "valtozas_hatasa", "Változás hatása", false, "A változás hatása szerepekre és terhelésre."),
-]);
+])};
 
 // P3 — Build (kapu: KEMÉNY, INTERIM = Megoldás-dok. + Tesztriport)
 const MEGOLDAS_DOKUMENTACIO = deliverable(
   "Megoldás-dokumentáció", "megoldasDokumentacio", "P3", true, [
   f("solutiondoc", "architektura", "Architektúra", true, "A megoldás architektúrája és fő folyamatai."),
-  f("solutiondoc", "komponensek", "Komponensek", true, "A komponensek és felelősségeik."),
-  f("solutiondoc", "prompt_konyvtar", "Prompt-könyvtár", true, "Hivatkozás a használt promptokra és verziójukra."),
-  f("solutiondoc", "guardrail_hitl", "Guardrail és HITL", true, "A beépített guardrail-ek és emberi kontrollpontok."),
+  f("solutiondoc", "komponensek", "Komponensek", true, "A komponensek és felelősségeik.", true),
+  f("solutiondoc", "prompt_konyvtar", "Prompt-könyvtár", true, "Hivatkozás a használt promptokra és verziójukra.", true),
+  f("solutiondoc", "guardrail_hitl", "Guardrail és HITL", true, "A beépített guardrail-ek és emberi kontrollpontok.", true),
   f("solutiondoc", "uzemeltetesi_jegyzet", "Üzemeltetési jegyzet", false, "Üzemeltetési tudnivalók és függőségek."),
 ]);
 
 const TESZTRIPORT = deliverable("Tesztriport", "tesztriport", "P3", true, [
-  f("testreport", "golden_set_eredmeny", "Golden set eredmény", true, "A golden set futásának eredményei."),
-  f("testreport", "atmenesi_arany", "Átmenési arány", true, "Az átmenési arány számszerűen."),
-  f("testreport", "hibak_javitasok", "Hibák és javítások", true, "A talált hibák és a javításuk."),
+  f("testreport", "golden_set_eredmeny", "Golden set eredmény", true, "A golden set futásának eredményei.", true),
+  f("testreport", "atmenesi_arany", "Átmenési arány", true, "Az átmenési arány számszerűen.", true),
+  f("testreport", "hibak_javitasok", "Hibák és javítások", true, "A talált hibák és a javításuk.", true),
   f("testreport", "maradek_kockazat", "Maradék kockázat", false, "A fennmaradó ismert kockázatok."),
 ]);
 
@@ -384,8 +405,15 @@ export function getTypeDef(key: string): ArtifactTypeDef | null {
   return ARTIFACT_TYPES.find((t) => t.key === key) ?? null;
 }
 
-/** A fázishoz kötött artefaktum-típusok (①–③ zónák ebből dolgoznak). */
+/** A fázishoz kötött artefaktum-típusok (①–③ zónák ebből dolgoznak).
+ *  A retired típus itt NEM jelenik meg (A6: új példány nem hozható létre). */
 export function typesForPhase(phase: PhaseId): ArtifactTypeDef[] {
+  return ARTIFACT_TYPES.filter((t) => t.phase === phase && !t.retired);
+}
+
+/** A tár nézete: a retired típusokat IS tartalmazza — a meglévő artifact-
+ *  sorok olvashatók maradnak (a tár dönt, mutatja-e az üres retired sort). */
+export function typesForPhaseAll(phase: PhaseId): ArtifactTypeDef[] {
   return ARTIFACT_TYPES.filter((t) => t.phase === phase);
 }
 
