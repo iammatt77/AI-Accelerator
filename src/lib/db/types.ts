@@ -444,7 +444,7 @@ export interface ControlPointRow {
 
 // ── Csomag A (0013): elavulás-feloldás napló ─────────────────
 
-export type StaleKind = "source_updated" | "origin_drift" | "doc_stale";
+export type StaleKind = "source_updated" | "origin_drift" | "doc_stale" | "render_stale";
 
 /** stale_acks sora — a jelölők DERIVÁLTAK (időbélyeg-összevetés), csak a
  *  feloldás tárolódik; az ack utáni újabb változás újra jelöl. */
@@ -455,4 +455,53 @@ export interface StaleAckRow {
   subject_id: string;
   kind: StaleKind;
   acked_at: string;
+}
+
+// ── Csomag C1 (0015): tudáselem-katalógus adat-rétege ────────
+
+/** A renderelés-él cél-típusai — a 4 generálás/sync író-pont céljai. */
+export type RenderTargetType =
+  | "use_case"
+  | "solution_component"
+  | "component_option"
+  | "build_component"
+  | "prompt_item"
+  | "control_point"
+  | "eval_case";
+
+/** artifact_render_links sora — perzisztált tény: „ez az artifact(-mező)
+ *  ezt a tudáselemet renderelte, ekkor". EGY-ÍRÓ: kizárólag a generálás/
+ *  sync actionök (rangsor, Megoldási javaslat, syncDoc, syncReport);
+ *  field-extract és kézi mentés SOHA. Regen/re-sync = az érintett
+ *  (artifact_id, field_key) hatókör éleinek CSERÉJE. A target_id soft-ref
+ *  (a component_links mintája); field_key NULL = teljes-dokumentum él. */
+export interface ArtifactRenderLinkRow {
+  id: string;
+  project_id: string;
+  artifact_id: string;
+  field_key: string | null;
+  target_type: RenderTargetType;
+  target_id: string;
+  rendered_at: string;
+}
+
+/** knowledge_catalog nézet sora (0015, DERIVE-ONLY — nulla írás).
+ *  Egy cédula = egy jóváhagyott tudáselem egységes leírása; a horgony
+ *  block_id VAGY artifact_id+field_key (D1 mező-cédula, logikai horgony).
+ *  approved_at = updated_at KÖZELÍTÉS (spec 5. korlát). */
+export interface KnowledgeCatalogRow {
+  block_type: string;
+  block_id: string | null;
+  artifact_id: string | null;
+  field_key: string | null;
+  project_id: string;
+  phase: string | null;
+  title: string;
+  excerpt: string | null;
+  approval_mode: "direct" | "inherited";
+  enrichment: unknown;
+  source_input_ids: string[] | null;
+  source_indices: number[] | null;
+  approved_at: string;
+  created_at: string;
 }
