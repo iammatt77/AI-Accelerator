@@ -15,7 +15,12 @@ import type { FormState } from "./actions";
 //     (stale_acks); a jelölők maguk deriváltak (lib/staleness).
 // ─────────────────────────────────────────────────────────────
 
-const STALE_KINDS: readonly StaleKind[] = ["source_updated", "origin_drift", "doc_stale"];
+const STALE_KINDS: readonly StaleKind[] = [
+  "source_updated",
+  "origin_drift",
+  "doc_stale",
+  "render_stale",
+];
 
 interface SupabaseErrorLike {
   message?: string;

@@ -11,6 +11,11 @@ import type { InputItemRow, StaleAckRow, StaleKind } from "@/lib/db/types";
 //                    változott (updated_at > seeded_at)
 //   doc_stale      — a modul-entitások az utolsó dokumentum-szinkron után
 //                    változtak (entitás-változás > artifacts.synced_at)
+//   render_stale   — (C1.4) egy artifact renderelés-élének cél-tudáseleme
+//                    az él rendered_at-jánál később módosult. A doc_stale
+//                    MELLETT él (koegzisztencia — C1 záró jelentés):
+//                    a doc_stale a modul-halmaz egészét figyeli él nélkül
+//                    is, a render_stale a perzisztált élek cél-pontos jele.
 // ─────────────────────────────────────────────────────────────
 
 const ts = (iso: string): number => new Date(iso).getTime();
@@ -60,6 +65,42 @@ export function docStaleSince(
 ): string | null {
   if (!syncedAt || !entityLatestChange) return null;
   return ts(entityLatestChange) > ts(syncedAt) ? entityLatestChange : null;
+}
+
+/** render_stale (C1.4): a legkésőbbi cél-változás bélyege, ha egy él
+ *  cél-tudáseleme az él rendered_at-ja UTÁN módosult; null, ha minden
+ *  renderelt cél friss. targetUpdatedAt kulcsa: `${target_type}:${target_id}`
+ *  → updated_at (a törölt/nem található cél nem jelöl — az él árva,
+ *  a következő regen/sync cseréli). */
+export function renderStaleSince(
+  edges: { target_type: string; target_id: string; rendered_at: string }[],
+  targetUpdatedAt: Map<string, string>,
+): string | null {
+  let since: string | null = null;
+  for (const e of edges) {
+    const updated = targetUpdatedAt.get(`${e.target_type}:${e.target_id}`);
+    if (!updated) continue;
+    if (ts(updated) > ts(e.rendered_at)) {
+      if (!since || ts(updated) > ts(since)) since = updated;
+    }
+  }
+  return since;
+}
+
+/** source_updated TÖBB soron egyszerre (C1.4 lánc-általánosítás): bármely
+ *  source_input_ids-hordozó tábla soraira — id → trigger-bélyeg, csak a
+ *  jelölt sorok kerülnek a map-be. Egyetlen forrás-hivatkozású tábla
+ *  (process_maps.source_input_id) sora [id]-ként adható át. */
+export function sourceUpdatedForRows(
+  rows: { id: string; source_input_ids: string[] }[],
+  inputRows: InputItemRow[],
+): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const r of rows) {
+    const since = sourceUpdatedSince(r.source_input_ids, inputRows);
+    if (since) out.set(r.id, since);
+  }
+  return out;
 }
 
 /** A legutóbbi változás-bélyeg egy entitás-halmazon (updated_at-ok maximuma). */

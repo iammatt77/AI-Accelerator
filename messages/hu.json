@@ -971,6 +971,7 @@
     "source_updated": "Forrás frissült",
     "origin_drift": "P2-eredet változott",
     "doc_stale": "Entitás-változás a szinkron után",
+    "render_stale": "Renderelt tudáselem változott",
     "ackCta": "Ellenőrizve"
   },
   "sourcesPage": {
