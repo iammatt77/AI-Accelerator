@@ -121,6 +121,8 @@ export async function seedFromP2Action(
       description: c.description,
       layer_type: c.type,
       origin_component_id: c.id,
+      // A8: a seed-átvétel bélyege — az origin_drift jelölő ehhez mér.
+      seeded_at: new Date().toISOString(),
       state: "confirmed",
       source_input_ids: c.source_input_ids,
       ord: ++maxOrd,
@@ -350,6 +352,11 @@ export async function generateBuildDocAction(
         layer_type: c.layer_type,
         origin_component_id:
           c.origin_index !== null ? (approvedCands[c.origin_index - 1]?.component.id ?? null) : null,
+        // A8: eredettel érkező javaslatnál a seed-bélyeg is íródik.
+        seeded_at:
+          c.origin_index !== null && approvedCands[c.origin_index - 1]
+            ? new Date().toISOString()
+            : null,
         state: "ai_suggested",
         source_input_ids: indicesToInputIds(c.source_indices, loaded.inputIds),
         ord: ++maxOrd,
