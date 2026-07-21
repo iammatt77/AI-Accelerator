@@ -16,6 +16,7 @@ import {
 import { isPhaseId } from "@/lib/phases/config";
 import { parseAiAct } from "@/lib/entities/evaluators";
 import { loadNumberedSources } from "@/lib/sources";
+import { replaceRenderLinks, type RenderTarget } from "@/lib/render-links";
 import { evaluateApprove } from "@/lib/goldenset/model";
 import {
   criteriaKeysOf,
@@ -265,7 +266,7 @@ async function insertNewArtifact(
   projectId: string,
   typeDef: ArtifactTypeDef,
   extra: { fields: ArtifactFields; source_input_ids: string[]; synced_at?: string },
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; id: string | null }> {
   const tErrors = await getTranslations("errors");
   const { data } = await supabase
     .from("artifacts")
@@ -277,23 +278,27 @@ async function insertNewArtifact(
     .maybeSingle();
   const nextVersion = ((data as { version?: number } | null)?.version ?? 0) + 1;
 
-  const { error } = await supabase.from("artifacts").insert({
-    project_id: projectId,
-    type: typeDef.key,
-    version: nextVersion,
-    status: "draft",
-    body: "",
-    fields: extra.fields,
-    source_input_ids: extra.source_input_ids,
-    ...(extra.synced_at ? { synced_at: extra.synced_at } : {}),
-  });
+  const { data: inserted, error } = await supabase
+    .from("artifacts")
+    .insert({
+      project_id: projectId,
+      type: typeDef.key,
+      version: nextVersion,
+      status: "draft",
+      body: "",
+      fields: extra.fields,
+      source_input_ids: extra.source_input_ids,
+      ...(extra.synced_at ? { synced_at: extra.synced_at } : {}),
+    })
+    .select("id")
+    .maybeSingle();
   if (error) {
     if (error.code === "23505") {
-      return { error: tErrors("versionConflict") };
+      return { error: tErrors("versionConflict"), id: null };
     }
-    return { error: tErrors("artifactSaveFailed", { message: errMessage(error) }) };
+    return { error: tErrors("artifactSaveFailed", { message: errMessage(error) }), id: null };
   }
-  return { error: null };
+  return { error: null, id: (inserted as { id?: string } | null)?.id ?? null };
 }
 
 // ── ② Mező-megerősítés / szerkesztés / elvetés (E1) ──────────
@@ -802,6 +807,7 @@ export async function generateShortlistFromEntitiesAction(
   if (latest && latest.status === "in_review") {
     return { ok: false, error: tErrors("artifactNotDraft") };
   }
+  let renderedArtifactId: string | null = null;
   if (latest && latest.status === "draft") {
     const { data, error } = await supabase
       .from("artifacts")
@@ -821,12 +827,30 @@ export async function generateShortlistFromEntitiesAction(
           : tErrors("artifactNotDraft"),
       };
     }
+    renderedArtifactId = latest.id;
   } else {
     const created = await insertNewArtifact(supabase, projectId, typeDef, {
       fields,
       source_input_ids: unionIds,
     });
     if (created.error) return { ok: false, error: created.error };
+    renderedArtifactId = created.id;
+  }
+
+  // Renderelés-élek (C1.2): a dokumentum által renderelt use case-ek —
+  // rangsorolt + kizárt (a quick win a rangsor részhalmaza). Replace-
+  // szemantika: a teljes-dokumentum (field_key=null) élek cserélődnek.
+  if (renderedArtifactId) {
+    const targets: RenderTarget[] = [...shortlisted, ...excluded].map((u) => ({
+      target_type: "use_case",
+      target_id: u.id,
+    }));
+    const edges = await replaceRenderLinks(
+      supabase, projectId, renderedArtifactId, null, targets,
+    );
+    if (edges.error) {
+      return { ok: false, error: tErrors("artifactSaveFailed", { message: edges.error }) };
+    }
   }
 
   await logDecision(
@@ -1005,6 +1029,7 @@ export async function generateSolutionPlanFromEntitiesAction(
   if (latest && latest.status === "in_review") {
     return { ok: false, error: tErrors("artifactNotDraft") };
   }
+  let renderedArtifactId: string | null = null;
   if (latest && latest.status === "draft") {
     const { data, error } = await supabase
       .from("artifacts")
@@ -1025,6 +1050,7 @@ export async function generateSolutionPlanFromEntitiesAction(
           : tErrors("artifactNotDraft"),
       };
     }
+    renderedArtifactId = latest.id;
   } else {
     const created = await insertNewArtifact(supabase, projectId, typeDef, {
       fields,
@@ -1032,6 +1058,34 @@ export async function generateSolutionPlanFromEntitiesAction(
       synced_at: nowIso,
     });
     if (created.error) return { ok: false, error: created.error };
+    renderedArtifactId = created.id;
+  }
+
+  // Renderelés-élek (C1.2): jóváhagyott komponensek + HITL-nyertes opcióik
+  // + a választott use case. Teljes-dokumentum hatókör (field_key=null).
+  if (renderedArtifactId) {
+    const targets: RenderTarget[] = [
+      ...approved.map((c): RenderTarget => ({
+        target_type: "solution_component",
+        target_id: c.id,
+      })),
+      ...approved
+        .map((c) => selectedOption(c.id, options))
+        .filter((o): o is ComponentOptionRow => o != null)
+        .map((o): RenderTarget => ({
+          target_type: "component_option",
+          target_id: o.id,
+        })),
+      ...(chosenUc
+        ? [{ target_type: "use_case", target_id: chosenUc.id } as RenderTarget]
+        : []),
+    ];
+    const edges = await replaceRenderLinks(
+      supabase, projectId, renderedArtifactId, null, targets,
+    );
+    if (edges.error) {
+      return { ok: false, error: tErrors("artifactSaveFailed", { message: edges.error }) };
+    }
   }
 
   await logDecision(

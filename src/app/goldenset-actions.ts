@@ -17,6 +17,7 @@ import {
   passStats,
 } from "@/lib/goldenset/model";
 import { getTypeDef, parseArtifactFields, type ArtifactFields } from "@/lib/artifacts/config";
+import { replaceRenderLinks } from "@/lib/render-links";
 import type {
   AnswerType,
   ArtifactRow,
@@ -675,6 +676,7 @@ export async function syncReportAction(
     .maybeSingle();
   const artifact = artData as ArtifactRow | null;
 
+  let syncedArtifactId: string | null = null;
   if (artifact && artifact.status !== "approved") {
     const fields = parseArtifactFields(typeDef, artifact.fields);
     syncField(fields, "golden_set_eredmeny", resultText);
@@ -685,24 +687,44 @@ export async function syncReportAction(
       .update({ fields, synced_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", artifact.id);
     if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+    syncedArtifactId = artifact.id;
   } else if (!artifact) {
     const fields = parseArtifactFields(typeDef, {});
     syncField(fields, "golden_set_eredmeny", resultText);
     syncField(fields, "atmenesi_arany", ratioText);
     syncField(fields, "hibak_javitasok", failLines);
-    const { error } = await supabase.from("artifacts").insert({
-      project_id: projectId,
-      type: TESZTRIPORT_TYPE,
-      version: 1,
-      status: "draft",
-      body: "",
-      fields,
-      synced_at: new Date().toISOString(),
-      source_input_ids: [],
-    });
+    const { data: inserted, error } = await supabase
+      .from("artifacts")
+      .insert({
+        project_id: projectId,
+        type: TESZTRIPORT_TYPE,
+        version: 1,
+        status: "draft",
+        body: "",
+        fields,
+        synced_at: new Date().toISOString(),
+        source_input_ids: [],
+      })
+      .select("id")
+      .maybeSingle();
     if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+    syncedArtifactId = (inserted as { id?: string } | null)?.id ?? null;
   } else {
     return { ok: false, error: t("errReportApproved") };
+  }
+
+  // Renderelés-élek (C1.2): a riport golden_set_eredmeny mezője a set
+  // MINDEN tesztesetét rendereli (a statisztika az összesből számol) —
+  // mező-hatókörű csere.
+  if (syncedArtifactId) {
+    const edges = await replaceRenderLinks(
+      supabase,
+      projectId,
+      syncedArtifactId,
+      "golden_set_eredmeny",
+      cases.map((c) => ({ target_type: "eval_case", target_id: c.id })),
+    );
+    if (edges.error) return { ok: false, error: t("errSave", { message: edges.error }) };
   }
 
   revalidatePath(base(projectId));

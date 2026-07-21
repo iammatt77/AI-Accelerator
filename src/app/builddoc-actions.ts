@@ -16,6 +16,7 @@ import {
 } from "@/lib/builddoc/model";
 import { getTypeDef, parseArtifactFields, type ArtifactFields } from "@/lib/artifacts/config";
 import { implLinksFrom } from "@/lib/links";
+import { replaceRenderLinks } from "@/lib/render-links";
 import type {
   ArtifactRow,
   BuildComponentRow,
@@ -807,6 +808,7 @@ export async function syncDocAction(
     .maybeSingle();
   const artifact = artData as ArtifactRow | null;
 
+  let syncedArtifactId: string | null = null;
   if (artifact && artifact.status !== "approved") {
     const fields = parseArtifactFields(typeDef, artifact.fields);
     syncField(fields, "komponensek", compLines);
@@ -817,24 +819,43 @@ export async function syncDocAction(
       .update({ fields, synced_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", artifact.id);
     if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+    syncedArtifactId = artifact.id;
   } else if (!artifact) {
     const fields = parseArtifactFields(typeDef, {});
     syncField(fields, "komponensek", compLines);
     syncField(fields, "prompt_konyvtar", promptLines);
     syncField(fields, "guardrail_hitl", ctrlLines);
-    const { error } = await supabase.from("artifacts").insert({
-      project_id: projectId,
-      type: DOC_TYPE,
-      version: 1,
-      status: "draft",
-      body: "",
-      fields,
-      synced_at: new Date().toISOString(),
-      source_input_ids: [],
-    });
+    const { data: inserted, error } = await supabase
+      .from("artifacts")
+      .insert({
+        project_id: projectId,
+        type: DOC_TYPE,
+        version: 1,
+        status: "draft",
+        body: "",
+        fields,
+        synced_at: new Date().toISOString(),
+        source_input_ids: [],
+      })
+      .select("id")
+      .maybeSingle();
     if (error) return { ok: false, error: t("errSave", { message: errMessage(error) }) };
+    syncedArtifactId = (inserted as { id?: string } | null)?.id ?? null;
   } else {
     return { ok: false, error: t("errDocApproved") };
+  }
+
+  // Renderelés-élek (C1.2) MEZŐ-hatókörrel: mindhárom modul-mező élei
+  // cserélődnek a friss (nem ✦) entitás-halmazra — más mezők élei érintetlenek.
+  if (syncedArtifactId) {
+    for (const [fieldKey, rows] of [
+      ["komponensek", components.map((c) => ({ target_type: "build_component" as const, target_id: c.id }))],
+      ["prompt_konyvtar", prompts.map((p) => ({ target_type: "prompt_item" as const, target_id: p.id }))],
+      ["guardrail_hitl", controls.map((c) => ({ target_type: "control_point" as const, target_id: c.id }))],
+    ] as const) {
+      const edges = await replaceRenderLinks(supabase, projectId, syncedArtifactId, fieldKey, [...rows]);
+      if (edges.error) return { ok: false, error: t("errSave", { message: edges.error }) };
+    }
   }
 
   revalidatePath(base(projectId));
