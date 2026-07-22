@@ -423,6 +423,23 @@ export function typesForPhaseAll(phase: PhaseId): ArtifactTypeDef[] {
   return ARTIFACT_TYPES.filter((t) => t.phase === phase);
 }
 
+// ── Dokumentum-típus osztályozás (Epic 3 · 3.2) ──────────────
+// D1 = szabad-szöveges field-extract (a ② kivonatolja, mezőnként E1);
+// D2 = entitásból renderelt (entitySourced — a ③ „generálás" gombja tölti,
+//      a ② nem hordoz rá kivonatolást);
+// D3 = modul-szinkronizált, mező-partícióval (van moduleOwned mezője —
+//      azokat KIZÁRÓLAG a modul-sync írja; a fennmaradó szabad mezőket
+//      a ③-kártya beágyazott kivonatolása tölti, mert a ② üres marad).
+// A besorolás a típus-tulajdonságokból DERIVÁLT — nincs fázis-specifikus
+// hardkód, a szabály bármely jövőbeli típusra/fázisra ugyanígy érvényes.
+export type DocType = "D1" | "D2" | "D3";
+
+export function docTypeOf(typeDef: ArtifactTypeDef): DocType {
+  if (typeDef.entitySourced) return "D2";
+  if (typeDef.fields.some((f) => f.moduleOwned)) return "D3";
+  return "D1";
+}
+
 // ── fields jsonb defenzív parse + származtatott kijelzők ────
 
 function isFieldState(value: unknown): value is FieldState {

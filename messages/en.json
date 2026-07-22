@@ -310,8 +310,8 @@
     "lockedBody": "Closing the {prev} gate unlocks it. No work can be done here until then.",
     "goToPrev": "Go to {prev}",
     "completedTitle": "Phase completed",
-    "zoneInput": "① Input",
-    "zoneTools": "② Work tools",
+    "zoneInput": "① Sources",
+    "zoneTools": "② Processing",
     "zoneOutput": "③ Output",
     "zoneGate": "④ Gate",
     "confirmLabel": "I confirm closing the gate",
@@ -404,7 +404,13 @@
     "unlockOutput": "Unlocks once ≥1 pain point is confirmed.",
     "gateCriteriaList": "prioritise · score · approve report",
     "nextBestStep": "Next best step: paste the kickoff interview transcript",
-    "gateGoAria": "Go to: {target}"
+    "gateGoAria": "Go to: {target}",
+    "moduleFieldPartitionHint": "module field — only the sync writes it",
+    "docFieldPartitionHint": "doc field — editable by hand or extraction",
+    "closedZonesLabel": "Closed",
+    "closedZonesHint": "This phase is closed — tools and documents are readable, editing is inactive.",
+    "closedActionDisabledHint": "The phase is closed — this action is inactive.",
+    "zoneOutputDocsLabel": "documents"
   },
   "export": {
     "notFound": "Artifact not found.",
@@ -524,6 +530,12 @@
       "draft": "Draft",
       "in_review": "In review",
       "approved": "Approved"
+    },
+    "gateDeliverableBadge": "gate deliverable",
+    "docTypeHint": {
+      "D1": "extracted — from the raw source",
+      "D2": "generated — from the confirmed knowledge elements",
+      "D3": "module-synced — refreshed from the tool"
     }
   },
   "chain": {
@@ -635,14 +647,14 @@
     "projektCharter": "Project charter",
     "engagementTerv": "Engagement plan",
     "kickoffAgenda": "Kickoff agenda",
-    "useCaseShortlist": "Prioritized use case shortlist",
+    "useCaseShortlist": "Use case ranking",
     "felmeresiRiport": "Assessment report",
     "businessCase": "Business case",
     "pilotTerv": "Pilot plan",
     "megoldasiJavaslat": "Solution proposal",
     "toBeTerv": "TO-BE plan",
-    "megoldasDokumentacio": "Solution documentation",
-    "tesztriport": "Test report",
+    "megoldasDokumentacio": "Solution design",
+    "tesztriport": "Evaluation report",
     "pilotRiport": "Pilot report",
     "dontesiBrief": "Decision brief",
     "rolloutTerv": "Rollout plan",
@@ -1969,7 +1981,7 @@
       "processToBe": "Process map",
       "requirements": "Requirements",
       "solution": "Option comparison",
-      "builddoc": "Solution builder",
+      "builddoc": "Solution Builder",
       "goldenset": "Golden set & report"
     },
     "desc": {
@@ -1982,5 +1994,9 @@
       "builddoc": "Components, prompts and control points of the built solution",
       "goldenset": "Test-case set + evaluation → test report"
     }
+  },
+  "catalog": {
+    "usageBadgeCount": "used in {n} places",
+    "usageBadgeNone": "not used yet"
   }
 }

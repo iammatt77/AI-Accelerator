@@ -183,8 +183,15 @@ export function FieldCard({
         </span>
         <span className="flex items-center gap-1.5">
           {moduleOwned && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-tint-pivot px-2 py-[3px] text-[11px] font-semibold text-pivot">
-              <span aria-hidden>⟳</span>
+            <span
+              title={t("moduleFieldPartitionHint")}
+              className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-tint-pivot px-2 py-[3px] text-[11px] font-semibold text-pivot"
+            >
+              {/* 🔒 — mező-partíció (Epic 3 · 3.2-c): a modul-mező jelvénye.
+                  Szándékosan NEM ⟳ (az az elavulás-jelölő glifje, StaleFlag —
+                  a két fogalom vizuálisan ütközne egy P3-kártyán, ahol mindkettő
+                  megjelenhet). */}
+              <span aria-hidden>🔒</span>
               {t("moduleFieldBadge")}
             </span>
           )}

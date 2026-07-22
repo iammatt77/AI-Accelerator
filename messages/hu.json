@@ -310,8 +310,8 @@
     "lockedBody": "A(z) {prev} fázis kapujának lezárása nyitja meg. Addig itt nem végezhető munka.",
     "goToPrev": "Ugrás: {prev}",
     "completedTitle": "A fázis lezárva",
-    "zoneInput": "① Bemenet",
-    "zoneTools": "② Munkaeszközök",
+    "zoneInput": "① Források",
+    "zoneTools": "② Feldolgozás",
     "zoneOutput": "③ Kimenet",
     "zoneGate": "④ Kapu",
     "confirmLabel": "Megerősítem a kapu lezárását",
@@ -404,7 +404,13 @@
     "unlockOutput": "Legalább 1 megerősített fájdalompont után nyílik.",
     "gateCriteriaList": "prioritizálás · pontozás · riport-jóváhagyás",
     "nextBestStep": "Következő legjobb lépés: illeszd be a kickoff interjú átiratát",
-    "gateGoAria": "Ugrás: {target}"
+    "gateGoAria": "Ugrás: {target}",
+    "moduleFieldPartitionHint": "modul-mező — csak a szinkron írja",
+    "docFieldPartitionHint": "doc-mező — kézzel/kivonatolással szerkeszthető",
+    "closedZonesLabel": "Lezárva",
+    "closedZonesHint": "Ez a fázis lezárva — a toolok és a dokumentumok olvashatók, a szerkesztés inaktív.",
+    "closedActionDisabledHint": "A fázis lezárva — ez a művelet inaktív.",
+    "zoneOutputDocsLabel": "dokumentum"
   },
   "export": {
     "notFound": "Az artefaktum nem található.",
@@ -524,6 +530,12 @@
       "draft": "Draft",
       "in_review": "In review",
       "approved": "Approved"
+    },
+    "gateDeliverableBadge": "kapu-deliverable",
+    "docTypeHint": {
+      "D1": "kivonatolt — a nyers forrásból",
+      "D2": "generált — a jóváhagyott tudáselemekből",
+      "D3": "modul-szinkronizált — a toolból frissül"
     }
   },
   "chain": {
@@ -635,14 +647,14 @@
     "projektCharter": "Projekt-charter",
     "engagementTerv": "Engagement-terv",
     "kickoffAgenda": "Kickoff-agenda",
-    "useCaseShortlist": "Priorizált use case-shortlist",
+    "useCaseShortlist": "Use case-rangsor",
     "felmeresiRiport": "Felmérési riport",
     "businessCase": "Business case",
     "pilotTerv": "Pilot-terv",
     "megoldasiJavaslat": "Megoldási javaslat",
     "toBeTerv": "TO-BE terv",
-    "megoldasDokumentacio": "Megoldás-dokumentáció",
-    "tesztriport": "Tesztriport",
+    "megoldasDokumentacio": "Megoldásterv",
+    "tesztriport": "Kiértékelési riport",
     "pilotRiport": "Pilot-riport",
     "dontesiBrief": "Döntési brief",
     "rolloutTerv": "Rollout-terv",
@@ -1982,5 +1994,9 @@
       "builddoc": "A megépített megoldás komponensei, promptjai, kontrollpontjai",
       "goldenset": "Teszteset-készlet + kiértékelés → Tesztriport"
     }
+  },
+  "catalog": {
+    "usageBadgeCount": "{n} helyen használva",
+    "usageBadgeNone": "még nincs használva"
   }
 }
