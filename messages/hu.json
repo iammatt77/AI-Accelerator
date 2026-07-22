@@ -1994,6 +1994,87 @@
       "solution": "Opció-mátrix + HITL nyertes-választás → megoldás-komponensek",
       "builddoc": "A megépített megoldás komponensei, promptjai, kontrollpontjai",
       "goldenset": "Teszteset-készlet + kiértékelés → Tesztriport"
+    },
+    "preview": {
+      "corner": {
+        "empty": "ÜRES",
+        "scored": "{scored} / {total} PONTOZVA",
+        "quickWins": "{n} QUICK WIN",
+        "people": "{scored} / {total} FŐ",
+        "peopleDone": "{n} FŐ · 4 NEGYED",
+        "openPoints": "{n} NYITOTT PONT",
+        "steps": "{n} LÉPÉS",
+        "stepsDelta": "{a} → {b} LÉPÉS",
+        "inProgress": "FOLYAMATBAN",
+        "noWinner": "NINCS NYERTES",
+        "winner": "NYERTES: {name}",
+        "components": "{bound} / {total} KOMPONENS",
+        "passPct": "{pct}% · KÜSZÖB {t}%",
+        "passOk": "{pct}% ≥ {t}%",
+        "pctOnly": "{pct}%"
+      },
+      "stale": {
+        "source_updated": "⟳ FORRÁS FRISSÜLT",
+        "asis_changed": "⟳ AS-IS VÁLTOZOTT",
+        "origin_drift": "⟳ P2 VÁLTOZOTT"
+      },
+      "axis": {
+        "value": "ÉRTÉK",
+        "feasibility": "MEGVALÓSÍTHATÓSÁG →",
+        "influence": "BEFOLYÁS",
+        "impact": "ÉRINTETTSÉG →"
+      },
+      "empty": {
+        "heatmap": "Még nincs pontozott use case",
+        "heatmapHint": "✦ pontozd a use case-eket a ② Feldolgozásban",
+        "matrix": "Még nincs stakeholder felvéve",
+        "matrixHint": "✦ kivonatolás a forrásokból",
+        "asis": "Még nincs feltérképezett folyamat",
+        "asisHint": "✦ kivonatolás interjúból / leírásból",
+        "tobe": "A TO-BE még üres",
+        "tobeHint": "✦ generálás az AS-IS + fájdalompontokból",
+        "requirements": "Még nincs követelmény",
+        "requirementsHint": "✦ BA-fa generálás a use case-ekből",
+        "options": "Még nincsenek pontozott opciók",
+        "optionsHint": "✦ opciók + szempont-értékek a toolban",
+        "builddoc": "Még nincs build-komponens",
+        "builddocHint": "✦ struktúra-javaslat a TO-BE lépésekből",
+        "goldenset": "Még nincs eval-eset",
+        "goldensetHint": "✦ eset-generálás a forrás-mintákból"
+      },
+      "reqBadge": {
+        "business": "Ü",
+        "stakeholder": "S",
+        "system": "M"
+      },
+      "verdict": {
+        "passed": "PASS",
+        "partial": "RÉSZL.",
+        "failed": "FAIL"
+      },
+      "chip": {
+        "useCases": "{n} use case",
+        "quickWin": "{n} quick win",
+        "people": "{n} fő",
+        "manageClosely": "szorosan kezeld: {n}",
+        "steps": "{n} lépés",
+        "openPoints": "{n} nyitott pont",
+        "aiSteps": "{n} AI-lépés",
+        "ac": "{n} AC",
+        "decided": "{a} / {b} komponens döntve",
+        "links": "{n} kötés",
+        "cases": "{n} eset",
+        "underThreshold": "küszöb alatt",
+        "overThreshold": "küszöb felett"
+      },
+      "bottlenecks": "SZŰK KERESZTMETSZETEK",
+      "asIsTag": "AS-IS",
+      "criterionHead": "KRITÉRIUM",
+      "componentHead": "KOMPONENS",
+      "tobeStepHead": "TO-BE LÉPÉS",
+      "thresholdMark": "KÜSZÖB ▲",
+      "chipPassFail": "{p} PASS · {f} FAIL",
+      "more": "+{n}"
     }
   },
   "catalog": {

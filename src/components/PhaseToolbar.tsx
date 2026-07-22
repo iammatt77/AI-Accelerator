@@ -15,8 +15,9 @@ import { useZoneNav } from "@/components/ZoneNav";
 // Csomag B1-a — TOOL-SÁV: a fázis eszközei a stepper FÖLÖTT, dedikált
 // blokkban. A toolok NEM a zónákban élnek. A kártyák a tool destinációjára
 // visznek (route / hőtérkép-modál / zóna-váltás). P0: üres-állapot.
-// A kártyák TARTALMA minimál belépő (B1: csak áthelyez/összegyűjt); a
-// gazdag előnézetek a B3 dolga.
+// Epic 3 · 3.3: a kártyák szerver-renderelt ELŐNÉZET-slotot kapnak
+// (`previews`) — miniatűr munkafelület + metrika-chipek, valós adatból.
+// Az előnézet belül nem interaktív (F7): a kattintás a kártyáé.
 // ─────────────────────────────────────────────────────────────
 
 export interface ToolbarHeatmapData {
@@ -26,15 +27,24 @@ export interface ToolbarHeatmapData {
   phaseName: string;
 }
 
+/** Egy kártya szerver-renderelt előnézet-slotja (ToolPreviews.buildToolPreviewSlots). */
+export interface ToolCardExtras {
+  viz: React.ReactNode;
+  chips: React.ReactNode | null;
+}
+
 export function PhaseToolbar({
   phase,
   projectId,
   heatmap,
+  previews,
 }: {
   phase: PhaseId;
   projectId: string;
   /** P1: a hőtérkép-tool adatai (a fókusz-modálhoz). */
   heatmap?: ToolbarHeatmapData;
+  /** 3.3: tool-id → előnézet-slot (szerver-oldalon renderelve). */
+  previews?: Record<string, ToolCardExtras>;
 }) {
   const t = useTranslations("tools");
   const tools = phaseTools(phase);
@@ -68,6 +78,7 @@ export function PhaseToolbar({
               base={base}
               t={t}
               heatmap={heatmap}
+              extras={previews?.[tool.id]}
             />
           ))}
         </div>
@@ -81,14 +92,17 @@ function ToolCard({
   base,
   t,
   heatmap,
+  extras,
 }: {
   tool: PhaseToolDef;
   base: string;
   t: ReturnType<typeof useTranslations>;
   heatmap?: ToolbarHeatmapData;
+  extras?: ToolCardExtras;
 }) {
   const inner = (
     <span className="block">
+      {extras && <span className="mb-2.5 block">{extras.viz}</span>}
       <span className="flex items-center gap-2">
         <span className="text-body font-semibold text-ink">{t(`names.${tool.nameKey}`)}</span>
         {tool.badge && (
@@ -100,8 +114,11 @@ function ToolCard({
       <span className="mt-1 block text-mono-sm leading-snug text-ink-tertiary">
         {t(`desc.${tool.descKey}`)}
       </span>
-      <span className="mt-2 inline-flex items-center gap-1 text-mono-sm font-semibold text-action-deep">
-        {t("open")} <span aria-hidden>→</span>
+      <span className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        {extras?.chips ?? <span />}
+        <span className="inline-flex items-center gap-1 text-mono-sm font-semibold text-action-deep">
+          {t("open")} <span aria-hidden>→</span>
+        </span>
       </span>
     </span>
   );

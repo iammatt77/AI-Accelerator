@@ -75,6 +75,8 @@ import {
 } from "@/components/WorkspaceShell";
 import { PhaseZones, GateCriterionAction } from "@/components/ZoneNav";
 import { PhaseToolbar } from "@/components/PhaseToolbar";
+import { loadToolPreviews } from "@/lib/phases/preview-data";
+import { buildToolPreviewSlots } from "@/components/ToolPreviews";
 import { criterionTarget, defaultActiveZone } from "@/lib/phases/tools";
 import { GateCloseForm } from "@/components/PhaseGateForms";
 import { PhaseStateIcon } from "@/components/icons";
@@ -1222,10 +1224,20 @@ export async function PhaseWorkspace({
 
   // Tool-sáv (B1-a): a fázis eszközei a stepper FÖLÖTT. P1: a hőtérkép a
   // fókusz-modálhoz kap adatot (relokálva a workbenchből).
+  // Epic 3 · 3.3: minden kártya valós-adatú előnézet-slotot kap — a P1-toolok
+  // a már betöltött entitásokból, a P2/P3-toolok a preview-data saját
+  // read-only lekérdezéseiből.
+  const previews = await loadToolPreviews(supabase, projectId, phase, {
+    inputs,
+    useCases,
+    stakeholders: allStakeholders,
+    staleAcks,
+  });
   const toolbar = (
     <PhaseToolbar
       phase={phase}
       projectId={projectId}
+      previews={buildToolPreviewSlots(previews)}
       heatmap={
         isP1
           ? {

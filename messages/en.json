@@ -1994,6 +1994,87 @@
       "solution": "Option matrix + HITL winner choice → solution components",
       "builddoc": "Components, prompts and control points of the built solution",
       "goldenset": "Test-case set + evaluation → test report"
+    },
+    "preview": {
+      "corner": {
+        "empty": "EMPTY",
+        "scored": "{scored} / {total} SCORED",
+        "quickWins": "{n} QUICK WINS",
+        "people": "{scored} / {total} PEOPLE",
+        "peopleDone": "{n} PEOPLE · 4 QUADRANTS",
+        "openPoints": "{n} OPEN POINTS",
+        "steps": "{n} STEPS",
+        "stepsDelta": "{a} → {b} STEPS",
+        "inProgress": "IN PROGRESS",
+        "noWinner": "NO WINNER",
+        "winner": "WINNER: {name}",
+        "components": "{bound} / {total} COMPONENTS",
+        "passPct": "{pct}% · THRESHOLD {t}%",
+        "passOk": "{pct}% ≥ {t}%",
+        "pctOnly": "{pct}%"
+      },
+      "stale": {
+        "source_updated": "⟳ SOURCE UPDATED",
+        "asis_changed": "⟳ AS-IS CHANGED",
+        "origin_drift": "⟳ P2 CHANGED"
+      },
+      "axis": {
+        "value": "VALUE",
+        "feasibility": "FEASIBILITY →",
+        "influence": "INFLUENCE",
+        "impact": "IMPACT →"
+      },
+      "empty": {
+        "heatmap": "No scored use cases yet",
+        "heatmapHint": "✦ score the use cases in ② Processing",
+        "matrix": "No stakeholders yet",
+        "matrixHint": "✦ extract from the sources",
+        "asis": "No mapped process yet",
+        "asisHint": "✦ extract from interview / description",
+        "tobe": "The TO-BE is still empty",
+        "tobeHint": "✦ generate from AS-IS + pain points",
+        "requirements": "No requirements yet",
+        "requirementsHint": "✦ generate the BA tree from use cases",
+        "options": "No scored options yet",
+        "optionsHint": "✦ options + criterion values in the tool",
+        "builddoc": "No build components yet",
+        "builddocHint": "✦ structure proposal from TO-BE steps",
+        "goldenset": "No eval cases yet",
+        "goldensetHint": "✦ generate cases from source samples"
+      },
+      "reqBadge": {
+        "business": "B",
+        "stakeholder": "S",
+        "system": "S"
+      },
+      "verdict": {
+        "passed": "PASS",
+        "partial": "PART.",
+        "failed": "FAIL"
+      },
+      "chip": {
+        "useCases": "{n} use cases",
+        "quickWin": "{n} quick wins",
+        "people": "{n} people",
+        "manageClosely": "manage closely: {n}",
+        "steps": "{n} steps",
+        "openPoints": "{n} open points",
+        "aiSteps": "{n} AI steps",
+        "ac": "{n} AC",
+        "decided": "{a} / {b} components decided",
+        "links": "{n} links",
+        "cases": "{n} cases",
+        "underThreshold": "below threshold",
+        "overThreshold": "above threshold"
+      },
+      "bottlenecks": "BOTTLENECKS",
+      "asIsTag": "AS-IS",
+      "criterionHead": "CRITERION",
+      "componentHead": "COMPONENT",
+      "tobeStepHead": "TO-BE STEP",
+      "thresholdMark": "THRESHOLD ▲",
+      "chipPassFail": "{p} PASS · {f} FAIL",
+      "more": "+{n}"
     }
   },
   "catalog": {
