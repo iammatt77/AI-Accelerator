@@ -97,6 +97,7 @@ export async function PhaseWorkspace({
   criteria,
   clientName,
   phaseName,
+  locked = false,
 }: {
   supabase: SupabaseClient;
   projectId: string;
@@ -105,6 +106,11 @@ export async function PhaseWorkspace({
   criteria: EvaluatedCriterion[];
   clientName: string;
   phaseName: string;
+  /** Epic 3 · 3.2-e: lezárt fázis olvasható állapota — a ①②③ mutáló
+   *  triggerei inaktívak (láthatók, de nem futtathatók); a ③ dokumentumai
+   *  és a toolok TOVÁBBRA IS megnyithatók (a Link-navigáció nem mutáció).
+   *  Visszanyitás a felületen NINCS (nincs is ilyen action a kódbázisban). */
+  locked?: boolean;
 }) {
   const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty, tEnt, tCriteria, tSt, tTools, tCatalog] =
     await Promise.all([
@@ -125,6 +131,20 @@ export async function PhaseWorkspace({
     tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""));
   const dateLocale = locale === "hu" ? "hu-HU" : "en-GB";
   const dateOptions = { timeZone: "Europe/Budapest" } as const;
+
+  // Epic 3 · 3.2-e: mutáló tartalom lezárt fázison — láthatóan, de nem
+  // futtathatóan (pointer-events-none + halványítás + magyarázó sáv).
+  // KIZÁRÓLAG a mutáló triggereket öleli körbe (kivonatolás-indítás,
+  // E1-gombok, generálás) — a navigációs Linkek (szerkesztő megnyitása,
+  // export, verzió-előzmény) a hívási helyükön MARADNAK a wrapperen kívül.
+  const lockWrap = (node: React.ReactNode) =>
+    !locked ? (
+      node
+    ) : (
+      <div className="pointer-events-none select-none opacity-60" aria-disabled="true">
+        {node}
+      </div>
+    );
 
   const phaseTypes = typesForPhase(phase);
 
@@ -478,39 +498,47 @@ export async function PhaseWorkspace({
               </div>
             </>
           )}
-          {typeDef.entitySourced && (!latest || latest.status !== "in_review") && (
-            <div className="mt-3">
-              {/* Típus-specifikus entitás-generátor: shortlist (#7a F4) vagy
-                  Megoldási javaslat (Csomag A, A5). */}
-              {typeDef.key === "Megoldási javaslat" ? (
-                <GenerateSolutionPlanForm projectId={projectId} />
-              ) : (
-                <GenerateShortlistFieldsForm projectId={projectId} />
-              )}
-            </div>
-          )}
+          {typeDef.entitySourced &&
+            (!latest || latest.status !== "in_review") &&
+            lockWrap(
+              <div className="mt-3">
+                {/* Típus-specifikus entitás-generátor: shortlist (#7a F4) vagy
+                    Megoldási javaslat (Csomag A, A5). */}
+                {typeDef.key === "Megoldási javaslat" ? (
+                  <GenerateSolutionPlanForm projectId={projectId} />
+                ) : (
+                  <GenerateShortlistFieldsForm projectId={projectId} />
+                )}
+              </div>,
+            )}
           {latest && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {latest.status === "draft" &&
                 !typeDef.entitySourced &&
                 (hasConfirmed ? (
-                  <GenerateBodyForm
-                    projectId={projectId}
-                    artifactId={latest.id}
-                    hasBody={latest.body.trim() !== ""}
-                  />
+                  lockWrap(
+                    <GenerateBodyForm
+                      projectId={projectId}
+                      artifactId={latest.id}
+                      hasBody={latest.body.trim() !== ""}
+                    />,
+                  )
                 ) : (
                   <span className="text-mono-sm text-ink-tertiary">
                     {t("generateNeedsConfirmed")}
                   </span>
                 ))}
-              {latest.status === "draft" && typeDef.entitySourced && hasConfirmed && (
-                <GenerateBodyForm
-                  projectId={projectId}
-                  artifactId={latest.id}
-                  hasBody={latest.body.trim() !== ""}
-                />
-              )}
+              {latest.status === "draft" &&
+                typeDef.entitySourced &&
+                hasConfirmed &&
+                lockWrap(
+                  <GenerateBodyForm
+                    projectId={projectId}
+                    artifactId={latest.id}
+                    hasBody={latest.body.trim() !== ""}
+                  />,
+                )}
+              {/* Navigáció — lezárt fázison is megnyithatók/olvashatók (3.2-e). */}
               <Link
                 href={`/project/${projectId}/artifact/${latest.id}`}
                 className="inline-flex items-center justify-center rounded-control border border-line bg-surface px-3 py-1.5 text-body font-medium shadow-tile-sm transition-colors duration-[var(--motion-base)] hover:bg-sunken"
@@ -536,7 +564,14 @@ export async function PhaseWorkspace({
                   {t("docFieldPartitionHint")}
                 </span>
               </div>
-              <FieldWorkBody typeDef={typeDef} latest={latest} editable={editable} fields={fields} />
+              {lockWrap(
+                <FieldWorkBody
+                  typeDef={typeDef}
+                  latest={latest}
+                  editable={editable}
+                  fields={fields}
+                />,
+              )}
             </div>
           )}
         </div>
@@ -689,7 +724,7 @@ export async function PhaseWorkspace({
           ))}
         </ul>
       )}
-      <PhaseInputForm projectId={projectId} phase={phase} />
+      {lockWrap(<PhaseInputForm projectId={projectId} phase={phase} />)}
     </section>
   );
 
@@ -1054,7 +1089,7 @@ export async function PhaseWorkspace({
           );
         })}
       </ul>
-      {state !== "open" && (
+      {state !== "open" && !locked && (
         <div className="mt-4">
           <GateCloseForm projectId={projectId} phase={phase} temporary={isManualClose(phase)} />
         </div>
@@ -1223,6 +1258,14 @@ export async function PhaseWorkspace({
       {/* Összegző mondat + elsődleges „Next" CTA (v2: halvány lila sáv) */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-tile border border-line-soft bg-context px-4 py-3">
         <p className="min-w-0 flex-1 text-body text-ink">
+          {locked && (
+            <span
+              title={t("closedZonesHint")}
+              className="mr-2 inline-flex items-center gap-1 rounded-pill border border-line bg-sunken px-2 py-0.5 text-mono-sm font-semibold text-ink-secondary"
+            >
+              {t("closedZonesLabel")}
+            </span>
+          )}
           <span className="font-semibold">{summaryLead}</span>
           {summaryRest && <span className="text-ink-secondary"> {summaryRest}</span>}
         </p>
@@ -1243,7 +1286,7 @@ export async function PhaseWorkspace({
         zones={zones}
         panels={{
           input: inputPanel,
-          workbench: workbenchPanel,
+          workbench: lockWrap(workbenchPanel),
           output: outputPanel,
           gate: gatePanel,
         }}

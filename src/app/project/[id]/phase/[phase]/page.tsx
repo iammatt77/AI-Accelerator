@@ -150,7 +150,10 @@ export default async function PhasePage({
         </div>
       )}
 
-      {/* ── completed: olvasó nézet + kapu-döntés ── */}
+      {/* ── completed: olvasó munkaterület (3.2-e: lezárt fázis, a ①②③④
+          zóna-váz megmarad — a toolok + ③ dokumentumai visszalépve is
+          megnyithatók; a ② mutáló triggerei inaktívak; visszanyitás
+          NINCS) + kapu-döntés összegzés ── */}
       {state === "completed" && (
         <div className="space-y-6">
           <section className="surface-card border-l-2 border-l-done p-4">
@@ -175,7 +178,20 @@ export default async function PhasePage({
               </div>
             )}
           </section>
+
+          <PhaseWorkspace
+            supabase={supabase}
+            projectId={id}
+            phase={phase}
+            state={state}
+            criteria={entry.criteria}
+            clientName={clientName}
+            phaseName={shortName}
+            locked
+          />
+
           <PhaseDocumentTiles projectId={id} tiles={docTiles} blockingKeys={blockingKeys} />
+
           <DecisionHistory
             decisions={phaseDecisions}
             title={tGates("decisionsTitle")}
