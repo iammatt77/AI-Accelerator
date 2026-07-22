@@ -354,6 +354,8 @@ export async function renderStaleSinceForArtifact(
     prompt_item: { table: "prompt_items", projectScoped: true },
     control_point: { table: "control_points", projectScoped: true },
     eval_case: { table: "eval_cases", projectScoped: false },
+    // Epic 3 · 3.5: a TO-BE terv render-célja (a jóváhagyott TO-BE térkép).
+    process_map: { table: "process_maps", projectScoped: true },
   };
   const neededTypes = [...new Set(edges.map((e) => e.target_type))];
   const targetUpdatedAt = new Map<string, string>();

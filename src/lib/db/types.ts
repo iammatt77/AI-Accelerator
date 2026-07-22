@@ -459,7 +459,9 @@ export interface StaleAckRow {
 
 // ── Csomag C1 (0015): tudáselem-katalógus adat-rétege ────────
 
-/** A renderelés-él cél-típusai — a 4 generálás/sync író-pont céljai. */
+/** A renderelés-él cél-típusai — a generálás/sync író-pontok céljai.
+ *  Epic 3 · 3.5: "process_map" a TO-BE terv D2-renderelésének célja
+ *  (0016. migráció — a target_type CHECK bővítése). */
 export type RenderTargetType =
   | "use_case"
   | "solution_component"
@@ -467,7 +469,8 @@ export type RenderTargetType =
   | "build_component"
   | "prompt_item"
   | "control_point"
-  | "eval_case";
+  | "eval_case"
+  | "process_map";
 
 /** artifact_render_links sora — perzisztált tény: „ez az artifact(-mező)
  *  ezt a tudáselemet renderelte, ekkor". EGY-ÍRÓ: kizárólag a generálás/
