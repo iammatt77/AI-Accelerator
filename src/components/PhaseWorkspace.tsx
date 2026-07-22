@@ -27,6 +27,8 @@ import type {
 } from "@/lib/db/types";
 import { numberSourceRows } from "@/lib/sources";
 import { activeStaleSince, sourceUpdatedSince } from "@/lib/staleness";
+import { docStaleSinceForArtifact } from "@/lib/artifacts/doc-stale";
+import { usageOf, renderStaleSinceForArtifact } from "@/lib/catalog";
 import { StaleFlag } from "@/components/StaleFlag";
 import {
   ExtractForm,
@@ -104,7 +106,7 @@ export async function PhaseWorkspace({
   clientName: string;
   phaseName: string;
 }) {
-  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty, tEnt, tCriteria, tSt, tTools] =
+  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty, tEnt, tCriteria, tSt, tTools, tCatalog] =
     await Promise.all([
       getLocale(),
       getTranslations("workspace"),
@@ -117,6 +119,7 @@ export async function PhaseWorkspace({
       getTranslations("criteria"),
       getTranslations("stakeholders"),
       getTranslations("tools"),
+      getTranslations("catalog"),
     ]);
   const typeName = (typeDef: ArtifactTypeDef) =>
     tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""));
@@ -214,11 +217,13 @@ export async function PhaseWorkspace({
     .map((sid) => inputs.find((r) => r.id === sid))
     .filter((r): r is InputItemRow => Boolean(r));
 
-  // A8: elavulás-nyugták (a jelölők deriváltak; itt csak a P1-kártyákhoz
-  // kell — source_updated).
-  const { data: ackData } = isP1
-    ? await supabase.from("stale_acks").select("*").eq("project_id", projectId)
-    : { data: [] as StaleAckRow[] };
+  // A8/Epic 3 · 3.2-d: elavulás-nyugták — MOST már minden fázison kellenek
+  // (a ③ dokumentum-kártyák doc_stale/render_stale jelvényéhez is, nem
+  // csak a P1 entitás-kártyák source_updated jelvényéhez).
+  const { data: ackData } = await supabase
+    .from("stale_acks")
+    .select("*")
+    .eq("project_id", projectId);
   const staleAcks = (ackData ?? []) as StaleAckRow[];
   const sourceUpdatedFlag = (subjectType: string, subjectId: string, ids: string[]) =>
     activeStaleSince(
@@ -235,6 +240,45 @@ export async function PhaseWorkspace({
   const stakeholderConfirmed = allStakeholders.filter(
     (s) => s.state === "confirmed" || s.state === "manual",
   );
+
+  // Epic 3 · 3.2-d: „hol van használva" — KIZÁRÓLAG a jóváhagyott (confirmed/
+  // manual) tudáselem-kártyákon (F5). A 2.1 usageOf()-ot FOGYASZTJUK (nem
+  // írjuk); a renderelés-élek + entitás-élek összesített darabszáma. Előre
+  // számolva (Promise.all), mert a JSX-map szinkron.
+  const usageCountOf = async (blockType: string, blockId: string): Promise<number> => {
+    const usage = await usageOf(supabase, projectId, blockType, blockId);
+    return usage.documents.length + usage.entities.length;
+  };
+  const painUsage = new Map<string, number>();
+  const ucUsage = new Map<string, number>();
+  const stakeholderUsage = new Map<string, number>();
+  if (isP1) {
+    const confirmedPains = allPains.filter((p) => p.state === "confirmed" || p.state === "manual");
+    const confirmedUcs = useCases.filter((u) => u.state === "confirmed" || u.state === "manual");
+    await Promise.all([
+      ...confirmedPains.map(async (p) => {
+        painUsage.set(p.id, await usageCountOf("pain_point", p.id));
+      }),
+      ...confirmedUcs.map(async (u) => {
+        ucUsage.set(u.id, await usageCountOf("use_case", u.id));
+      }),
+      ...stakeholderConfirmed.map(async (s) => {
+        stakeholderUsage.set(s.id, await usageCountOf("stakeholder", s.id));
+      }),
+    ]);
+  }
+  const usageBadge = (count: number | undefined) =>
+    count === undefined ? null : (
+      <span
+        className={`inline-flex items-center gap-1 rounded-pill border px-2 py-[3px] text-[11px] font-semibold ${
+          count > 0
+            ? "border-line bg-sunken text-ink-secondary"
+            : "border-dashed border-line text-ink-tertiary"
+        }`}
+      >
+        {count > 0 ? tCatalog("usageBadgeCount", { n: count }) : tCatalog("usageBadgeNone")}
+      </span>
+    );
   const toStakeholderCard = (s: StakeholderRow): StakeholderCardData => ({
     id: s.id,
     name: s.name,
@@ -268,6 +312,8 @@ export async function PhaseWorkspace({
           kind="source_updated"
         />
       )}
+      {/* Epic 3 · 3.2-d (F5): „hol van használva" — csak jóváhagyott elemen. */}
+      {(p.state === "confirmed" || p.state === "manual") && usageBadge(painUsage.get(p.id))}
       <PainPointProposalCard projectId={projectId} painPoint={toPainCard(p)} embedded />
       <div className="border-t border-line pt-3">
         <PainStakeholderBinder
@@ -398,6 +444,23 @@ export async function PhaseWorkspace({
               </span>
             )}
           </div>
+          {/* Epic 3 · 3.2-d: doc_stale/render_stale — a 2.1 jelölő-rétegből. */}
+          {latest &&
+            docStaleBadges.get(latest.id)?.map((b) => (
+              <div key={b.kind} className="mt-1.5">
+                <StaleFlag
+                  projectId={projectId}
+                  subjectType="artifact"
+                  subjectId={latest.id}
+                  kind={b.kind}
+                  dateLabel={new Date(b.since).toLocaleDateString(dateLocale, {
+                    timeZone: "Europe/Budapest",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                />
+              </div>
+            ))}
           {latest && done && (
             <>
               <p className="mt-1.5 font-mono text-mono-sm text-ink-tertiary">
@@ -772,6 +835,8 @@ export async function PhaseWorkspace({
                                 kind="source_updated"
                               />
                             )}
+                            {(u.state === "confirmed" || u.state === "manual") &&
+                              usageBadge(ucUsage.get(u.id))}
                             <UseCaseCard projectId={projectId} useCase={toUseCaseCard(u)} embedded />
                           </div>
                         }
@@ -828,11 +893,23 @@ export async function PhaseWorkspace({
                   {tSt("confirmedHeading")}
                 </h5>
                 {stakeholderConfirmed.map((s) => (
-                  <StakeholderConfirmedRow
-                    key={s.id}
-                    projectId={projectId}
-                    stakeholder={toStakeholderCard(s)}
-                  />
+                  <div key={s.id} className="space-y-1.5">
+                    {/* Epic 3 · 3.2-d: source_updated kiterjesztve a
+                        stakeholder-kártyákra (eddig csak pain/use case). */}
+                    {sourceUpdatedFlag("stakeholder", s.id, s.source_input_ids) && (
+                      <StaleFlag
+                        projectId={projectId}
+                        subjectType="stakeholder"
+                        subjectId={s.id}
+                        kind="source_updated"
+                      />
+                    )}
+                    {usageBadge(stakeholderUsage.get(s.id))}
+                    <StakeholderConfirmedRow
+                      projectId={projectId}
+                      stakeholder={toStakeholderCard(s)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -867,6 +944,33 @@ export async function PhaseWorkspace({
         <FieldWorkBlock key={typeDef.key} typeDef={typeDef} />
       ))}
     </div>
+  );
+
+  // Epic 3 · 3.2-d: doc_stale + render_stale badge-ek MINDEN ③-kártyán, a
+  // 2.1 rétegből FOGYASZTVA (nem írva). Előre számolva (a JSX-map szinkron).
+  type DocStaleBadge = { kind: "doc_stale" | "render_stale"; since: string };
+  const docStaleBadges = new Map<string, DocStaleBadge[]>();
+  await Promise.all(
+    phaseTypes.map(async (td) => {
+      const latest = latestOfType(td);
+      if (!latest) return;
+      const badges: DocStaleBadge[] = [];
+      const [docSince, renderSince] = await Promise.all([
+        docStaleSinceForArtifact(supabase, projectId, latest),
+        renderStaleSinceForArtifact(supabase, projectId, latest.id),
+      ]);
+      if (docSince) {
+        const active = activeStaleSince(docSince, staleAcks, "artifact", latest.id, "doc_stale");
+        if (active) badges.push({ kind: "doc_stale", since: active });
+      }
+      if (renderSince) {
+        const active = activeStaleSince(
+          renderSince, staleAcks, "artifact", latest.id, "render_stale",
+        );
+        if (active) badges.push({ kind: "render_stale", since: active });
+      }
+      if (badges.length > 0) docStaleBadges.set(latest.id, badges);
+    }),
   );
 
   const outputPanel =
