@@ -1155,6 +1155,16 @@
       "low": "low",
       "medium": "medium",
       "high": "high"
+    },
+    "matrixView": {
+      "lead": "All confirmed stakeholders by their scores — click through to the detail page.",
+      "count": "{n} people",
+      "hotCount": "manage closely: {n}",
+      "empty": "No confirmed stakeholders yet.",
+      "emptyHint": "Extract from the sources in P1 ② Processing, or add manually.",
+      "goToP1": "Open the P1 workspace",
+      "unscoredTitle": "Without scores · {n}",
+      "unscoredHint": "Cannot be placed in the matrix — score them on the detail page."
     }
   },
   "p2": {

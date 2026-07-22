@@ -1155,6 +1155,16 @@
       "low": "alacsony",
       "medium": "közepes",
       "high": "magas"
+    },
+    "matrixView": {
+      "lead": "Az összes megerősített stakeholder a saját pontszáma szerint — kattintva a részletlapra.",
+      "count": "{n} fő",
+      "hotCount": "szorosan kezeld: {n}",
+      "empty": "Még nincs megerősített stakeholder.",
+      "emptyHint": "Kivonatolás a forrásokból a P1 ② Feldolgozásban, vagy kézi felvétel.",
+      "goToP1": "P1 munkafelület megnyitása",
+      "unscoredTitle": "Pontszám nélkül · {n}",
+      "unscoredHint": "A mátrixban nem ábrázolható — a részletlapon pontozható."
     }
   },
   "p2": {

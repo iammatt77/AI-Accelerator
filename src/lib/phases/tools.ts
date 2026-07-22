@@ -36,13 +36,14 @@ const HEATMAP: PhaseToolDef = {
   descKey: "heatmap",
   open: "heatmap",
 };
+// Epic 3 · 3.4: önálló összesített mátrix-nézet — a korábbi ② +
+// #stakeholders kerülő (B1) megszűnt, a kártya a saját nézetét nyitja.
 const STAKEHOLDER_MATRIX: PhaseToolDef = {
   id: "stakeholder_matrix",
   nameKey: "stakeholderMatrix",
   descKey: "stakeholderMatrix",
-  open: "zone",
-  zone: "workbench",
-  anchor: "stakeholders",
+  open: "route",
+  path: "/stakeholder-matrix",
 };
 const PROCESS = (badge: string): PhaseToolDef => ({
   id: "process",
