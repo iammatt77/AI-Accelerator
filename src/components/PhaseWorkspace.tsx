@@ -43,6 +43,7 @@ import {
   ExtractPainPointsForm,
   GenerateShortlistFieldsForm,
   GenerateSolutionPlanForm,
+  GenerateToBePlanForm,
   PainPointProposalCard,
   UseCaseCard,
   type PainPointCardData,
@@ -258,6 +259,22 @@ export async function PhaseWorkspace({
       "source_updated",
     );
   const painTitleById = new Map(allPains.map((p) => [p.id, p.title]));
+
+  // ── P2 TO-BE terv D2 függőség (Epic 3, 3.5): a generálás csak akkor
+  // indítható, ha van jóváhagyott TO-BE folyamattérkép — a spec F2 szerint
+  // ez látható függőség-üzenet, nem néma hiba (lásd OutputCard lejjebb).
+  const isP2 = phase === "P2";
+  let approvedToBeMapExists = false;
+  if (isP2) {
+    const { data: toBeMapData } = await supabase
+      .from("process_maps")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("kind", "to_be")
+      .eq("status", "approved")
+      .limit(1);
+    approvedToBeMapExists = (toBeMapData ?? []).length > 0;
+  }
 
   // Megerősített stakeholderek (a kötés csak ezekre mutathat) + kártya-adat.
   const stakeholderProposals = allStakeholders.filter((s) => s.state === "ai_suggested");
@@ -504,17 +521,35 @@ export async function PhaseWorkspace({
           )}
           {typeDef.entitySourced &&
             (!latest || latest.status !== "in_review") &&
-            lockWrap(
-              <div className="mt-3">
-                {/* Típus-specifikus entitás-generátor: shortlist (#7a F4) vagy
-                    Megoldási javaslat (Csomag A, A5). */}
-                {typeDef.key === "Megoldási javaslat" ? (
-                  <GenerateSolutionPlanForm projectId={projectId} />
-                ) : (
-                  <GenerateShortlistFieldsForm projectId={projectId} />
-                )}
-              </div>,
-            )}
+            (typeDef.key === "TO-BE terv" && !approvedToBeMapExists ? (
+              // Epic 3 · 3.5 F2: a generálás nem indítható jóváhagyott
+              // TO-BE térkép nélkül — látható függőség-üzenet, nem néma
+              // hiba. A tool maga (a térkép) nincs érintve, csak fogyasztva.
+              <div className="mt-3 rounded-tile border border-dashed border-line bg-sunken p-3 text-body text-ink-secondary">
+                <p>{t("toBePlanNeedsApprovedMap")}</p>
+                <Link
+                  href={`/project/${projectId}/process`}
+                  className="mt-1.5 inline-block text-mono-sm font-medium text-action underline"
+                >
+                  {t("toBePlanGoToProcessMap")}
+                </Link>
+              </div>
+            ) : (
+              lockWrap(
+                <div className="mt-3">
+                  {/* Típus-specifikus entitás-generátor: shortlist (#7a F4),
+                      Megoldási javaslat (Csomag A, A5) vagy TO-BE terv
+                      (Epic 3, 3.5) — a jóváhagyott TO-BE térképből (D2). */}
+                  {typeDef.key === "Megoldási javaslat" ? (
+                    <GenerateSolutionPlanForm projectId={projectId} />
+                  ) : typeDef.key === "TO-BE terv" ? (
+                    <GenerateToBePlanForm projectId={projectId} />
+                  ) : (
+                    <GenerateShortlistFieldsForm projectId={projectId} />
+                  )}
+                </div>,
+              )
+            ))}
           {latest && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {latest.status === "draft" &&

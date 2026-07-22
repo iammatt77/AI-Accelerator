@@ -22,6 +22,7 @@ import {
 import {
   generateShortlistFromEntitiesAction,
   generateSolutionPlanFromEntitiesAction,
+  generateToBePlanFromMapAction,
 } from "@/app/artifact-actions";
 import {
   AiActPanel,
@@ -780,6 +781,31 @@ export function GenerateSolutionPlanForm({ projectId }: { projectId: string }) {
         {t("generateSolutionPlanCta")}
       </SubmitButton>
       <p className="text-mono-sm text-ink-tertiary">{t("generateSolutionPlanHint")}</p>
+    </form>
+  );
+}
+
+// ── ③ TO-BE terv mezői a jóváhagyott TO-BE térképből (Epic 3, 3.5) ─
+
+export function GenerateToBePlanForm({ projectId }: { projectId: string }) {
+  const t = useTranslations("entities");
+  const [state, formAction] = useActionState(
+    generateToBePlanFromMapAction.bind(null, projectId),
+    initialState,
+  );
+
+  return (
+    <form action={formAction} className="space-y-2">
+      <ErrorAlert error={state.error} />
+      <NoticeAlert notice={state.notice} />
+      {state.ok && !state.notice && (
+        <p className="text-body text-done">{t("toBePlanFieldsDone")}</p>
+      )}
+      {/* Mezők entitásból = döntés-előkészítő generálás → lila (törvény 3) */}
+      <SubmitButton pendingLabel={t("generatingToBePlan")}>
+        {t("generateToBePlanCta")}
+      </SubmitButton>
+      <p className="text-mono-sm text-ink-tertiary">{t("generateToBePlanHint")}</p>
     </form>
   );
 }

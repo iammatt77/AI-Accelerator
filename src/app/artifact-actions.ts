@@ -23,14 +23,17 @@ import {
   customCriterionLabel,
   optionsOf,
   parseCriteriaValues,
+  resolveApprovedToBe,
   selectedOption,
 } from "@/lib/solution/model";
+import { graphFromJson } from "@/lib/processmap/parse";
 import type {
   ArtifactRow,
   ComponentOptionRow,
   EvalCaseRow,
   GoldenSetRow,
   InputItemRow,
+  ProcessMapRow,
   SolutionComponentRow,
   UseCaseRow,
 } from "@/lib/db/types";
@@ -1094,6 +1097,174 @@ export async function generateSolutionPlanFromEntitiesAction(
     "generate_solution_plan_fields",
     `Megoldási javaslat entitásokból: ${approved.length} jóváhagyott komponens ` +
       `nyertes opcióval, ${unionIds.length} forrás.`,
+  );
+  revalidateWorkspace(projectId);
+  return { ok: true, error: null };
+}
+
+// ── ③ TO-BE terv a JÓVÁHAGYOTT TO-BE folyamattérképből (Epic 3 · 3.5) ─
+// D2-átkötés a shortlist/Megoldási javaslat mintájára: a mezők a
+// JÓVÁHAGYOTT TO-BE process_maps sorból renderelődnek — a forrás
+// KIZÁRÓLAG a térkép, sosem a nyersanyag. A citáció-rendszer ([n]) a
+// node-onkénti source_input_ids hiányában nem alkalmazható erre a
+// típusra (a node.source_ref egyetlen idézet-objektum, nem indexelhető
+// forrás-lista) — a mezők ezért üres source_indices-szel készülnek,
+// ugyanúgy, ahogy a shortlist „ertekelesi_szempontok" mezője is teszi
+// olyan tartalomra, aminek nincs egyetlen-forrás alapja.
+
+const TOBE_PLAN_TYPE_KEY = "TO-BE terv";
+
+const NODE_TYPE_HU: Record<string, string> = {
+  start_end: "kezdő/záró pont",
+  human: "emberi lépés",
+  system: "rendszer-lépés",
+  decide: "döntési pont",
+  ai_intervention: "AI-beavatkozás",
+  control_hitl: "HITL-kontroll",
+};
+
+export async function generateToBePlanFromMapAction(
+  projectId: string,
+  _prevState: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const tErrors = await getTranslations("errors");
+  const typeDef = getTypeDef(TOBE_PLAN_TYPE_KEY);
+  if (!typeDef) {
+    return { ok: false, error: tErrors("typeNotFound", { type: TOBE_PLAN_TYPE_KEY }) };
+  }
+
+  const supabase = createServiceSupabaseClient();
+
+  const { data: mapData, error: mapErr } = await supabase
+    .from("process_maps")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("kind", "to_be");
+  if (mapErr) {
+    return { ok: false, error: tErrors("entityFetchFailed", { message: errMessage(mapErr) }) };
+  }
+  const maps = (mapData ?? []) as ProcessMapRow[];
+  // Defenzív őr (a gomb az OutputCard-ban csak jóváhagyott térképnél
+  // jelenik meg — ez a második, szerveroldali kapu ugyanarra a szabályra).
+  const approvedMap = resolveApprovedToBe(maps);
+  if (!approvedMap) {
+    return { ok: false, error: tErrors("toBePlanNeedsApprovedMap") };
+  }
+
+  const graph = graphFromJson(approvedMap.nodes, approvedMap.edges);
+  if (graph.nodes.length === 0) {
+    return { ok: false, error: tErrors("toBePlanNeedsApprovedMap") };
+  }
+
+  // Lépések sorrendben, próza (a tárolt node-sorrend — mint spineFromMap).
+  const stepsValue = graph.nodes
+    .map((n, i) => {
+      const head = `${i + 1}. ${n.title} [${NODE_TYPE_HU[n.type] ?? n.type}]`;
+      return n.desc ? `${head} — ${n.desc}` : head;
+    })
+    .join("\n");
+
+  // Elágazások: a >1 kimenő éllel rendelkező (jellemzően decide-) node-ok,
+  // az élek label-jével — ha a label üres, a cél-lépés címe áll helyette.
+  const outByFrom = new Map<string, typeof graph.edges>();
+  for (const e of graph.edges) {
+    const list = outByFrom.get(e.from) ?? [];
+    list.push(e);
+    outByFrom.set(e.from, list);
+  }
+  const titleOf = new Map(graph.nodes.map((n) => [n.id, n.title]));
+  const branches = graph.nodes.filter((n) => (outByFrom.get(n.id)?.length ?? 0) > 1);
+  const branchesValue = branches
+    .map((n) => {
+      const outs = outByFrom.get(n.id) ?? [];
+      const arms = outs
+        .map((e) => e.label || titleOf.get(e.to) || "?")
+        .join(" / ");
+      return `${n.title}: ${arms}`;
+    })
+    .join("\n");
+
+  // Beavatkozási pontok: az AI/rendszer-oldali beavatkozások (ahol a
+  // folyamat ténylegesen változik — a node-típus maga a jel, nincs
+  // perzisztált AS-IS↔TO-BE kiváltás-leképezés a fabrikáció elkerülésére).
+  const interventionNodes = graph.nodes.filter((n) => n.type === "ai_intervention");
+  const interventionValue = interventionNodes
+    .map((n) => (n.desc ? `${n.title} — ${n.desc}` : n.title))
+    .join("\n");
+
+  // HITL-kontrollok: kizárólag a control_hitl-típusú node-ok.
+  const hitlNodes = graph.nodes.filter((n) => n.type === "control_hitl");
+  const hitlValue = hitlNodes
+    .map((n) => (n.desc ? `${n.title} — ${n.desc}` : n.title))
+    .join("\n");
+
+  const confirmedField = (value: string): ArtifactFields[string] =>
+    value !== "" ? { value, source_indices: [], state: "confirmed" } : { ...EMPTY_FIELD };
+  const fields: ArtifactFields = {
+    to_be_lepesek: confirmedField(
+      branchesValue ? `${stepsValue}\n\nElágazások:\n${branchesValue}` : stepsValue,
+    ),
+    beavatkozasi_pontok: confirmedField(interventionValue),
+    hitl_kontrollok: confirmedField(hitlValue),
+    valtozas_hatasa: { ...EMPTY_FIELD },
+  };
+
+  // A térkép saját nyers-forrása (ha van) provenancia-jelleggel öröklődik
+  // az artifactra — NEM [n]-citáció (lásd fejléc-megjegyzés).
+  const sourceIds = approvedMap.source_input_id ? [approvedMap.source_input_id] : [];
+
+  const latest = await loadLatestArtifact(supabase, projectId, TOBE_PLAN_TYPE_KEY);
+  if (latest && latest.status === "in_review") {
+    return { ok: false, error: tErrors("artifactNotDraft") };
+  }
+  let renderedArtifactId: string | null = null;
+  if (latest && latest.status === "draft") {
+    const { data, error } = await supabase
+      .from("artifacts")
+      .update({
+        fields,
+        source_input_ids: sourceIds,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", latest.id)
+      .eq("status", "draft") // optimista guard
+      .select("id");
+    if (error || (data ?? []).length === 0) {
+      return {
+        ok: false,
+        error: error
+          ? tErrors("artifactSaveFailed", { message: errMessage(error) })
+          : tErrors("artifactNotDraft"),
+      };
+    }
+    renderedArtifactId = latest.id;
+  } else {
+    const created = await insertNewArtifact(supabase, projectId, typeDef, {
+      fields,
+      source_input_ids: sourceIds,
+    });
+    if (created.error) return { ok: false, error: created.error };
+    renderedArtifactId = created.id;
+  }
+
+  // Renderelés-él (3.5-b): a jóváhagyott TO-BE térkép egésze, teljes-
+  // dokumentum hatókörben (field_key=null) — a render_stale ezt figyeli.
+  if (renderedArtifactId) {
+    const edges = await replaceRenderLinks(supabase, projectId, renderedArtifactId, null, [
+      { target_type: "process_map", target_id: approvedMap.id },
+    ]);
+    if (edges.error) {
+      return { ok: false, error: tErrors("artifactSaveFailed", { message: edges.error }) };
+    }
+  }
+
+  await logDecision(
+    supabase,
+    projectId,
+    "generate_tobe_plan_from_map",
+    `TO-BE terv a jóváhagyott TO-BE térképből (v${approvedMap.version}): ` +
+      `${graph.nodes.length} lépés, ${branches.length} elágazás.`,
   );
   revalidateWorkspace(projectId);
   return { ok: true, error: null };

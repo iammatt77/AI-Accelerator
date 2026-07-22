@@ -299,17 +299,20 @@ const MEGOLDASI_JAVASLAT: ArtifactTypeDef = {
   entitySourced: true,
 };
 
-const TO_BE_TERV = {
-  // Csomag A (A6): kivezetve — a TO-BE igazság-forrása a Folyamattérkép
-  // TO-BE entitása (process_maps); a párhuzamos, összekötetlen dokumentum-
-  // reprezentáció megszűnik. Meglévő sorok olvashatók maradnak (retired).
-  retired: true,
+// Epic 3 · 3.5: D2-ként visszahozva — a Csomag A (A6) kivezette, mert
+// field-extractként a NYERSFORRÁSBÓL kivont, párhuzamosan a TO-BE
+// folyamattérképpel (elcsúszás-kockázat). A helyes mechanizmus: a
+// jóváhagyott TO-BE térkép egyetlen igazság-forrásból RENDERELŐDIK
+// (mint a Use case-rangsor) — nincs önálló kivonás, nincs elcsúszás.
+const TO_BE_TERV: ArtifactTypeDef = {
   ...deliverable("TO-BE terv", "toBeTerv", "P2", false, [
-  f("tobe", "to_be_lepesek", "TO-BE lépések", true, "A cél-folyamat lépései sorrendben."),
-  f("tobe", "beavatkozasi_pontok", "Beavatkozási pontok", true, "Hol változik a folyamat az AS-IS-hez képest."),
-  f("tobe", "hitl_kontrollok", "HITL-kontrollok", true, "Az emberi ellenőrzési pontok a folyamatban."),
-  f("tobe", "valtozas_hatasa", "Változás hatása", false, "A változás hatása szerepekre és terhelésre."),
-])};
+    f("tobe", "to_be_lepesek", "TO-BE lépések", true, "A cél-folyamat lépései sorrendben."),
+    f("tobe", "beavatkozasi_pontok", "Beavatkozási pontok", true, "Hol változik a folyamat az AS-IS-hez képest."),
+    f("tobe", "hitl_kontrollok", "HITL-kontrollok", true, "Az emberi ellenőrzési pontok a folyamatban."),
+    f("tobe", "valtozas_hatasa", "Változás hatása", false, "A változás hatása szerepekre és terhelésre."),
+  ]),
+  entitySourced: true,
+};
 
 // P3 — Build (kapu: KEMÉNY, INTERIM = Megoldás-dok. + Tesztriport)
 const MEGOLDAS_DOKUMENTACIO = deliverable(
