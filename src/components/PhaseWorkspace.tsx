@@ -139,11 +139,13 @@ export async function PhaseWorkspace({
   // KIZÁRÓLAG a mutáló triggereket öleli körbe (kivonatolás-indítás,
   // E1-gombok, generálás) — a navigációs Linkek (szerkesztő megnyitása,
   // export, verzió-előzmény) a hívási helyükön MARADNAK a wrapperen kívül.
+  // 3.3 FIX-1: az `inert` (React 19 natív) a Tab-fókuszból és az a11y-fából
+  // is kiveszi az alfát — billentyűzettel sem aktiválható.
   const lockWrap = (node: React.ReactNode) =>
     !locked ? (
       node
     ) : (
-      <div className="pointer-events-none select-none opacity-60" aria-disabled="true">
+      <div inert className="pointer-events-none select-none opacity-60" aria-disabled="true">
         {node}
       </div>
     );
