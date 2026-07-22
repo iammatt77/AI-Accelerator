@@ -354,7 +354,7 @@ export async function ProcessPreviewViz({ data }: { data: ProcessPreviewData }) 
           );
         })}
         {data.stepTotal > data.steps.length && (
-          <text x={366} y={65} textAnchor="end" style={ND} fill="var(--ink-tertiary)">
+          <text x={366} y={100} textAnchor="end" style={ND} fill="var(--ink-tertiary)">
             {t("preview.more", { n: data.stepTotal - data.steps.length })}
           </text>
         )}
@@ -501,6 +501,10 @@ export async function RequirementsPreviewViz({ data }: { data: RequirementsPrevi
 
 export async function OptionsPreviewViz({ data }: { data: OptionsPreviewData }) {
   const t = await getTranslations("tools");
+  const tSolution = await getTranslations("solution");
+  // Alap-szempont → i18n-felirat (solution.criteria.*); egyedi → a hordozott label.
+  const criterionLabel = (c: { key: string; label: string | null }) =>
+    c.label ?? tSolution(`criteria.${c.key}`);
   const empty = data.options.length === 0 || data.criteria.length === 0;
   const corner = data.stale
     ? await staleCorner(data.stale)
@@ -565,13 +569,13 @@ export async function OptionsPreviewViz({ data }: { data: OptionsPreviewData }) 
           <EmptyLines title={t("preview.empty.options")} hint={t("preview.empty.optionsHint")} y={62} />
         </>
       ) : (
-        data.criteria.map((label, ri) => {
+        data.criteria.map((crit, ri) => {
           const y = ROWS_Y[ri];
           if (y === undefined) return null;
           return (
             <g key={ri}>
               <text x={14} y={y + 8} style={TX} fill="var(--ink-secondary)">
-                {trunc(label, 13)}
+                {trunc(criterionLabel(crit), 13)}
               </text>
               {data.options.map((o, ci) => {
                 const col = COLS[ci];

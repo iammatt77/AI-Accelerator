@@ -89,8 +89,10 @@ export interface RequirementsPreviewData {
 }
 
 export interface OptionsPreviewData {
-  /** A mutatott komponens szempont-feliratai (max 3). */
-  criteria: string[];
+  /** A mutatott komponens szempontjai (max 3): kulcs + az opciókban hordozott
+   *  egyedi felirat (null = alap-készletbeli — a nézet a solution.criteria.*
+   *  i18n-feliratát használja). */
+  criteria: { key: string; label: string | null }[];
   /** A mutatott komponens opciói (max 3): jóság-szint szempontonként
    *  (a ComponentDetail valueTone-osztályozásával azonos szemantika). */
   options: { name: string; selected: boolean; levels: (0 | 1 | 2 | 3)[] }[];
@@ -379,7 +381,7 @@ export async function loadToolPreviews(
       .slice(0, 3);
     const winner = shownOpts.find((o) => o.is_selected) ?? null;
     out.solution = {
-      criteria: keys.map((k) => customCriterionLabel(shownOpts, k) ?? k),
+      criteria: keys.map((k) => ({ key: k, label: customCriterionLabel(shownOpts, k) })),
       options: shownOpts.map((o) => {
         const vals = parseCriteriaValues(o.criteria_values);
         return {
