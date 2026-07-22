@@ -410,7 +410,8 @@
     "closedZonesLabel": "Closed",
     "closedZonesHint": "This phase is closed — tools and documents are readable, editing is inactive.",
     "closedActionDisabledHint": "The phase is closed — this action is inactive.",
-    "zoneOutputDocsLabel": "documents"
+    "zoneOutputDocsLabel": "documents",
+    "noD1ForPhase": "Knowledge-element building happens in the tools — see the toolbar above the stepper."
   },
   "export": {
     "notFound": "Artifact not found.",

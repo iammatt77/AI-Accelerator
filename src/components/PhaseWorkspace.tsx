@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   completeness,
+  docTypeOf,
   parseArtifactFields,
   typesForPhase,
   type ArtifactTypeDef,
@@ -363,11 +364,18 @@ export async function PhaseWorkspace({
           return (v.state === "confirmed" || v.state === "manual") && Boolean(v.value);
         })
       : false;
+    // Epic 3 · 3.2-c: minden ③-kártyán a saját típusjelzés (D1/D2/D3) +
+    // a kapu-deliverable jelvény, ahol jár (typeDef.gate — kiírva, nem
+    // csak ikon). A D3-típusoknál a ② nem hordoz field-work blokkot (a
+    // típus nem entitySourced, de van moduleOwned mezője) — a kivonatolás
+    // + mező-partíció ITT, a kártyán belül jelenik meg (lásd lejjebb).
+    const docType = docTypeOf(typeDef);
+    const editable = latest?.status === "draft";
     return (
       <div className="space-y-3">
         <div className="surface-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-body font-semibold">{typeName(typeDef)}</span>
+            <span className="min-w-0 flex-1 text-body font-semibold">{typeName(typeDef)}</span>
             {latest ? (
               <StatusPill
                 variant={latest.status}
@@ -375,6 +383,19 @@ export async function PhaseWorkspace({
               />
             ) : (
               <span className="text-mono-sm text-ink-tertiary">{t("noArtifactYet")}</span>
+            )}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span
+              title={tArtifacts(`docTypeHint.${docType}`)}
+              className="rounded-3 border border-line bg-sunken px-1.5 py-px font-mono text-[10px] font-bold text-ink-secondary"
+            >
+              {docType}
+            </span>
+            {typeDef.gate && (
+              <span className="rounded-3 bg-tint-gate px-1.5 py-px font-mono text-[10px] font-bold uppercase tracking-wide text-gate-text">
+                {tArtifacts("gateDeliverableBadge")}
+              </span>
             )}
           </div>
           {latest && done && (
@@ -435,6 +456,26 @@ export async function PhaseWorkspace({
               </Link>
             </div>
           )}
+          {/* Epic 3 · 3.2-b/c: D3-típusnál a ② üres marad (a modul-mezőket
+              kizárólag a sync írja, a szabad doc-mezőknek pedig itt van a
+              helye — a spec F3 "teljes funkcióval (kivonatolás)" pontja).
+              A meglévő kivonatolás-gépezet (ExtractForm + FieldCard) NEM
+              új logika, csak áthelyezve a ②-ből ide. */}
+          {docType === "D3" && (
+            <div className="mt-4 border-t border-line pt-3">
+              <div className="mb-2 flex flex-wrap items-center gap-3 text-mono-sm text-ink-tertiary">
+                <span className="inline-flex items-center gap-1">
+                  <span aria-hidden>🔒</span>
+                  {t("moduleFieldPartitionHint")}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span aria-hidden>✎</span>
+                  {t("docFieldPartitionHint")}
+                </span>
+              </div>
+              <FieldWorkBody typeDef={typeDef} latest={latest} editable={editable} fields={fields} />
+            </div>
+          )}
         </div>
         {versions.length > 1 && (
           <ul className="space-y-1.5">
@@ -460,15 +501,22 @@ export async function PhaseWorkspace({
     );
   }
 
-  // ── Mező-kivonatolás blokk (②) egy típusra — Workbench tab ──
-  function FieldWorkBlock({ typeDef }: { typeDef: ArtifactTypeDef }) {
-    const latest = latestOfType(typeDef);
-    const editable = latest?.status === "draft";
-    const fields = latest ? parseArtifactFields(typeDef, latest.fields) : null;
+  // ── Kivonatolás-indítás + mezőnkénti elfogad/szerkeszt/elvet — a
+  // "guts" MINDKÉT helyről hívva: a ② FieldWorkBlock (D1-típusok) ÉS a
+  // ③ OutputCard (D3-típusok, a ② üres marad rájuk — lásd fent). ──
+  function FieldWorkBody({
+    typeDef,
+    latest,
+    editable,
+    fields,
+  }: {
+    typeDef: ArtifactTypeDef;
+    latest: ArtifactRow | null;
+    editable: boolean;
+    fields: ReturnType<typeof parseArtifactFields> | null;
+  }) {
     return (
-      <div className="surface-card space-y-3 p-4">
-        <h4 className="text-body font-semibold">{typeName(typeDef)}</h4>
-        <p className="text-mono-sm text-ink-tertiary">{t("toolsLead")}</p>
+      <>
         {latest && !editable && (
           <p className="rounded-tile border border-dashed border-line px-3 py-2 text-body text-ink-tertiary">
             {t("notDraftNotice")}
@@ -482,7 +530,7 @@ export async function PhaseWorkspace({
           (!latest || editable) && <ExtractForm projectId={projectId} typeKey={typeDef.key} />
         )}
         {latest && fields && (
-          <div className="space-y-2">
+          <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <h5 className="text-body font-semibold">
                 {t("fieldsTitle", { type: typeName(typeDef) })}
@@ -520,6 +568,20 @@ export async function PhaseWorkspace({
         {!latest && !typeDef.entitySourced && (
           <p className="text-body text-ink-tertiary">{t("noDraftYet")}</p>
         )}
+      </>
+    );
+  }
+
+  // ── Forráskinyerő blokk (②) egy D1-típusra — Feldolgozás zóna ──
+  function FieldWorkBlock({ typeDef }: { typeDef: ArtifactTypeDef }) {
+    const latest = latestOfType(typeDef);
+    const editable = latest?.status === "draft";
+    const fields = latest ? parseArtifactFields(typeDef, latest.fields) : null;
+    return (
+      <div className="surface-card space-y-3 p-4">
+        <h4 className="text-body font-semibold">{typeName(typeDef)}</h4>
+        <p className="text-mono-sm text-ink-tertiary">{t("toolsLead")}</p>
+        <FieldWorkBody typeDef={typeDef} latest={latest} editable={editable} fields={fields} />
       </div>
     );
   }
@@ -568,8 +630,12 @@ export async function PhaseWorkspace({
     </section>
   );
 
-  // Nem entitás-forrású típusok (mező-kivonatolás a workbench-en).
-  const fieldTypes = phaseTypes.filter((td) => !td.entitySourced);
+  // Epic 3 · 3.2-b: a ② KIZÁRÓLAG D1-típusokat rendereli — sem az
+  // entitásból renderelt (D2), sem a modul-szinkronizált (D3) típusnak
+  // NINCS field-work blokkja itt (a D3 kivonatolása a ③-kártyán belül
+  // van, lásd OutputCard). A besorolás a típus-tulajdonságokból derivált
+  // (docTypeOf) — nincs fázis-specifikus kivétel a kódban.
+  const d1Types = phaseTypes.filter((td) => docTypeOf(td) === "D1");
 
   const workbenchPanel = isP1 ? (
     <div className="space-y-5">
@@ -782,16 +848,22 @@ export async function PhaseWorkspace({
 
       </div>
 
-      {/* Nem entitás-forrású típus(ok) mező-munkája (pl. Felmérési riport) */}
-      {fieldTypes.map((typeDef) => (
+      {/* D1 típus(ok) forráskinyerő blokkja (pl. Felmérési riport) */}
+      {d1Types.map((typeDef) => (
         <FieldWorkBlock key={typeDef.key} typeDef={typeDef} />
       ))}
     </div>
   ) : phaseTypes.length === 0 ? (
     <p className="surface-card p-4 text-body text-ink-tertiary">{t("noTypesForPhase")}</p>
+  ) : d1Types.length === 0 ? (
+    // Epic 3 · 3.2-b (F2): a fázisnak VAN dokumentum-típusa, de egyik sem
+    // D1 (mind entitásból renderelt vagy modul-szinkronizált) — a ②-ben
+    // nincs mit kivonatolni, a tudáselem-építés a tool-sávban zajlik.
+    // Generalizált szabály (docTypeOf), nem "if P3" hardkód.
+    <p className="surface-card p-4 text-body text-ink-tertiary">{t("noD1ForPhase")}</p>
   ) : (
     <div className="space-y-5">
-      {phaseTypes.map((typeDef) => (
+      {d1Types.map((typeDef) => (
         <FieldWorkBlock key={typeDef.key} typeDef={typeDef} />
       ))}
     </div>
@@ -895,7 +967,7 @@ export async function PhaseWorkspace({
   // az ① Források zónán nyílik (F4). A forrás-felvétel az ① panelben van.
 
   // ── Fül-jelvények (valós számlálók) ─────────────────────────
-  const confirmedFieldCount = fieldTypes.reduce((acc, td) => {
+  const confirmedFieldCount = d1Types.reduce((acc, td) => {
     const latest = latestOfType(td);
     if (!latest) return acc;
     const f = parseArtifactFields(td, latest.fields);
@@ -907,22 +979,31 @@ export async function PhaseWorkspace({
       }).length
     );
   }, 0);
-  // ── Output-mezők összegzése (kitöltött/kötelező) a flow-sáv Output-kártyához ──
-  let outFilled = 0;
-  let outRequired = 0;
-  for (const td of phaseTypes) {
-    const latest = latestOfType(td);
-    if (!latest) continue;
-    const c = completeness(td, parseArtifactFields(td, latest.fields));
-    outFilled += c.filled;
-    outRequired += c.required;
-  }
+  // ── ③ zóna-kártya metrikája (Epic 3 · 3.2-c, item #5 javítás) ──
+  // Dokumentum-szintű, FELTÉTEL NÉLKÜLI számláló — ugyanaz a séma, mint
+  // az ①/②/④ kártyákon (sosem rejtőzik el nulla induló dokumentumnál;
+  // a korábbi mező-completeness-alapú metrika `undefined`-ra esett vissza
+  // 0 induló dokumentumnál, ELTÉRVE a másik három zónától — ez volt a
+  // hiányzó P2-számláló gyökéroka).
+  const outputStarted = phaseTypes.filter((td) => latestOfType(td) !== null).length;
   const firstStartedOutput = phaseTypes
     .map((td) => latestOfType(td))
     .find((a): a is ArtifactRow => a !== null);
   const latestOutputStatus = firstStartedOutput
     ? tArtifacts(`status.${firstStartedOutput.status}`)
     : undefined;
+  // Az összegző mondat „még N mező kell" tippjéhez — KÜLÖN a zóna-kártya
+  // metrikájától (az fentebb dokumentum-számláló lett); ez a mező-szintű
+  // completeness-összeg, változatlan logikával.
+  let gateFieldsFilled = 0;
+  let gateFieldsRequired = 0;
+  for (const td of phaseTypes) {
+    const latest = latestOfType(td);
+    if (!latest) continue;
+    const c = completeness(td, parseArtifactFields(td, latest.fields));
+    gateFieldsFilled += c.filled;
+    gateFieldsRequired += c.required;
+  }
 
   const painTotal = allPains.filter((p) => p.state !== "rejected").length;
   const ucScored = useCases.filter(
@@ -971,8 +1052,8 @@ export async function PhaseWorkspace({
       tone: "muted",
       chip: latestOutputStatus,
       chipTone: "muted",
-      metric: outRequired > 0 ? `${outFilled}/${outRequired}` : undefined,
-      metricLabel: outRequired > 0 ? t("zoneOutputLabel") : undefined,
+      metric: `${outputStarted}/${phaseTypes.length}`,
+      metricLabel: t("zoneOutputDocsLabel"),
     },
     {
       key: "gate",
@@ -1025,7 +1106,7 @@ export async function PhaseWorkspace({
   const summaryLead = isP1
     ? t("summaryP1Lead", { confirmed: painConfirmed.length, total: painTotal, scored: ucScored })
     : t("summaryGeneric", { confirmed: confirmedFieldCount });
-  const fieldsLeft = Math.max(0, outRequired - outFilled);
+  const fieldsLeft = Math.max(0, gateFieldsRequired - gateFieldsFilled);
   const summaryRest = [
     isP1 && painProposals.length > 0 ? t("summaryWaiting", { code: firstProposalCode }) : "",
     fieldsLeft > 0 ? t("summaryFieldsLeft", { n: fieldsLeft }) : "",

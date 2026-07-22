@@ -410,7 +410,8 @@
     "closedZonesLabel": "Lezárva",
     "closedZonesHint": "Ez a fázis lezárva — a toolok és a dokumentumok olvashatók, a szerkesztés inaktív.",
     "closedActionDisabledHint": "A fázis lezárva — ez a művelet inaktív.",
-    "zoneOutputDocsLabel": "dokumentum"
+    "zoneOutputDocsLabel": "dokumentum",
+    "noD1ForPhase": "A tudáselem-építés a toolokban zajlik — nézd meg a stepper fölötti tool-sávot."
   },
   "export": {
     "notFound": "Az artefaktum nem található.",
