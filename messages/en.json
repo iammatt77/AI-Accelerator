@@ -403,7 +403,8 @@
     "unlockWorkbench": "Unlocks after the first extraction.",
     "unlockOutput": "Unlocks once ≥1 pain point is confirmed.",
     "gateCriteriaList": "prioritise · score · approve report",
-    "nextBestStep": "Next best step: paste the kickoff interview transcript"
+    "nextBestStep": "Next best step: paste the kickoff interview transcript",
+    "gateGoAria": "Go to: {target}"
   },
   "export": {
     "notFound": "Artifact not found.",
@@ -1954,5 +1955,32 @@
     "syncOriginP2": "origin: P2 · {name}",
     "syncOriginManual": "origin: manual",
     "syncImplements": "implements"
+  },
+  "tools": {
+    "barTag": "TOOLBAR",
+    "barTitle": "Phase tools",
+    "barLead": "click to open",
+    "empty": "This phase has no tool. The toolbar appears from P1.",
+    "open": "Open",
+    "names": {
+      "heatmap": "Heatmap",
+      "stakeholderMatrix": "Influence × impact",
+      "processAsIs": "Process map",
+      "processToBe": "Process map",
+      "requirements": "Requirements",
+      "solution": "Option comparison",
+      "builddoc": "Solution builder",
+      "goldenset": "Golden set & report"
+    },
+    "desc": {
+      "heatmap": "Value × feasibility from the confirmed use cases",
+      "stakeholderMatrix": "Stakeholder matrix — engagement strategy in four quadrants",
+      "processAsIs": "The current-state steps with pain-point markers",
+      "processToBe": "The target-state steps and intervention points",
+      "requirements": "Business → stakeholder → solution requirement, story, AC",
+      "solution": "Option matrix + HITL winner choice → solution components",
+      "builddoc": "Components, prompts and control points of the built solution",
+      "goldenset": "Test-case set + evaluation → test report"
+    }
   }
 }

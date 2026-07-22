@@ -403,7 +403,8 @@
     "unlockWorkbench": "Az első kivonatolás után nyílik.",
     "unlockOutput": "Legalább 1 megerősített fájdalompont után nyílik.",
     "gateCriteriaList": "prioritizálás · pontozás · riport-jóváhagyás",
-    "nextBestStep": "Következő legjobb lépés: illeszd be a kickoff interjú átiratát"
+    "nextBestStep": "Következő legjobb lépés: illeszd be a kickoff interjú átiratát",
+    "gateGoAria": "Ugrás: {target}"
   },
   "export": {
     "notFound": "Az artefaktum nem található.",
@@ -1954,5 +1955,32 @@
     "syncOriginP2": "eredet: P2 · {name}",
     "syncOriginManual": "eredet: manuális",
     "syncImplements": "megvalósítja"
+  },
+  "tools": {
+    "barTag": "TOOL-SÁV",
+    "barTitle": "A fázis eszközei",
+    "barLead": "kattintásra megnyílnak",
+    "empty": "Ebben a fázisban nincs tool. A tool-sáv a P1-től jelenik meg.",
+    "open": "Megnyitás",
+    "names": {
+      "heatmap": "Hőtérkép",
+      "stakeholderMatrix": "Befolyás × érintettség",
+      "processAsIs": "Folyamattérkép",
+      "processToBe": "Folyamattérkép",
+      "requirements": "Követelmények",
+      "solution": "Opció-összevető",
+      "builddoc": "Megoldás-tervező",
+      "goldenset": "Golden set & riport"
+    },
+    "desc": {
+      "heatmap": "Érték × megvalósíthatóság a jóváhagyott use case-ekből",
+      "stakeholderMatrix": "Stakeholder-mátrix — kezelési stratégia négy negyedben",
+      "processAsIs": "A jelen állapot lépései, fájdalompont-jelölőkkel",
+      "processToBe": "A cél-folyamat lépései és beavatkozási pontjai",
+      "requirements": "Üzleti → stakeholder → megoldás-követelmény, story, AC",
+      "solution": "Opció-mátrix + HITL nyertes-választás → megoldás-komponensek",
+      "builddoc": "A megépített megoldás komponensei, promptjai, kontrollpontjai",
+      "goldenset": "Teszteset-készlet + kiértékelés → Tesztriport"
+    }
   }
 }

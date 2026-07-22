@@ -356,6 +356,46 @@ export function WorkbenchHeatmap({
   );
 }
 
+/** Csomag B1: a hőtérkép fókusz-mód mint TOOL-belépő. A `children` a
+ *  tool-sáv-kártya; kattintásra a MEGLÉVŐ fókusz-modál nyílik (a modál
+ *  vizuálja változatlan — B3). Üres (pontozatlan) hőtérképnél letiltva. */
+export function HeatmapFocusTrigger({
+  points,
+  shortlist,
+  clientName,
+  phaseName,
+  children,
+}: {
+  points: HeatmapPoint[];
+  shortlist: ShortlistItem[];
+  clientName: string;
+  phaseName: string;
+  children: React.ReactNode;
+}) {
+  const [focus, setFocus] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setFocus(true)}
+        className="block w-full text-left"
+        aria-haspopup="dialog"
+      >
+        {children}
+      </button>
+      {focus && (
+        <HeatmapFocus
+          points={points}
+          shortlist={shortlist}
+          clientName={clientName}
+          phaseName={phaseName}
+          onExit={() => setFocus(false)}
+        />
+      )}
+    </>
+  );
+}
+
 /** Hőtérkép fókusz-mód (design 1d): teljes képernyős, ügyfél-workshop
  *  nézet. All ⇄ Shortlist szűrő, nagy térkép + shortlist-sáv + „a térkép
  *  olvasása" magyarázó. Read-only (a pontozás a workbench confirm-lépésén

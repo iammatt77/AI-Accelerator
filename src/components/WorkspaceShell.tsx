@@ -10,6 +10,10 @@ import { useTranslations } from "next-intl";
 // a Gate-kártya megnevezi a nyílt kritériumot. A kártyák kattinthatók: az
 // aktív zóna panelja alul jelenik meg (a fül-mechanizmus megmarad, csak a
 // megjelenés lett flow-sáv). A panelek szerveroldalon renderelt ReactNode-ok.
+//
+// Csomag B1: CONTROLLED — az aktív zónát a `PhaseZones` (ZoneNav) birtokolja
+// és adja át props-ban, hogy a stepper FÖLÖTTI tool-sáv és a kapu-gombok is
+// tudjanak zónát váltani (közös állapot). A stepper maga a zóna-váltó.
 // ─────────────────────────────────────────────────────────────
 
 export interface FlowZone {
@@ -43,14 +47,17 @@ const TONE_BAR: Record<FlowZone["tone"], string> = {
 export function ZoneFlowStrip({
   zones,
   panels,
-  defaultZone,
+  active,
+  onSelect,
 }: {
   zones: FlowZone[];
   panels: Record<string, React.ReactNode>;
-  defaultZone: string;
+  /** Az aktív zóna kulcsa (controlled — a PhaseZones birtokolja). */
+  active: string;
+  onSelect: (key: string) => void;
 }) {
   const t = useTranslations("workspace");
-  const [active, setActive] = useState(defaultZone);
+  const setActive = onSelect;
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const onKeyNav = (e: React.KeyboardEvent, index: number) => {

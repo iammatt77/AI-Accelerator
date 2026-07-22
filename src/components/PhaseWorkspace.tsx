@@ -58,7 +58,6 @@ import {
   StakeholderProposalCard,
   type StakeholderCardData,
 } from "@/components/StakeholderForms";
-import { WorkbenchHeatmap } from "@/components/UseCaseHeatmap";
 import {
   aiActWarnFor,
   parseAiAct,
@@ -66,12 +65,14 @@ import {
   parseDataReadiness,
 } from "@/lib/entities/evaluators";
 import {
-  ZoneFlowStrip,
   DrillRow,
   ShowMore,
   CollapsedGroup,
   type FlowZone,
 } from "@/components/WorkspaceShell";
+import { PhaseZones, GateCriterionAction } from "@/components/ZoneNav";
+import { PhaseToolbar } from "@/components/PhaseToolbar";
+import { criterionTarget, defaultActiveZone } from "@/lib/phases/tools";
 import { GateCloseForm } from "@/components/PhaseGateForms";
 import { PhaseStateIcon } from "@/components/icons";
 import { StatusPill } from "@/components/StatusPill";
@@ -102,7 +103,7 @@ export async function PhaseWorkspace({
   clientName: string;
   phaseName: string;
 }) {
-  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty, tEnt, tCriteria, tSt] =
+  const [locale, t, tGates, tArtifacts, tTypes, tFields, tEmpty, tEnt, tCriteria, tSt, tTools] =
     await Promise.all([
       getLocale(),
       getTranslations("workspace"),
@@ -114,6 +115,7 @@ export async function PhaseWorkspace({
       getTranslations("entities"),
       getTranslations("criteria"),
       getTranslations("stakeholders"),
+      getTranslations("tools"),
     ]);
   const typeName = (typeDef: ArtifactTypeDef) =>
     tTypes(typeDef.nameKey.replace(/^artifactTypes\./, ""));
@@ -337,14 +339,6 @@ export async function PhaseWorkspace({
       shortlisted: u.list_status === "shortlist" || u.list_status === "selected",
       aiActWarn: aiActWarnFor(u),
     }));
-  const heatmapUnscored = useCases
-    .filter(
-      (u) =>
-        isUcConfirmed(u) &&
-        u.list_status !== "excluded" &&
-        (u.score_value === null || u.score_feasibility === null),
-    )
-    .map((u) => ({ id: u.id, title: u.title }));
   const heatmapShortlist = useCases
     .filter(
       (u) =>
@@ -579,8 +573,10 @@ export async function PhaseWorkspace({
 
   const workbenchPanel = isP1 ? (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        {/* Bal: entitás-munka */}
+      {/* Csomag B1: a hőtérkép TOOL kikerült a workbenchből a tool-sávba
+          (egyetlen tool sem renderelődik a zónában). A ② itt tisztán az
+          entitás-munka; a hőtérkép a stepper fölötti tool-sávból nyílik. */}
+      <div className="space-y-5">
         <div className="space-y-5">
           {/* Fájdalompontok (v2: tömör lap, a „Next" CTA görgetési célpontja) */}
           <section
@@ -730,8 +726,9 @@ export async function PhaseWorkspace({
           </section>
 
           {/* Stakeholderek (#8): kivonatolás → E1-javaslatok → megerősített
-              sorok a dedikált nézetre mutató linkkel */}
-          <section className="surface-card p-4">
+              sorok a dedikált nézetre mutató linkkel. A `#stakeholders`
+              horgony a tool-sáv „Befolyás × érintettség" kártyájának célja. */}
+          <section id="stakeholders" className="scroll-mt-4 surface-card p-4">
             <h4 className="text-body font-semibold">
               {tSt("sectionTitle")}{" "}
               <span className="font-mono text-mono-sm font-normal text-ink-tertiary">
@@ -783,16 +780,6 @@ export async function PhaseWorkspace({
           </section>
         </div>
 
-        {/* Jobb: hőtérkép (mindig látható) + fókusz-mód */}
-        <div>
-          <WorkbenchHeatmap
-            points={heatmapPoints}
-            unscored={heatmapUnscored}
-            shortlist={heatmapShortlist}
-            clientName={clientName}
-            phaseName={phaseName}
-          />
-        </div>
       </div>
 
       {/* Nem entitás-forrású típus(ok) mező-munkája (pl. Felmérési riport) */}
@@ -823,6 +810,21 @@ export async function PhaseWorkspace({
 
   // ── Gate panel (④, a fázis-oldalról ide emelve) ─────────────
   const satisfiedCount = criteria.filter((c) => c.satisfied).length;
+  // Kapu-navigáció (B1-c): a nem teljesült feltétel akció-célja a zóna
+  // emberi neve (② Feldolgozás / ③ Kimenet) vagy a tool neve. A cél a
+  // kritériumból derivált (nincs séma-mező).
+  const zoneDisplayLabel = (zone: string): string => {
+    const key =
+      zone === "workbench"
+        ? "zoneTools"
+        : zone === "output"
+          ? "zoneOutput"
+          : zone === "input"
+            ? "zoneInput"
+            : "zoneGate";
+    return tGates(key);
+  };
+
   const gatePanel = !hasGate(phase) ? (
     <section className="card-sunken p-4">
       <p className="text-body font-semibold">{tGates("noGate")}</p>
@@ -836,32 +838,45 @@ export async function PhaseWorkspace({
         {tGates("criteriaTitle")}
       </h3>
       <ul className="mt-2 space-y-1.5">
-        {criteria.map((criterion) => (
-          <li key={criterion.id} className="flex items-center gap-2 text-body">
-            <span className={criterion.satisfied ? "text-done" : "text-gate"}>
-              <PhaseStateIcon
-                state={criterion.satisfied ? "completed" : "gate_pending"}
-                size={11}
-              />
-            </span>
-            <span className="min-w-0 flex-1">
-              {criterionLabel(criterion, tCriteria, tTypes)}
-            </span>
-            {criterion.interim && (
-              <span
-                title={tGates("interimHint")}
-                className="shrink-0 rounded-pill border border-dashed border-line px-1.5 py-px text-[10px] font-medium text-ink-tertiary"
-              >
-                {tGates("interimBadge")}
+        {criteria.map((criterion) => {
+          const target = criterion.satisfied
+            ? null
+            : criterionTarget(criterion.id, criterion.typeKey);
+          return (
+            <li key={criterion.id} className="flex items-center gap-2 text-body">
+              <span className={criterion.satisfied ? "text-done" : "text-gate"}>
+                <PhaseStateIcon
+                  state={criterion.satisfied ? "completed" : "gate_pending"}
+                  size={11}
+                />
               </span>
-            )}
-            <span
-              className={`shrink-0 text-mono-sm font-medium ${criterion.satisfied ? "text-done" : "text-gate"}`}
-            >
-              {criterion.satisfied ? tGates("criterionSatisfied") : tGates("criterionPending")}
-            </span>
-          </li>
-        ))}
+              <span className="min-w-0 flex-1">
+                {criterionLabel(criterion, tCriteria, tTypes)}
+              </span>
+              {criterion.interim && (
+                <span
+                  title={tGates("interimHint")}
+                  className="shrink-0 rounded-pill border border-dashed border-line px-1.5 py-px text-[10px] font-medium text-ink-tertiary"
+                >
+                  {tGates("interimBadge")}
+                </span>
+              )}
+              {/* B1-c: a nem teljesült feltétel → oda visz, ahol orvosolható
+                  (zóna-váltás reload nélkül, vagy a tool megnyitása). */}
+              {target ? (
+                <GateCriterionAction
+                  target={target}
+                  zoneLabel={target.kind === "zone" ? zoneDisplayLabel(target.zone) : undefined}
+                  toolLabel={target.kind === "tool" ? tTools(`names.${target.toolId}`) : undefined}
+                />
+              ) : (
+                <span className="shrink-0 text-mono-sm font-medium text-done">
+                  {tGates("criterionSatisfied")}
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {state !== "open" && (
         <div className="mt-4">
@@ -874,52 +889,10 @@ export async function PhaseWorkspace({
     </section>
   );
 
-  // ── Üres állapot (v2 1b): csak az Input él (dashed lila); a downstream
-  // zónák megnevezik a saját unlock-feltételüket, alul a „Next best step". ──
-  if (isP1 && inputs.length === 0) {
-    const zLabel = (key: string) => tGates(key).replace(/^[^\p{L}]+/u, "");
-    const lockedZone = (index: number, labelKey: string, lockText: string) => (
-      <div className="flex flex-1 items-stretch">
-        <span aria-hidden className="flex items-center px-1.5 text-neutral-300">
-          ›
-        </span>
-        <div className="min-w-0 flex-1 rounded-tile border border-line bg-neutral-100 p-4 text-ink-tertiary">
-          <div className="font-mono text-mono-sm font-bold uppercase tracking-wide">
-            {index} · {zLabel(labelKey)}
-          </div>
-          <p className="mt-2 text-body">{lockText}</p>
-        </div>
-      </div>
-    );
-    return (
-      <div className="space-y-4">
-        <div className="flex flex-col items-stretch gap-0 lg:flex-row lg:flex-wrap">
-          <div className="flex flex-[1.3] flex-col items-center justify-center gap-2.5 rounded-tile border-[1.5px] border-dashed border-action bg-tint-action/40 p-6 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-tile bg-action-light text-action">
-              <span className="text-title leading-none">+</span>
-            </div>
-            <h3 className="text-title">{t("emptyAddTitle")}</h3>
-            <p className="max-w-md text-body text-ink-secondary">{t("emptyAddBody")}</p>
-            <div className="mt-1 w-full max-w-md text-left">
-              <PhaseInputForm projectId={projectId} phase={phase} />
-            </div>
-          </div>
-          {lockedZone(2, "zoneTools", t("unlockWorkbench"))}
-          {lockedZone(3, "zoneOutput", t("unlockOutput"))}
-          {lockedZone(4, "zoneGate", t("gateCriteriaList"))}
-        </div>
-        <div className="flex items-center gap-3 rounded-tile border border-line-soft bg-context px-4 py-3">
-          <span
-            aria-hidden
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-3 bg-action-light text-action"
-          >
-            →
-          </span>
-          <span className="text-body font-semibold">{t("nextBestStep")}</span>
-        </div>
-      </div>
-    );
-  }
+  // Csomag B1-b: az „üres állapot" korábbi külön elrendezése (lezárt,
+  // nem kattintható downstream zónák) megszűnik — a stepper MINDIG
+  // zóna-váltó (mind a négy kártya kattintható), a forrás nélküli fázis
+  // az ① Források zónán nyílik (F4). A forrás-felvétel az ① panelben van.
 
   // ── Fül-jelvények (valós számlálók) ─────────────────────────
   const confirmedFieldCount = fieldTypes.reduce((acc, td) => {
@@ -1022,12 +995,29 @@ export async function PhaseWorkspace({
     },
   ];
 
-  const defaultZone =
-    state === "open" || inputs.length === 0
-      ? "input"
-      : state === "gate_pending"
-        ? "gate"
-        : "workbench";
+  // F4 (B1-b): nincs forrás → ①; van forrás + a ② forráskinyerő (P0/P1/P2)
+  // → ②; van forrás + a ② üres (P3) → ③. (A kézi zóna-váltás a munkamenet
+  // idejére felülírja; fázis-váltáskor újra ez az alapértelmezés érvényes.)
+  const defaultZone = defaultActiveZone(phase, inputs.length > 0);
+
+  // Tool-sáv (B1-a): a fázis eszközei a stepper FÖLÖTT. P1: a hőtérkép a
+  // fókusz-modálhoz kap adatot (relokálva a workbenchből).
+  const toolbar = (
+    <PhaseToolbar
+      phase={phase}
+      projectId={projectId}
+      heatmap={
+        isP1
+          ? {
+              points: heatmapPoints,
+              shortlist: heatmapShortlist,
+              clientName,
+              phaseName,
+            }
+          : undefined
+      }
+    />
+  );
 
   // ── Összegző mondat + elsődleges „Next" CTA (v2) ──
   const firstProposalCode =
@@ -1061,7 +1051,10 @@ export async function PhaseWorkspace({
         )}
       </div>
 
-      <ZoneFlowStrip
+      {/* B1: a tool-sáv a stepper FÖLÖTT; a PhaseZones birtokolja az aktív-
+          zóna állapotot (a tool-sáv és a kapu-gombok is válthatnak). */}
+      <PhaseZones
+        toolbar={toolbar}
         zones={zones}
         panels={{
           input: inputPanel,
