@@ -281,8 +281,11 @@ end $$;
 -- metaadatot LEFT JOIN köti a horgonyon; metaadat nélküli elem kimarad,
 -- ha szűrő van megadva (nem tudja teljesíteni). A hasonlóság = 1 - koszinusz
 -- távolság (<=>), így 1.0 = azonos, 0 = merőleges.
+-- A query_embedding TEXT-ként érkezik (a lokális shim minden paramétert
+-- szövegként köt; a valós PostgREST is elfogadja) → belül vector(1024)-re
+-- kasztoljuk. A literál alakja: "[0.1,0.2,…]".
 create or replace function match_knowledge_embeddings(
-  query_embedding vector(1024),
+  query_embedding text,
   p_project_id uuid,
   p_scope text default null,
   p_modality_family text[] default null,
@@ -304,10 +307,12 @@ returns table (
 )
 language sql stable
 as $$
+  -- a text-paramétert egyszer kasztoljuk vektorrá (a shim text-ként köti)
+  with q as (select query_embedding::vector(1024) as v)
   select
     e.block_type, e.block_id, e.artifact_id, e.field_key,
     e.content_text, e.model_name, e.model_version,
-    1 - (e.embedding <=> query_embedding) as similarity
+    1 - (e.embedding <=> (select v from q)) as similarity
   from knowledge_embeddings e
   left join knowledge_metadata m
     on m.project_id = e.project_id
@@ -326,7 +331,7 @@ as $$
       and coalesce(e.artifact_id::text, '') = coalesce(p_exclude_artifact_id::text, '')
       and coalesce(e.field_key, '') = coalesce(p_exclude_field_key, '')
     )
-  order by e.embedding <=> query_embedding
+  order by e.embedding <=> (select v from q)
   limit match_count;
 $$;
 
