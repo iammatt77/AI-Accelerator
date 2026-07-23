@@ -508,3 +508,137 @@ export interface KnowledgeCatalogRow {
   approved_at: string;
   created_at: string;
 }
+
+// ── Epic 4 · 4.1 (0017): elavulás-modell kiterjesztése ───────
+// Közös horgony (katalógus-cédula, compliance 1. döntés): entitás-cédula
+// (block_id) VAGY artifact_field cédula (block_type='artifact_field' +
+// artifact_id + field_key). A KnowledgeAnchor a lib/knowledge/anchor.ts-ben.
+
+export type Modality =
+  | "historikus"
+  | "as_is"
+  | "normativ"
+  | "to_be"
+  | "ismeretlen";
+
+export type SourceOrgLevel = "hq" | "helyi" | "kulso" | "ismeretlen";
+
+/** knowledge_metadata sora (0017) — a négydimenziós keret + explicit
+ *  elavítás. A horgony a katalógus-cédula. valid_time PG tstzrange
+ *  szövegként (pl. "[2024-01-01,)"). */
+export interface KnowledgeMetadataRow {
+  id: string;
+  project_id: string;
+  block_type: string;
+  block_id: string | null;
+  artifact_id: string | null;
+  field_key: string | null;
+  modality: Modality;
+  valid_time: string | null;
+  lang: string | null;
+  source_person_stakeholder_id: string | null;
+  source_org_level: SourceOrgLevel;
+  source_kind: string | null;
+  scope: string | null;
+  deprecated_at: string | null;
+  deprecated_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** knowledge_embeddings sora (0017) — a vektor a horgonyhoz kötve, a
+ *  modell nevével+verziójával (F4: modell-váltáskor mit újraszámolni). */
+export interface KnowledgeEmbeddingRow {
+  id: string;
+  project_id: string;
+  block_type: string;
+  block_id: string | null;
+  artifact_id: string | null;
+  field_key: string | null;
+  embedding: number[];
+  model_name: string;
+  model_version: string;
+  content_text: string;
+  created_at: string;
+}
+
+/** knowledge_supersessions sora (0017) — irányított meghaladott→meghaladó
+ *  él, KÖTELEZŐ indoklással. A meghaladott elem NEM törlődik (a katalógus
+ *  nézet amúgy is derivált). */
+export interface KnowledgeSupersessionRow {
+  id: string;
+  project_id: string;
+  superseded_block_type: string;
+  superseded_block_id: string | null;
+  superseded_artifact_id: string | null;
+  superseded_field_key: string | null;
+  superseding_block_type: string;
+  superseding_block_id: string | null;
+  superseding_artifact_id: string | null;
+  superseding_field_key: string | null;
+  reason: string;
+  created_at: string;
+}
+
+/** A hat finding-típus (①–⑥) számként; a tervezési dok. §3 sorrendje. */
+export type FindingType = 1 | 2 | 3 | 4 | 5 | 6;
+
+/** Finding állapot: a feloldható ág (1,4,5) hat értéke + a lelet-ág (2,3,6)
+ *  egy értéke. Lásd a 0017 status-branch CHECK-jét. */
+export type FindingStatus =
+  | "felismerve"
+  | "a_ervenyes"
+  | "b_ervenyes"
+  | "mindketto_ervenyes"
+  | "hamis_pozitiv"
+  | "osszevonando"
+  | "lelet";
+
+/** A feloldható ág terminál végállapotai (F7). */
+export type FindingResolution =
+  | "a_ervenyes"
+  | "b_ervenyes"
+  | "mindketto_ervenyes"
+  | "hamis_pozitiv"
+  | "osszevonando";
+
+/** knowledge_findings sora (0017) — elem-pár (a_* / b_* horgony) + típus +
+ *  bizonyíték + állapot. A feloldható ág állapotgépe a tervezési dok. §5. */
+export interface KnowledgeFindingRow {
+  id: string;
+  project_id: string;
+  finding_type: FindingType;
+  a_block_type: string;
+  a_block_id: string | null;
+  a_artifact_id: string | null;
+  a_field_key: string | null;
+  b_block_type: string;
+  b_block_id: string | null;
+  b_artifact_id: string | null;
+  b_field_key: string | null;
+  evidence: string | null;
+  status: FindingStatus;
+  resolved_at: string | null;
+  resolution_reason: string | null;
+  created_at: string;
+}
+
+/** knowledge_dismissals sora (0017) — sticky elutasítás + a pár akkori
+ *  tartalom-lenyomatai (F8: érdemi szöveg-változás újra-értékelést vált ki). */
+export interface KnowledgeDismissalRow {
+  id: string;
+  project_id: string;
+  finding_type: FindingType;
+  a_block_type: string;
+  a_block_id: string | null;
+  a_artifact_id: string | null;
+  a_field_key: string | null;
+  b_block_type: string;
+  b_block_id: string | null;
+  b_artifact_id: string | null;
+  b_field_key: string | null;
+  dismissed_reason: string | null;
+  a_fingerprint: string;
+  b_fingerprint: string;
+  dismissed_at: string;
+}
