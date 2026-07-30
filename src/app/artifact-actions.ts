@@ -110,11 +110,17 @@ export async function addPhaseInput(
   }
 
   const supabase = createServiceSupabaseClient();
+  // 0013 (A8): group_id NOT NULL — egy vadonatúj forrás a SAJÁT csoportjának
+  // v1-e (group_id = id), a migráció backfill-jével azonos szabály, csak
+  // beszúráskor. Kliens-oldali id, hogy a group_id ugyanazt az értéket kapja.
+  const id = crypto.randomUUID();
   const { error } = await supabase.from("input_items").insert({
+    id,
     project_id: projectId,
     type: title || "raw",
     raw_text: rawText,
     phase,
+    group_id: id,
   });
   if (error) {
     return {
