@@ -1262,9 +1262,10 @@
   },
   "processMap": {
     "errInputNotFound": "A kiválasztott bemenet nem található a projektben.",
-    "noticeNoSteps": "A feldolgozás lefutott, de nem adott azonosítható folyamat-lépést — nézd meg a forrást.",
+    "noticeNoSteps": "A feldolgozás lefutott, de nem talált azonosítható folyamat-lépést ebben a forrásban — ha a forrás mégis tartalmaz folyamatot, próbáld konkrétabb, lépésekre bontott szöveggel.",
     "errSave": "A folyamatterv mentése nem sikerült: {message}",
     "errLlm": "A generálás nem sikerült: {message}",
+    "errTruncated": "A modell válasza a forrás terjedelme/összetettsége miatt csonkolt lett — bontsd rövidebb szakaszra a forrást, és generáld külön-külön.",
     "errAsIsNotFound": "Az AS-IS folyamatterv nem található — előbb azt generáld le.",
     "errMapNotFound": "A folyamatterv nem található.",
     "errChatApproved": "Jóváhagyott terv chatből már nem módosítható — indíts új iterációt.",

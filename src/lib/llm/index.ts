@@ -789,7 +789,9 @@ export async function extractProcessMap(
   const system = [
     "Üzleti folyamat-elemző vagy egy AI-implementációs tanácsadói rendszerben.",
     "A megadott nyers leiratból a LEÍRT folyamat lépéseit rekonstruálod, bejárható",
-    "gráfként. KIZÁRÓLAG érvényes JSON-t adsz vissza. SZIGORÚ SZABÁLY: csak olyan",
+    "gráfként. KIZÁRÓLAG érvényes JSON-t adsz vissza — magyarázó szöveget, bevezetőt",
+    "vagy összefoglalót SEM a JSON előtt, SEM utána ne írj, még akkor sem, ha a",
+    "forrás összetett (sok lépés, több elágazás). SZIGORÚ SZABÁLY: csak olyan",
     "lépést vehetsz fel, amelyre a leiratban tényleges alap van; a quote mező",
     "SZÓ SZERINTI idézet a forrásból (rövidíthetsz …-tal, de nem fogalmazhatsz át).",
     "TILOS lépést kitalálni vagy általános folyamat-tudásból pótolni.",
@@ -804,6 +806,19 @@ export async function extractProcessMap(
     "merge), az is rendben. Kerüld a HAMIS LINEARITÁST: a leirat „ha X, akkor…,",
     "egyébként…” szerkezetét elágazó next-ekkel add vissza, ne egymás utáni",
     "lépésekként. DE ne találj ki elágazást ott, ahol a folyamat valóban lineáris.",
+    "VALÓDI PÁRHUZAM (Parallel Split/Join, megkülönböztetendő a döntéstől): ha a",
+    "leirat szerint egy lépés után KÉT VAGY TÖBB ág EGYIDEJŰLEG, feltétel nélkül",
+    "fut (nem választás, mindegyik lefut), a szétválasztó lépés type-ja",
+    "parallel_split legyen (NEM decide), a next-jei ág-label NÉLKÜL mutassanak a",
+    "párhuzamos ágakra; ha az ágak összefutnak, az összefutó lépés type-ja",
+    "parallel_join legyen.",
+    "VISSZAUGRÓ ÉL / CIKLUS: ha a leirat szerint egy lépés egy KORÁBBI lépésre tér",
+    "vissza (pl. „nem sikerült, vissza a X. lépéshez”), ez ÉRVÉNYES — a next.to",
+    "egyszerűen a korábbi lépés id-jára mutasson; ne hagyd ki ezt az élt, és ne",
+    "duplikáld a korábbi lépést egy új node-ként.",
+    "TÖBB VÉGPONT: ha a folyamatnak több különálló záró állapota van (pl. több",
+    "kilépési pont), mindegyik külön start_end type-ú node legyen — nem kell egy",
+    "közös záró node-ba terelni őket.",
     "A kezdő és a záró állapot type-ja start_end. Az eredmény magyarul készül.",
   ].join(" ");
 
@@ -820,10 +835,20 @@ export async function extractProcessMap(
   const client = getClient();
   const message = await client.messages.create({
     model: getModel(),
-    max_tokens: 6000,
+    // 16000: a korábbi 6000 egy gazdag, sok lépéses/gateway-es forrásnál (szó
+    // szerinti idézet KÖTELEZŐ node-onként) csonkolódáshoz vezethetett — a
+    // csonka JSON-t a parse némán üres gráfként adta vissza (l. alább).
+    max_tokens: 16000,
     system,
     messages: [{ role: "user", content: userPrompt }],
   });
+  if (message.stop_reason === "max_tokens") {
+    // A válasz csonkolt — a JSON.parse hibázna, a parse pedig ezt NEM tudná
+    // megkülönböztetni a "nincs folyamat a forrásban" esettől. Külön, a
+    // hívó (generateProcessMapAction) által felismerhető jelzéssel dobunk,
+    // hogy a felhasználó pontos, tettre-ösztönző hibát kapjon.
+    throw new Error("PROCESS_MAP_TRUNCATED");
+  }
   return parseProcessProposal(textFromMessage(message), refLabel, source.title);
 }
 
@@ -908,6 +933,19 @@ export async function suggestToBeProcess(
 
 // ── Folyamattérkép mock-fixture-ök (determinisztikus) ────────
 
+// Durva jelző arra, hogy a forrás gateway-gazdag, nem-lineáris folyamatot
+// ír le (számozott lépéssor, 10+ tétel) — ilyenkor a mock a GAZDAG fixture-t
+// adja vissza (lásd mockExtractRichProcessMap), különben a régi lineáris
+// panaszkezelés-mintát. Ez zárja a 2026-07-30-i harmadik MOCK-rést: korábban
+// a mock MINDIG ugyanazt az egy-gateway, párhuzam/ciklus/több-típus/több-
+// végpont NÉLKÜLI fixture-t adta vissza, függetlenül a forrás struktúrájától
+// — így a self-check sosem gyakorolta azt az útvonalat, ahol a valós LLM
+// (nagy, sokféle idézetet igénylő kimenet) csonkolhat.
+const NUMBERED_STEP_RE = /^\s*\d+[.)]\s/gm;
+function isGatewayRichSource(text: string): boolean {
+  return (text.match(NUMBERED_STEP_RE)?.length ?? 0) >= 10;
+}
+
 // A demo panaszkezelés-leiratához igazított AS-IS: lineáris lánc + egy
 // kétágú döntés, ami visszacsatlakozik (a bejárás/ág-választás tesztelhető).
 // Az idézetek SZÓ SZERINT a reset-demo transzkriptjéből valók, hogy a
@@ -916,6 +954,9 @@ export async function suggestToBeProcess(
 function mockExtractProcessMap(source: LlmSource, refLabel: string): ParsedProcess {
   if (source.text.trim().length < 40) {
     return { title: "", graph: { nodes: [], edges: [] } };
+  }
+  if (isGatewayRichSource(source.text)) {
+    return mockExtractRichProcessMap(source, refLabel);
   }
   const steps = [
     { id: "s1", title: "Panasz beérkezik", sub: "email · központi cím", type: "start_end", desc: "A panaszok egy központi címre érkeznek, napi ~40 darab, hullámzó eloszlással.", quote: "Napi negyven körül jön be, hullámzik.", loc: "04:12", open_points: [], next: [{ to: "s2", label: null }] },
@@ -928,6 +969,41 @@ function mockExtractProcessMap(source: LlmSource, refLabel: string): ParsedProce
   ];
   return parseProcessProposal(
     JSON.stringify({ title: "Panaszkezelés — jelenlegi folyamat", steps }),
+    refLabel,
+    source.title,
+  );
+}
+
+// Gateway-gazdag, NEM-lineáris fixture (2026-07-30, a dokumentum-út
+// felzárkóztatásának verifikációjához) — egy 10+ számozott lépéses forrásra
+// vált be (isGatewayRichSource). Tartalmazza mindazt, amit az egyszerű
+// panaszkezelés-fixture NEM: több gateway CÍMKÉZETT ágakkal (s3, s9, s13),
+// valódi Parallel Split/Join (s4→s6,s7→s8 — AND-szemantika, NEM döntés),
+// visszaugró él/ciklus (s5→s3), 8 különböző node-típus, és 4 db start_end
+// végpont (1 nyitó + 3 záró). Ez a struktúra a dokumentum-út mockjában
+// EDDIG sosem futott le — a self-check ezért nem fogta meg a valós ágon
+// jelentkező csonkolási/formátum-hibát erre a forrás-osztályra.
+function mockExtractRichProcessMap(source: LlmSource, refLabel: string): ParsedProcess {
+  const steps = [
+    { id: "s1", title: "Kérelem beérkezik", sub: null, type: "start_end", desc: "A kérelem az ügyfélportálon keresztül érkezik.", quote: "1. A kérelem az ügyfélportálon keresztül érkezik be.", loc: "1. lépés", open_points: [], next: [{ to: "s2", label: null }] },
+    { id: "s2", title: "Iktatás és előzetes átnézés", sub: null, type: "human", desc: "Az ügyintéző iktatja a kérelmet és előzetesen átnézi a mellékleteket.", quote: "2. Az ügyintéző iktatja és előzetesen átnézi a beadott dokumentumokat.", loc: "2. lépés", open_points: [], next: [{ to: "s3", label: null }] },
+    { id: "s3", title: "Teljes-e a dokumentáció?", sub: null, type: "decide", desc: "Döntési pont: hiánytalan-e a benyújtott dokumentáció.", quote: "3. Ha a dokumentáció hiányos, hiánypótlást kell kérni, egyébként a folyamat folytatódik.", loc: "3. lépés", open_points: [], next: [{ to: "s4", label: "Igen" }, { to: "s5", label: "Nem · hiánypótlás szükséges" }] },
+    { id: "s5", title: "Hiánypótlás kérése az ügyféltől", sub: "visszaugró ág", type: "human", desc: "Az ügyintéző hiánypótlást kér; a beérkezés után a dokumentáció-ellenőrzés újra lefut.", quote: "5. Hiánypótlás esetén az ügyfél pótolja a hiányzó dokumentumokat, és a folyamat a 3. lépésnél folytatódik.", loc: "5. lépés", open_points: [{ level: "clarify", text: "Hiánypótlási határidő egyeztetendő." }], next: [{ to: "s3", label: null }] },
+    { id: "s4", title: "Párhuzamos ellenőrzés indul", sub: "szabály + szakértő EGYIDEJŰLEG", type: "parallel_split", desc: "A dokumentáció egyszerre, feltétel nélkül két ellenőrzési ágra fut szét — mindkét ág lefut, ez NEM választás.", quote: "4. Ezután egyidejűleg elindul az automatikus szabály-ellenőrzés és a szakértői átvizsgálás.", loc: "4. lépés", open_points: [], next: [{ to: "s6", label: null }, { to: "s7", label: null }] },
+    { id: "s6", title: "Automatikus szabály-ellenőrzés", sub: "rendszer", type: "system", desc: "A rendszer automatikusan ellenőrzi a formai szabályoknak való megfelelést.", quote: "6. Az automatikus szabály-ellenőrzés a formai megfelelést vizsgálja.", loc: "6. lépés", open_points: [], next: [{ to: "s8", label: null }] },
+    { id: "s7", title: "Szakértői átvizsgálás", sub: null, type: "human", desc: "Egy szakértő tartalmilag átvizsgálja a kérelmet.", quote: "7. A szakértő párhuzamosan tartalmi átvizsgálást végez.", loc: "7. lépés", open_points: [], next: [{ to: "s8", label: null }] },
+    { id: "s8", title: "Az ellenőrzések eredménye összefut", sub: null, type: "parallel_join", desc: "A szabály-ellenőrzés és a szakértői átvizsgálás eredménye itt fut össze, mielőtt a döntés következik.", quote: "8. Amint mindkét ellenőrzés lezárult, az eredmények összefutnak a döntéshez.", loc: "8. lépés", open_points: [], next: [{ to: "s9", label: null }] },
+    { id: "s9", title: "Megfelel mindkét ellenőrzésen?", sub: null, type: "decide", desc: "Döntési pont: a szabály-ellenőrzés ÉS a szakértői átvizsgálás is megfelelt-e.", quote: "9. Ha mindkét ellenőrzésen megfelelt, a kérelem továbbmegy jóváhagyásra, egyébként elutasításra kerül.", loc: "9. lépés", open_points: [], next: [{ to: "s10", label: "Igen" }, { to: "s11", label: "Nem · elutasítás" }] },
+    { id: "s11", title: "Elutasítva az ellenőrzés után — lezárva", sub: "1. végpont", type: "start_end", desc: "A kérelem elutasításra kerül, az ügy itt lezárul.", quote: "11. Sikertelen ellenőrzés esetén a kérelmet elutasítják, az ügy lezárul.", loc: "11. lépés", open_points: [], next: [] },
+    { id: "s10", title: "Vezetői jóváhagyás", sub: "kötelező emberi kontroll", type: "control_hitl", desc: "Automata döntés innentől nem mehet tovább emberi jóváhagyás nélkül.", quote: "10. A megfelelt kérelmeket a vezető kézzel hagyja jóvá, mielőtt továbbmennek.", loc: "10. lépés", open_points: [{ level: "blocker", text: "A jóváhagyás SLA-ja nincs rögzítve." }], next: [{ to: "s12", label: null }] },
+    { id: "s12", title: "AI-alapú döntés-összegzés generálása", sub: null, type: "ai_intervention", desc: "Az AI a vezető számára összefoglalja a kérelmet és az ellenőrzések eredményét.", quote: "12. A rendszer AI-alapú összegzést készít a vezető döntéséhez.", loc: "12. lépés", open_points: [], next: [{ to: "s13", label: null }] },
+    { id: "s13", title: "A vezető jóváhagyja a végső döntést?", sub: null, type: "decide", desc: "Döntési pont: a vezető elfogadja-e az AI-összegzés alapján a javasolt döntést.", quote: "13. A vezető az összegzés alapján jóváhagyja vagy elutasítja a végső döntést.", loc: "13. lépés", open_points: [], next: [{ to: "s14", label: "Igen" }, { to: "s15", label: "Nem · elutasítás" }] },
+    { id: "s15", title: "Elutasítva vezetői döntéssel — lezárva", sub: "2. végpont", type: "start_end", desc: "A vezető elutasítja a kérelmet, az ügy itt lezárul.", quote: "15. Vezetői elutasítás esetén az ügy lezárul.", loc: "15. lépés", open_points: [], next: [] },
+    { id: "s14", title: "Automatikus értesítés és irattározás", sub: null, type: "system", desc: "A rendszer értesíti az ügyfelet és irattározza a döntést.", quote: "14. Jóváhagyás esetén a rendszer automatikusan értesíti az ügyfelet és irattározza az ügyet.", loc: "14. lépés", open_points: [], next: [{ to: "s16", label: null }] },
+    { id: "s16", title: "Jóváhagyva — ügy lezárva", sub: "3. végpont", type: "start_end", desc: "A kérelem jóváhagyva, az ügy sikeresen lezárul.", quote: "16. A kérelem jóváhagyásával az ügy sikeresen lezárul.", loc: "16. lépés", open_points: [], next: [] },
+  ];
+  return parseProcessProposal(
+    JSON.stringify({ title: "Gateway-gazdag folyamat (verifikációs fixture)", steps }),
     refLabel,
     source.title,
   );

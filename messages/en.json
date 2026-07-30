@@ -1262,9 +1262,10 @@
   },
   "processMap": {
     "errInputNotFound": "The selected input was not found in the project.",
-    "noticeNoSteps": "Processing finished but produced no identifiable process step — check the source.",
+    "noticeNoSteps": "Processing finished but found no identifiable process step in this source — if the source does describe a process, try a more concrete, step-by-step text.",
     "errSave": "Saving the process map failed: {message}",
     "errLlm": "Generation failed: {message}",
+    "errTruncated": "The model's response was truncated by the source's length/complexity — split the source into shorter sections and generate them separately.",
     "errAsIsNotFound": "The AS-IS process map was not found — generate it first.",
     "errMapNotFound": "The process map was not found.",
     "errChatApproved": "An approved map can no longer be edited from chat — start a new iteration.",

@@ -106,6 +106,9 @@ export async function generateProcessMapAction(
     }
     mapId = (data as { id: string }).id;
   } catch (e) {
+    if (e instanceof Error && e.message === "PROCESS_MAP_TRUNCATED") {
+      return { ok: false, error: t("errTruncated") };
+    }
     return { ok: false, error: t("errLlm", { message: e instanceof Error ? e.message : "?" }) };
   }
   revalidatePath(`/project/${projectId}/process`);
