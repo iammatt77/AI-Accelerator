@@ -642,3 +642,66 @@ export interface KnowledgeDismissalRow {
   b_fingerprint: string;
   dismissed_at: string;
 }
+
+// ── Epic 4 · 4.2 (0018): címkézés konfidencia-jelei + javítás-napló ──
+
+/** A címkézés öt dimenziója (a 0018 CHECK-listája). */
+export type LabelDimension = "modality" | "valid_time" | "scope" | "source" | "lang";
+
+/** Egy dimenzió konfidencia-jele a signals jsonb-ben. A label a gép JELÖLTJE
+ *  (kétesnél is — a felülvizsgálat ezt kínálja fel); accepted mondja meg,
+ *  átment-e a küszöbön (false → a metaadatban ismeretlen/null a fallback).
+ *  A votes CSAK a kényes tengelyen (modalitás, eszkalált N=3-5) töltött. */
+export interface DimensionSignal {
+  label: string | null;
+  confidence: number;
+  reason: string | null;
+  evidence: string | null;
+  /** Szó szerint megtalálható-e a bizonyíték a cédula-szövegben. */
+  evidence_verbatim?: boolean;
+  /** Szavazatmegoszlás (pl. {"as_is":3,"normativ":2}) — F2: megjelenítendő. */
+  votes?: Record<string, number>;
+  /** Hány minta készült (1 / 3 / 5). */
+  samples?: number;
+  accepted: boolean;
+  /** 'ember' → a gép nem írja felül (F4). */
+  source: "gep" | "ember";
+  /** source-dimenziónál: a modell által megnevezett személy nyers neve. */
+  person_name?: string | null;
+  /** source-dimenziónál: forrás-típus (dokumentum/interju/…). */
+  kind?: string | null;
+}
+
+/** knowledge_label_signals sora (0018) — horgonyonként egy; újracímkézés
+ *  csere. A doubtful elem NEM vesz részt a felismerésben (F3, a 4.3 szűr). */
+export interface KnowledgeLabelSignalRow {
+  id: string;
+  project_id: string;
+  block_type: string;
+  block_id: string | null;
+  artifact_id: string | null;
+  field_key: string | null;
+  signals: Partial<Record<LabelDimension, DimensionSignal>>;
+  doubtful: boolean;
+  doubtful_dimensions: string[];
+  labeled_at: string;
+  updated_at: string;
+}
+
+/** knowledge_label_corrections sora (0018) — append-only javítás-napló (F5).
+ *  Hangolási irány: was_doubtful + old=new → túl óvatos volt;
+ *  nem-kétes + old≠new → túl bátor volt. */
+export interface KnowledgeLabelCorrectionRow {
+  id: string;
+  project_id: string;
+  block_type: string;
+  block_id: string | null;
+  artifact_id: string | null;
+  field_key: string | null;
+  dimension: LabelDimension;
+  old_label: string | null;
+  new_label: string | null;
+  machine_confidence: number | null;
+  was_doubtful: boolean;
+  corrected_at: string;
+}

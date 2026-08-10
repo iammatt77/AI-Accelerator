@@ -2414,3 +2414,296 @@ function mockSuggestImplLinks(
   const valid = new Set(candidates.map((c) => `${c.targetType}:${c.label}`));
   return parseImplLinkSuggestions(JSON.stringify({ links: picked }), valid);
 }
+
+// ─────────────────────────────────────────────────────────────
+// Katalógus-címkézés (Epic 4 · 4.2-a) — EGY minta osztályozása.
+//
+// Az önkonzisztencia (N=3-5) a HÍVÓNÁL (lib/knowledge/labeling) él: ez a
+// függvény egyetlen mintát ad. FONTOS: a jelenlegi modellen a temperature
+// nem elfogadott paraméter — a minták közti változatosság a modell
+// alapértelmezett sztochasztikus mintavételéből jön (a hívás ismétlése).
+// A sampleIndex a MOCK determinisztikus varianciájához kell (valós hívásnál
+// nincs hatása).
+// ─────────────────────────────────────────────────────────────
+
+import {
+  parseKnowledgeLabelSample,
+  type KnowledgeLabelSample,
+} from "./parse";
+export type { KnowledgeLabelSample, LabelAxisResult } from "./parse";
+
+export interface KnowledgeClassifyContext {
+  /** A projekt stakeholder-nevei (forrás-attribúció jelöltjei). */
+  stakeholderNames?: string[];
+  /** Mock-variancia index (0-tól); valós hívásnál figyelmen kívül marad. */
+  sampleIndex?: number;
+}
+
+export async function classifyKnowledgeItem(
+  text: string,
+  ctx: KnowledgeClassifyContext = {},
+): Promise<KnowledgeLabelSample> {
+  if (isMock()) {
+    return mockClassifyKnowledge(text, ctx.sampleIndex ?? 0, ctx.stakeholderNames ?? []);
+  }
+
+  const system = [
+    "Tudáskatalógus-címkéző vagy egy AI-implementációs tanácsadói rendszerben.",
+    "Egy jóváhagyott tudáselem cédula-szövegét címkézed öt dimenzión.",
+    "KIZÁRÓLAG érvényes JSON-t adsz vissza, magyarázat nélkül.",
+    "A szöveg kevert magyar/angol lehet — EZ A VALÓSÁG: ne fordíts, ne",
+    "normalizálj. Minden evidence mező SZÓ SZERINTI részlet a megadott",
+    "szövegből (rövidíthetsz, de nem fogalmazhatsz át).",
+    "MODALITÁS: historikus (múltbeli állapot/esemény) · as_is (a jelenlegi",
+    "működés MEGFIGYELÉSE — így csináljuk) · normativ (ELŐÍRÁS — kell,",
+    "kötelező, tilos; policy/szabály) · to_be (tervezett/jövőbeli állapot) ·",
+    "ismeretlen. A borderline mező igaz, ha az as_is ÉS a normativ olvasat",
+    "egyaránt védhető (megfigyelésként és előírásként is olvasható).",
+    "Ha egy dimenzió a szövegből NEM állapítható meg: label null (idő, scope,",
+    "kind, person) vagy 'ismeretlen' (modalitás, org_level) — a confidence a",
+    "SAJÁT ítéleted biztosságát fejezi ki (a „nincs adat” is lehet magabiztos",
+    "ítélet). TILOS adatot kitalálni.",
+    "A confidence 0..1 szám. NE adj udvariassági magas értéket — a",
+    "bizonytalanság kimondása itt érték, nem hiba.",
+    "valid_time: tstzrange-literál — '[2024-01-01,)' (2024-től, nyitott vég),",
+    "'[2024-01-01,2025-01-01)' (a 2024-es év); vagy null.",
+    "source: person = a szövegben megnevezett/egyértelműen tulajdonítható",
+    "személy NYERS neve vagy null; org_level = hq (központi előírás) / helyi",
+    "(helyi gyakorlat) / kulso (külső fél) / ismeretlen; kind = dokumentum /",
+    "interju / megfigyeles / rendszeradat vagy null.",
+    "scope: RÖVID téma-címke (1-3 szó), miről szól az elem.",
+    "lang: hu / en / hu-en (kevert).",
+  ].join(" ");
+
+  const names = (ctx.stakeholderNames ?? []).filter(Boolean);
+  const userPrompt = [
+    "── A tudáselem cédula-szövege ──",
+    text,
+    "",
+    names.length > 0
+      ? `── A projekt ismert stakeholderei (person-jelöltek) ──\n${names.join(" · ")}\n`
+      : "",
+    "Add vissza pontosan ebben a JSON-alakban:",
+    `{"modality":{"label":"as_is","confidence":0.9,"reason":"<egy mondat>",` +
+      `"evidence":"<szó szerinti idézet>","borderline":false},` +
+      `"valid_time":{"label":"[2024-01-01,)","confidence":0.8,"reason":"…","evidence":"…"},` +
+      `"scope":{"label":"panaszkezelés","confidence":0.8,"reason":"…","evidence":"…"},` +
+      `"source":{"person":null,"org_level":"helyi","kind":"interju",` +
+      `"confidence":0.7,"reason":"…","evidence":"…"},` +
+      `"lang":{"label":"hu","confidence":0.95,"reason":"…","evidence":"…"}}`,
+    "Csak JSON-t adj vissza.",
+  ].join("\n");
+
+  const client = getClient();
+  const message = await client.messages.create({
+    model: getModel(),
+    max_tokens: 2000,
+    system,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return parseKnowledgeLabelSample(textFromMessage(message));
+}
+
+// Determinisztikus címkéző-mock — a MOCK-RÉS ELV szerint HATÁRESETEKKEL:
+// kevert megfigyelés+előírás szöveg → borderline + váltakozó minták (a
+// szavazatmegoszlás 3/2-re fut ki → kétes); rövid szöveg → alacsony
+// konfidencia (eszkaláció, de egyhangú szavazás → feloldódik); év nélküli
+// határidő-említés → kétes érvényességi idő; HU+EN keverék → hu-en nyelv;
+// ismeretlen forrás → alacsony konfidenciájú attribúció.
+function snippetAround(text: string, re: RegExp): string {
+  const m = re.exec(text);
+  if (!m) return text.slice(0, 60);
+  const start = Math.max(0, m.index - 20);
+  return text.slice(start, Math.min(text.length, m.index + m[0].length + 30));
+}
+
+function mockClassifyKnowledge(
+  text: string,
+  sampleIndex: number,
+  stakeholderNames: string[],
+): KnowledgeLabelSample {
+  const NORM = /kötelező|tilos|kell\b|must\b|policy|szabályzat|előírás/i;
+  const ASIS = /jelenleg|minden reggel|\bma\b|currently|jellemzően|a gyakorlatban/i;
+  const TOBE = /\blesz\b|tervez|will\b|jövőben/i;
+  const HIST = /\bvolt\b|korábban|tavaly/i;
+
+  const norm = NORM.test(text);
+  const asis = ASIS.test(text);
+  let modality: KnowledgeLabelSample["modality"];
+  if (norm && asis) {
+    // as_is/normativ átfedés: a minták váltakoznak → 3/2 megoszlás N=5-nél
+    modality = {
+      label: sampleIndex % 2 === 0 ? "as_is" : "normativ",
+      confidence: 0.55,
+      reason: "A szöveg megfigyelésként és előírásként is olvasható.",
+      evidence: snippetAround(text, NORM),
+      borderline: true,
+    };
+  } else if (norm) {
+    modality = {
+      label: "normativ",
+      confidence: 0.9,
+      reason: "Explicit előírás-nyelv (kell/kötelező/tilos).",
+      evidence: snippetAround(text, NORM),
+      borderline: false,
+    };
+  } else if (TOBE.test(text)) {
+    modality = {
+      label: "to_be",
+      confidence: 0.85,
+      reason: "Tervezett/jövőbeli állapot leírása.",
+      evidence: snippetAround(text, TOBE),
+      borderline: false,
+    };
+  } else if (HIST.test(text)) {
+    modality = {
+      label: "historikus",
+      confidence: 0.85,
+      reason: "Múltbeli állapotra utaló nyelv.",
+      evidence: snippetAround(text, HIST),
+      borderline: false,
+    };
+  } else if (asis) {
+    modality = {
+      label: "as_is",
+      confidence: 0.85,
+      reason: "Jelen idejű működés-megfigyelés.",
+      evidence: snippetAround(text, ASIS),
+      borderline: false,
+    };
+  } else if (text.trim().length < 60) {
+    // alacsony konfidencia → eszkaláció; a minták EGYHANGÚAK (as_is) →
+    // a szavazás feloldja (túl-óvatos-e a küszöb? — ezt méri a napló)
+    modality = {
+      label: "as_is",
+      confidence: 0.45,
+      reason: "Rövid szöveg, kevés jelzés — bizonytalan besorolás.",
+      evidence: text.trim().slice(0, 40),
+      borderline: false,
+    };
+  } else {
+    modality = {
+      label: "ismeretlen",
+      confidence: 0.8,
+      reason: "A szövegben nincs modalitás-jelzés.",
+      evidence: text.trim().slice(0, 40),
+      borderline: false,
+    };
+  }
+
+  const YEAR = /20\d\d/;
+  const DEADLINE = /határidő|deadline/i;
+  let validTime: KnowledgeLabelSample["validTime"];
+  const year = YEAR.exec(text);
+  if (year) {
+    validTime = {
+      label: year[0],
+      confidence: 0.8,
+      reason: "Explicit évszám a szövegben.",
+      evidence: snippetAround(text, YEAR),
+    };
+  } else if (DEADLINE.test(text)) {
+    validTime = {
+      label: null,
+      confidence: 0.45,
+      reason: "Határidő-említés konkrét dátum nélkül.",
+      evidence: snippetAround(text, DEADLINE),
+    };
+  } else {
+    validTime = {
+      label: null,
+      confidence: 0.85,
+      reason: "Nincs időjelzés a szövegben.",
+      evidence: text.trim().slice(0, 40),
+    };
+  }
+
+  let scope: KnowledgeLabelSample["scope"];
+  if (/panasz/i.test(text)) {
+    scope = { label: "panaszkezelés", confidence: 0.85, reason: "Panaszkezelési téma.", evidence: snippetAround(text, /panasz\w*/i) };
+  } else if (/riport|report/i.test(text)) {
+    scope = { label: "riportolás", confidence: 0.8, reason: "Riportolási téma.", evidence: snippetAround(text, /riport\w*|report\w*/i) };
+  } else if (/sablon|template/i.test(text)) {
+    scope = { label: "válasz-sablonok", confidence: 0.75, reason: "Sablon-téma.", evidence: snippetAround(text, /sablon\w*|template\w*/i) };
+  } else {
+    const firstLong = text.split(/\s+/).find((w) => w.length >= 6) ?? "általános";
+    scope = {
+      label: firstLong.toLowerCase().replace(/[^a-záéíóöőúüű-]/gi, ""),
+      confidence: 0.5,
+      reason: "Nincs egyértelmű téma-jelzés — gyenge jelölt.",
+      evidence: text.trim().slice(0, 40),
+    };
+  }
+
+  const matchedName = stakeholderNames.find((n) => n && text.toLowerCase().includes(n.toLowerCase()));
+  let source: KnowledgeLabelSample["source"];
+  if (matchedName) {
+    source = {
+      label: "helyi",
+      confidence: 0.8,
+      reason: "Megnevezett belső személytől származó állítás.",
+      evidence: snippetAround(text, new RegExp(matchedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")),
+      personName: matchedName,
+      kind: "interju",
+    };
+  } else if (/szabályzat|policy|kézikönyv/i.test(text)) {
+    source = {
+      label: "hq",
+      confidence: 0.8,
+      reason: "Központi dokumentumra utaló nyelv.",
+      evidence: snippetAround(text, /szabályzat|policy|kézikönyv/i),
+      personName: null,
+      kind: "dokumentum",
+    };
+  } else if (/ügyfél|customer|külső/i.test(text)) {
+    source = {
+      label: "kulso",
+      confidence: 0.7,
+      reason: "Külső félre utaló nyelv.",
+      evidence: snippetAround(text, /ügyfél|customer|külső/i),
+      personName: null,
+      kind: null,
+    };
+  } else {
+    source = {
+      label: "ismeretlen",
+      confidence: 0.4,
+      reason: "A forrás a szövegből nem azonosítható.",
+      evidence: text.trim().slice(0, 40),
+      personName: null,
+      kind: null,
+    };
+  }
+
+  const HU = /[áéíóöőúüű]/i;
+  const EN = /\b(the|and|of|process|report|must|workflow|team)\b/i;
+  let lang: KnowledgeLabelSample["lang"];
+  if (HU.test(text) && EN.test(text)) {
+    lang = { label: "hu-en", confidence: 0.75, reason: "Kevert magyar/angol szöveg.", evidence: snippetAround(text, EN) };
+  } else if (HU.test(text)) {
+    lang = { label: "hu", confidence: 0.95, reason: "Magyar szöveg.", evidence: text.trim().slice(0, 40) };
+  } else if (EN.test(text)) {
+    lang = { label: "en", confidence: 0.9, reason: "Angol szöveg.", evidence: snippetAround(text, EN) };
+  } else {
+    lang = { label: "hu", confidence: 0.5, reason: "Nyelvi jelzés nélküli rövid szöveg.", evidence: text.trim().slice(0, 40) };
+  }
+
+  // A parse-on át adjuk vissza (ugyanaz a koerciós út, mint élesben — a
+  // fixture nem kerülheti meg a parse-t, MOCK-rés elv).
+  return parseKnowledgeLabelSample(
+    JSON.stringify({
+      modality: { ...modality },
+      valid_time: validTime,
+      scope,
+      source: {
+        person: source.personName,
+        org_level: source.label,
+        kind: source.kind,
+        confidence: source.confidence,
+        reason: source.reason,
+        evidence: source.evidence,
+      },
+      lang,
+    }),
+  );
+}

@@ -373,3 +373,105 @@ export function parseStakeholdersResult(
   }
   return result;
 }
+
+// ── Epic 4 · 4.2: katalógus-címkézés parse ───────────────────
+
+/** Egy dimenzió nyers osztályozási eredménye (egy mintából). */
+export interface LabelAxisResult {
+  label: string | null;
+  confidence: number; // 0..1 (clampelve)
+  reason: string;
+  evidence: string;
+}
+
+/** Egy teljes címkézési minta (egy LLM-hívás kimenete, öt dimenzió). */
+export interface KnowledgeLabelSample {
+  modality: LabelAxisResult & { borderline: boolean };
+  validTime: LabelAxisResult;
+  scope: LabelAxisResult;
+  source: LabelAxisResult & { personName: string | null; kind: string | null };
+  lang: LabelAxisResult;
+}
+
+const LABEL_MODALITIES = ["historikus", "as_is", "normativ", "to_be", "ismeretlen"];
+const LABEL_ORG_LEVELS = ["hq", "helyi", "kulso", "ismeretlen"];
+
+function clamp01(v: unknown): number {
+  const n = typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : NaN;
+  if (Number.isNaN(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
+function strOrNull2(v: unknown): string | null {
+  if (typeof v === "string" && v.trim() !== "") return v.trim();
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return null;
+}
+
+function axisOf(v: unknown): LabelAxisResult {
+  const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+  return {
+    label: strOrNull2(o.label),
+    confidence: clamp01(o.confidence),
+    reason: strOrNull2(o.reason) ?? "",
+    evidence: strOrNull2(o.evidence) ?? "",
+  };
+}
+
+/** valid_time koerció tstzrange-literállá: kész range-alak marad; puszta év
+ *  → éves tartomány; ISO-dátum → nyitott végű tartomány; egyéb → null (a
+ *  #6-fix elve szerint az ÉRTELMEZHETETLEN formát dobjuk, nem az értéket
+ *  fabrikáljuk). */
+export function coerceValidTime(label: string | null): string | null {
+  if (!label) return null;
+  const t = label.trim();
+  if (/^[\[(].*[)\]]$/.test(t)) return t; // range-alak, ahogy kaptuk
+  const year = /^(\d{4})$/.exec(t);
+  if (year) return `[${year[1]}-01-01,${Number(year[1]) + 1}-01-01)`;
+  const date = /^(\d{4}-\d{2}-\d{2})$/.exec(t);
+  if (date) return `[${date[1]},)`;
+  return null;
+}
+
+/**
+ * Egy címkézési minta parse-a. Érvénytelen enum-érték → 'ismeretlen' 0
+ * konfidenciával (őszinte: a rossz alak bizonytalanság, nem tipp). A
+ * bizonyíték szó szerintiségét a HÍVÓ ellenőrzi (nála van a forrás-szöveg).
+ */
+export function parseKnowledgeLabelSample(raw: string): KnowledgeLabelSample {
+  const parsed = parseJsonLoose(raw) as Record<string, unknown>;
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("A címkézési válasz nem objektum.");
+  }
+
+  const mod = axisOf(parsed.modality);
+  const modObj = (parsed.modality ?? {}) as Record<string, unknown>;
+  const modality = {
+    ...mod,
+    label: mod.label && LABEL_MODALITIES.includes(mod.label) ? mod.label : "ismeretlen",
+    confidence: mod.label && LABEL_MODALITIES.includes(mod.label) ? mod.confidence : 0,
+    borderline: modObj.borderline === true,
+  };
+
+  const vt = axisOf(parsed.valid_time);
+  const validTime = { ...vt, label: coerceValidTime(vt.label) };
+
+  const src = axisOf(parsed.source);
+  const srcObj = (parsed.source ?? {}) as Record<string, unknown>;
+  const orgLevel = strOrNull2(srcObj.org_level);
+  const source = {
+    ...src,
+    label: orgLevel && LABEL_ORG_LEVELS.includes(orgLevel) ? orgLevel : "ismeretlen",
+    confidence: orgLevel && LABEL_ORG_LEVELS.includes(orgLevel) ? src.confidence : 0,
+    personName: strOrNull2(srcObj.person),
+    kind: strOrNull2(srcObj.kind),
+  };
+
+  return {
+    modality,
+    validTime,
+    scope: axisOf(parsed.scope),
+    source,
+    lang: axisOf(parsed.lang),
+  };
+}
