@@ -8,6 +8,7 @@ import type { DimensionSignal, LabelDimension } from "@/lib/db/types";
 import { formatValidTime } from "@/lib/knowledge/browse";
 import {
   DIM_ORDER,
+  EVIDENCE_OPTIONS,
   Feedback,
   INITIAL,
   LANG_OPTIONS,
@@ -50,6 +51,8 @@ function optionsFor(j: Judgment): { value: string | null; free?: boolean }[] {
       return MODALITY_OPTIONS.map((m) => ({ value: m }));
     case "source":
       return ORG_OPTIONS.map((o) => ({ value: o }));
+    case "evidence":
+      return EVIDENCE_OPTIONS.map((e) => ({ value: e }));
     case "lang":
       return [...LANG_OPTIONS.map((l) => ({ value: l as string | null })), { value: null }];
     case "scope":
@@ -113,6 +116,7 @@ export function CatalogReview({
       if (value === null) return t("reviewKeepNone");
       if (j.dim === "modality") return t(`modality.${value}`);
       if (j.dim === "source") return t(`org.${value}`);
+      if (j.dim === "evidence") return t(`evidence.${value}`);
       return value;
     },
     [t],
@@ -405,9 +409,13 @@ export function CatalogReview({
                                 ? md
                                   ? t(`org.${md.sourceOrgLevel}`)
                                   : null
-                                : d === "lang"
-                                  ? md?.lang
-                                  : formatValidTime(md?.validTime ?? null);
+                                : d === "evidence"
+                                  ? md
+                                    ? t(`evidence.${md.evidenceKind}`)
+                                    : null
+                                  : d === "lang"
+                                    ? md?.lang
+                                    : formatValidTime(md?.validTime ?? null);
                         return `${t(`dim.${d}`)}: ${v ?? t("notSpecified")}`;
                       })
                       .join(" · ")}

@@ -24,11 +24,19 @@ export const DIM_ORDER: readonly LabelDimension[] = [
   "valid_time",
   "scope",
   "source",
+  "evidence",
   "lang",
 ];
 export const MODALITY_OPTIONS = ["historikus", "as_is", "normativ", "to_be", "ismeretlen"];
 export const ORG_OPTIONS = ["hq", "helyi", "kulso", "ismeretlen"];
 export const KIND_OPTIONS = ["dokumentum", "interju", "megfigyeles", "rendszeradat"];
+export const EVIDENCE_OPTIONS = [
+  "mert_adat",
+  "megfigyeles",
+  "velekedes",
+  "hivatkozas",
+  "ismeretlen",
+];
 export const LANG_OPTIONS = ["hu", "en", "hu-en"];
 
 /** A modalitás piktogramja a design szerint (◆ megfigyelés · § előírás ·
@@ -62,6 +70,7 @@ export interface CatalogAdminItem {
     sourceOrgLevel: string;
     sourceKind: string | null;
     sourcePersonStakeholderId: string | null;
+    evidenceKind: string;
   } | null;
   signal: KnowledgeLabelSignalRow | null;
 }
@@ -216,6 +225,8 @@ export function LabelEditForm({
         return m.scope ?? "";
       case "source":
         return m.sourceOrgLevel;
+      case "evidence":
+        return m.evidenceKind;
       case "lang":
         return m.lang ?? "";
     }
@@ -294,7 +305,21 @@ export function LabelEditForm({
             ))}
           </select>
         </label>
-        <label className="col-span-2 flex flex-col gap-1">
+        <label className="flex flex-col gap-1">
+          <span className={lbl}>{t("fieldEvidence")}</span>
+          <select
+            name="evidenceKind"
+            defaultValue={candidateOf("evidence") || "ismeretlen"}
+            className={sel}
+          >
+            {EVIDENCE_OPTIONS.map((e) => (
+              <option key={e} value={e}>
+                {t(`evidence.${e}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
           <span className={lbl}>{t("fieldPerson")}</span>
           <select name="sourcePersonStakeholderId" defaultValue={personDefault} className={sel}>
             <option value="">{t("personNone")}</option>

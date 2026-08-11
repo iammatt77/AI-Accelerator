@@ -43,6 +43,11 @@ export interface ArtifactFieldDef {
    *  (syncDoc/syncReport) — a field-extract NEM javasol rá, a szerkesztőben
    *  read-only („a modulból frissül"). Doc-mezőn nincs beállítva. */
   moduleOwned?: boolean;
+  /** 4.2b (F3-b): a mező DOKUMENTUM-SZERKEZET (napirend, résztvevő-lista,
+   *  előkészület-lista), nem tudás-állítás — a tudáselem-katalógus 4.2
+   *  FOGYASZTÓI (címkéző köteg, katalógus-oldal) kihagyják. A 2.1
+   *  knowledge_catalog nézet érintetlen (védett felület). */
+  knowledgeExempt?: boolean;
 }
 
 export interface BodySection {
@@ -206,6 +211,7 @@ function f(
   required: boolean,
   promptHint: string,
   moduleOwned?: boolean,
+  knowledgeExempt?: boolean,
 ): ArtifactFieldDef {
   return {
     key,
@@ -214,6 +220,7 @@ function f(
     required,
     promptHint,
     ...(moduleOwned ? { moduleOwned: true } : {}),
+    ...(knowledgeExempt ? { knowledgeExempt: true } : {}),
   };
 }
 
@@ -236,11 +243,15 @@ const ENGAGEMENT_TERV = deliverable("Engagement-terv", "engagementTerv", "P0", f
   f("engagement", "kockazatok", "Kockázatok", false, "Az engagement kockázatai és kezelésük."),
 ]);
 
+// 4.2b (F3-b): a résztvevő-lista, a napirend és az előkészület-lista
+// DOKUMENTUM-SZERKEZET — sorszámozott/felsorolt logisztika, nem tudás-
+// állítás. knowledgeExempt: a 4.2 fogyasztói kihagyják (a spec példája:
+// a napirendi pontokból „1. A helyzetértékelés… 2. A" törmelék lett).
 const KICKOFF_AGENDA = deliverable("Kickoff-agenda", "kickoffAgenda", "P0", false, [
-  f("kickoff", "resztvevok", "Résztvevők", true, "A kickoff résztvevői és szerepeik."),
-  f("kickoff", "napirend", "Napirend", true, "A kickoff napirendi pontjai időkerettel."),
+  f("kickoff", "resztvevok", "Résztvevők", true, "A kickoff résztvevői és szerepeik.", undefined, true),
+  f("kickoff", "napirend", "Napirend", true, "A kickoff napirendi pontjai időkerettel.", undefined, true),
   f("kickoff", "celok", "Célok", true, "A kickoff elvárt kimenetei."),
-  f("kickoff", "elokeszuletek", "Előkészületek", false, "Előzetesen bekérendő anyagok és teendők."),
+  f("kickoff", "elokeszuletek", "Előkészületek", false, "Előzetesen bekérendő anyagok és teendők.", undefined, true),
 ]);
 
 // P1 — Felderítés & felmérés (kapu: KEMÉNY = shortlist Approved)
@@ -412,6 +423,14 @@ export function gateTypesForPhase(phase: PhaseId): ArtifactTypeDef[] {
 
 export function getTypeDef(key: string): ArtifactTypeDef | null {
   return ARTIFACT_TYPES.find((t) => t.key === key) ?? null;
+}
+
+/** 4.2b (F3-b): szerkezet-mező-e a (típus, mező-kulcs) pár — a tudáselem-
+ *  katalógus 4.2 fogyasztói (címkéző köteg, katalógus-oldal) ennek alapján
+ *  hagyják ki a cédulát. Ismeretlen típus/mező → NEM kivétel (konzervatív). */
+export function isKnowledgeExemptField(artifactType: string, fieldKey: string): boolean {
+  const def = getTypeDef(artifactType);
+  return def?.fields.find((fd) => fd.key === fieldKey)?.knowledgeExempt === true;
 }
 
 /** A fázishoz kötött artefaktum-típusok (①–③ zónák ebből dolgoznak).

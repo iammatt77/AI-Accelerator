@@ -1,15 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   DimensionSignal,
+  EvidenceKind,
   KnowledgeLabelCorrectionRow,
   KnowledgeLabelSignalRow,
   LabelDimension,
   Modality,
+  SourceDocKind,
   SourceOrgLevel,
 } from "@/lib/db/types";
 import { anchorColumns, isValidAnchor, type KnowledgeAnchor } from "@/lib/knowledge/anchor";
 import { generateEmbedding, setMetadata, type Result } from "@/lib/knowledge/store";
 import { classifyKnowledgeItem, type KnowledgeLabelSample } from "@/lib/llm";
+import { evidencePriorOf, modalityPriorOf } from "@/lib/sources/meta";
 import { coerceValidTime } from "@/lib/llm/parse";
 
 // ─────────────────────────────────────────────────────────────
@@ -43,7 +46,15 @@ export const LABEL_DIMENSIONS: readonly LabelDimension[] = [
   "scope",
   "source",
   "lang",
+  "evidence",
 ];
+
+/** A forrás feltöltéskor megadott metaadata (4.2b-c) — a hívó oldja fel az
+ *  elem source_input_ids[0]-jából; null = nincs forrás vagy nincs megadva. */
+export interface SourceMeta {
+  kind: SourceDocKind | null;
+  orgLevel: SourceOrgLevel | null;
+}
 
 export interface LabelThresholds {
   /** Verbalizált konfidencia-küszöb (ez alatt: kétes / eszkaláció). */
@@ -132,6 +143,7 @@ export async function labelOneItem(
   anchor: KnowledgeAnchor,
   text: string,
   stakeholders: StakeholderRef[],
+  sourceMeta: SourceMeta | null = null,
 ): Promise<Result<LabelOutcome>> {
   if (!isValidAnchor(anchor)) return { ok: false, error: "Érvénytelen horgony." };
   const cedula = normalizeWs(text);
@@ -147,14 +159,56 @@ export async function labelOneItem(
   let samplesUsed = 1;
   let sample0: KnowledgeLabelSample;
   try {
-    sample0 = await classifyKnowledgeItem(cedula, { stakeholderNames, sampleIndex: 0 });
+    sample0 = await classifyKnowledgeItem(cedula, {
+      stakeholderNames,
+      sampleIndex: 0,
+      sourceKind: sourceMeta?.kind ?? null,
+    });
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Osztályozási hiba." };
   }
 
   // ── Modalitás: önkonzisztencia a kényes tengelyen ──────────
+  // 4.2b-c: ha a forrás típusából van PRIOR (hivatalos dok → normativ,
+  // rendszeradat/interjú → as_is), az felold: nincs eszkaláció, NEM kétes.
+  // A szöveg felülírhat, ha nem-borderline és magabiztos; különben a prior
+  // dönt (a borderline as_is/normativ kérdést pont a forrás-típus zárja le).
+  const modalityPrior = modalityPriorOf(sourceMeta?.kind ?? null);
+  const noKindNote =
+    sourceMeta?.kind == null
+      ? " A forrás típusa nincs megadva — a besorolás csak a szövegre támaszkodik."
+      : "";
   let modalitySignal: DimensionSignal | null = null;
-  if (!humanDims.has("modality")) {
+  if (!humanDims.has("modality") && modalityPrior) {
+    const first = sample0.modality;
+    const textOverrides =
+      !first.borderline && first.label !== modalityPrior && first.confidence >= t.conf;
+    modalitySignal = textOverrides
+      ? {
+          label: first.label,
+          confidence: first.confidence,
+          reason: `${first.reason} (a szöveg felülírja a forrás-típus alapértékét)`,
+          evidence: first.evidence,
+          evidence_verbatim: normalizeWs(cedula).includes(normalizeWs(first.evidence)),
+          samples: 1,
+          accepted: true,
+          source: "gep",
+        }
+      : {
+          label: modalityPrior,
+          confidence: Math.max(first.confidence, 0.85),
+          reason:
+            first.label === modalityPrior && !first.borderline
+              ? first.reason
+              : "A forrás típusának alapértéke dönt; a szöveg nem mond ellent elég erősen.",
+          evidence: first.evidence,
+          evidence_verbatim: normalizeWs(cedula).includes(normalizeWs(first.evidence)),
+          samples: 1,
+          accepted: true,
+          source: "gep",
+          derived_from: "forras-metaadat",
+        };
+  } else if (!humanDims.has("modality")) {
     const first = sample0.modality;
     const needEscalation = first.borderline || first.confidence < t.conf;
     if (!needEscalation) {
@@ -173,14 +227,22 @@ export async function labelOneItem(
       const labels: string[] = [first.label ?? "ismeretlen"];
       try {
         for (let i = 1; i < 3; i++) {
-          const s = await classifyKnowledgeItem(cedula, { stakeholderNames, sampleIndex: i });
+          const s = await classifyKnowledgeItem(cedula, {
+            stakeholderNames,
+            sampleIndex: i,
+            sourceKind: sourceMeta?.kind ?? null,
+          });
           labels.push(s.modality.label ?? "ismeretlen");
         }
         samplesUsed = 3;
         const tally3 = tally(labels);
         if (tally3.fraction < 1.0) {
           for (let i = 3; i < 5; i++) {
-            const s = await classifyKnowledgeItem(cedula, { stakeholderNames, sampleIndex: i });
+            const s = await classifyKnowledgeItem(cedula, {
+              stakeholderNames,
+              sampleIndex: i,
+              sourceKind: sourceMeta?.kind ?? null,
+            });
             labels.push(s.modality.label ?? "ismeretlen");
           }
           samplesUsed = 5;
@@ -222,13 +284,55 @@ export async function labelOneItem(
   if (!humanDims.has("valid_time")) signals.valid_time = dimOf(sample0.validTime);
   if (!humanDims.has("scope")) signals.scope = dimOf(sample0.scope);
   if (!humanDims.has("source")) {
-    signals.source = {
-      ...dimOf(sample0.source),
-      person_name: sample0.source.personName,
-      kind: sample0.source.kind,
-    };
+    if (sourceMeta?.orgLevel) {
+      // 4.2b-c: a szervezeti szint a feltöltő metaadatából — nem tipp.
+      signals.source = {
+        label: sourceMeta.orgLevel,
+        confidence: 0.98,
+        reason: "A forrás szervezeti szintje a feltöltéskor megadott metaadatból.",
+        evidence: "",
+        samples: 1,
+        accepted: true,
+        source: "gep",
+        derived_from: "forras-metaadat",
+        person_name: sample0.source.personName,
+        kind: sample0.source.kind,
+      };
+    } else {
+      signals.source = {
+        ...dimOf(sample0.source),
+        person_name: sample0.source.personName,
+        kind: sample0.source.kind,
+      };
+    }
   }
   if (!humanDims.has("lang")) signals.lang = dimOf(sample0.lang);
+  if (!humanDims.has("evidence")) {
+    const base = dimOf(sample0.evidence);
+    const evidencePrior = evidencePriorOf(sourceMeta?.kind ?? null);
+    if (!base.accepted && evidencePrior) {
+      // A forrás-típus alapértéke felold (spec §4) — a szöveg finomíthat,
+      // de gyenge szöveg-jel mellett az alapérték áll, NEM kétes.
+      signals.evidence = {
+        ...base,
+        label: evidencePrior,
+        confidence: Math.max(base.confidence, 0.85),
+        reason: "A forrás-típus alapértéke (a szövegben nincs erősebb jel).",
+        accepted: true,
+        derived_from: "forras-metaadat",
+      };
+    } else {
+      signals.evidence = base;
+    }
+  }
+  // Látható bizonytalanság (F4): ismeretlen forrás-típusnál a modalitás
+  // indoka kimondja, hogy csak a szövegre támaszkodtunk.
+  if (noKindNote && signals.modality && signals.modality.source === "gep") {
+    signals.modality = {
+      ...signals.modality,
+      reason: `${signals.modality.reason ?? ""}${noKindNote}`,
+    };
+  }
 
   const doubtfulDimensions = LABEL_DIMENSIONS.filter(
     (d) => signals[d] && signals[d]!.source === "gep" && !signals[d]!.accepted,
@@ -261,6 +365,11 @@ export async function labelOneItem(
   }
   if (signals.lang && signals.lang.source === "gep") {
     meta.lang = signals.lang.accepted ? signals.lang.label : null;
+  }
+  if (signals.evidence && signals.evidence.source === "gep") {
+    meta.evidenceKind = (signals.evidence.accepted
+      ? (signals.evidence.label as EvidenceKind)
+      : "ismeretlen") as EvidenceKind;
   }
   const metaRes = await setMetadata(db, projectId, anchor, meta);
   if (!metaRes.ok) return { ok: false, error: `Metaadat-írás sikertelen: ${metaRes.error}` };
@@ -324,6 +433,7 @@ function tally(labels: string[]): {
 
 export interface CorrectionPatch {
   modality?: Modality;
+  evidenceKind?: EvidenceKind;
   validTime?: string | null;
   scope?: string | null;
   sourceOrgLevel?: SourceOrgLevel;
@@ -423,6 +533,14 @@ export async function applyLabelCorrection(
     const v = patch.lang && patch.lang.trim() !== "" ? patch.lang.trim() : null;
     edits.push({ dimension: "lang", newLabel: v, metaPatch: { lang: v }, signalLabel: v });
   }
+  if (patch.evidenceKind !== undefined) {
+    edits.push({
+      dimension: "evidence",
+      newLabel: patch.evidenceKind,
+      metaPatch: { evidenceKind: patch.evidenceKind },
+      signalLabel: patch.evidenceKind,
+    });
+  }
 
   // approveDoubtful: a patch-ben nem szereplő kétes gépi dimenziók a gépi
   // JELÖLTTEL jóváhagyódnak (változtatás nélküli jóváhagyás).
@@ -449,6 +567,9 @@ export async function applyLabelCorrection(
           personName: sig.person_name ?? null,
           kind: sig.kind ?? null,
         });
+      } else if (dim === "evidence") {
+        const label = (sig.label ?? "ismeretlen") as EvidenceKind;
+        edits.push({ dimension: dim, newLabel: label, metaPatch: { evidenceKind: label }, signalLabel: label });
       } else {
         edits.push({ dimension: dim, newLabel: sig.label, metaPatch: { lang: sig.label }, signalLabel: sig.label });
       }

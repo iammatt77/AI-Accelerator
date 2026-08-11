@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
+  EvidenceKind,
   FindingResolution,
   FindingType,
   KnowledgeDismissalRow,
@@ -69,7 +70,17 @@ export interface MetadataInput {
   sourceOrgLevel?: SourceOrgLevel;
   sourceKind?: string | null;
   scope?: string | null;
+  /** Evidencia-jelleg (0019, 4.2b-d). */
+  evidenceKind?: EvidenceKind;
 }
+
+const EVIDENCE_KINDS: readonly EvidenceKind[] = [
+  "mert_adat",
+  "megfigyeles",
+  "velekedes",
+  "hivatkozas",
+  "ismeretlen",
+];
 
 /** Metaadat írása/frissítése egy horgonyra (F1). Nem érinti az elavítás-
  *  mezőket (azt a deprecateElement kezeli). Új sor default modalitás
@@ -87,6 +98,9 @@ export async function setMetadata(
   if (input.sourceOrgLevel && !ORG_LEVELS.includes(input.sourceOrgLevel)) {
     return { ok: false, error: `Érvénytelen szervezeti szint: ${input.sourceOrgLevel}` };
   }
+  if (input.evidenceKind && !EVIDENCE_KINDS.includes(input.evidenceKind)) {
+    return { ok: false, error: `Érvénytelen evidencia-jelleg: ${input.evidenceKind}` };
+  }
 
   const existing = await findOne<KnowledgeMetadataRow>(db, "knowledge_metadata", projectId, anchor);
   const now = new Date().toISOString();
@@ -102,6 +116,7 @@ export async function setMetadata(
   if (input.sourceOrgLevel !== undefined) patch.source_org_level = input.sourceOrgLevel;
   if (input.sourceKind !== undefined) patch.source_kind = input.sourceKind;
   if (input.scope !== undefined) patch.scope = input.scope;
+  if (input.evidenceKind !== undefined) patch.evidence_kind = input.evidenceKind;
 
   if (existing) {
     const { data, error } = await db

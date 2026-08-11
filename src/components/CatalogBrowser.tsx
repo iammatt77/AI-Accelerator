@@ -374,6 +374,11 @@ function ReaderPanel({
           {dimRow(t("dim.modality"), m ? t(`modality.${m.modality}`) : null, true)}
           {dimRow(t("dim.scope"), m?.scope ?? null, true)}
           {dimRow(t("dim.source"), m ? t(`org.${m.sourceOrgLevel}`) : null, false)}
+          {dimRow(
+            t("dim.evidence"),
+            m && m.evidenceKind !== "ismeretlen" ? t(`evidence.${m.evidenceKind}`) : null,
+            false,
+          )}
           {dimRow(t("dim.lang"), m?.lang ?? null, false)}
           {dimRow(t("dim.valid_time"), formatValidTime(m?.validTime ?? null), false)}
         </div>

@@ -4,17 +4,21 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import type {
+  EvidenceKind,
+  InputItemRow,
   KnowledgeCatalogRow,
   KnowledgeLabelSignalRow,
   Modality,
   SourceOrgLevel,
   StakeholderRow,
 } from "@/lib/db/types";
+import { isKnowledgeExemptField } from "@/lib/artifacts/config";
 import { anchorKey, type KnowledgeAnchor } from "@/lib/knowledge/anchor";
 import {
   applyLabelCorrection,
   labelOneItem,
   type CorrectionPatch,
+  type SourceMeta,
 } from "@/lib/knowledge/labeling";
 import type { FormState } from "./actions";
 
@@ -33,9 +37,25 @@ const MODALITIES: readonly Modality[] = [
   "ismeretlen",
 ];
 const ORG_LEVELS: readonly SourceOrgLevel[] = ["hq", "helyi", "kulso", "ismeretlen"];
+const EVIDENCE_KINDS: readonly EvidenceKind[] = [
+  "mert_adat",
+  "megfigyeles",
+  "velekedes",
+  "hivatkozas",
+  "ismeretlen",
+];
 
 function cedulaText(row: KnowledgeCatalogRow): string {
   return [row.title, row.excerpt ?? ""].filter(Boolean).join(" — ");
+}
+
+/** 4.2b (F3-b): szerkezet-mező cédulája-e a sor — ezek NEM tudáselemek, a
+ *  címkéző köteg kihagyja őket (a 2.1 nézet érintetlen; a katalógus-oldal
+ *  ugyanígy szűr). Az artifact-típust a hívó oldja fel (a nézet nem hordozza). */
+function isExemptRow(row: KnowledgeCatalogRow, artifactTypeById: Map<string, string>): boolean {
+  if (row.block_type !== "artifact_field" || !row.artifact_id || !row.field_key) return false;
+  const type = artifactTypeById.get(row.artifact_id);
+  return !!type && isKnowledgeExemptField(type, row.field_key);
 }
 
 function anchorOfCatalogRow(row: KnowledgeCatalogRow): KnowledgeAnchor {
@@ -54,6 +74,40 @@ async function loadStakeholders(projectId: string) {
     .select("*")
     .eq("project_id", projectId);
   return ((data ?? []) as StakeholderRow[]).map((s) => ({ id: s.id, name: s.name }));
+}
+
+/** Forrás-metaadat feloldása a cédulák source_input_ids[0]-jából (4.2b-c):
+ *  a feltöltő által megadott {source_kind, org_level} a forrás-elemről.
+ *  Egy kötegre EGY lekérdezés; a térkép kulcsa az input_items.id. Ha egy
+ *  cédulának nincs forrás-hivatkozása, vagy a forráson nincs metaadat, a
+ *  motor a mai szöveg-alapú útra esik vissza (látható bizonytalansággal). */
+async function loadSourceMetaMap(
+  projectId: string,
+  rows: KnowledgeCatalogRow[],
+): Promise<Map<string, SourceMeta>> {
+  const ids = Array.from(
+    new Set(rows.map((r) => r.source_input_ids?.[0]).filter((v): v is string => !!v)),
+  );
+  const map = new Map<string, SourceMeta>();
+  if (ids.length === 0) return map;
+  const db = createServiceSupabaseClient();
+  const { data } = await db
+    .from("input_items")
+    .select("id,source_kind,org_level")
+    .eq("project_id", projectId)
+    .in("id", ids);
+  for (const item of (data ?? []) as Pick<InputItemRow, "id" | "source_kind" | "org_level">[]) {
+    map.set(item.id, { kind: item.source_kind, orgLevel: item.org_level });
+  }
+  return map;
+}
+
+function sourceMetaOf(
+  row: KnowledgeCatalogRow | undefined,
+  map: Map<string, SourceMeta>,
+): SourceMeta | null {
+  const firstId = row?.source_input_ids?.[0];
+  return (firstId && map.get(firstId)) || null;
 }
 
 /** Egy köteg mérete — konzervatívan a serverless funkció-időkorlát alatt
@@ -106,11 +160,17 @@ export async function labelCatalogBatchAction(
 ): Promise<LabelBatchResult> {
   const db = createServiceSupabaseClient();
 
-  const [{ data: catData }, { data: sigData }] = await Promise.all([
+  const [{ data: catData }, { data: sigData }, { data: artData }] = await Promise.all([
     db.from("knowledge_catalog").select("*").eq("project_id", projectId),
     db.from("knowledge_label_signals").select("*").eq("project_id", projectId),
+    db.from("artifacts").select("id,type").eq("project_id", projectId),
   ]);
-  const rows = (catData ?? []) as KnowledgeCatalogRow[];
+  const artifactTypeById = new Map(
+    ((artData ?? []) as { id: string; type: string }[]).map((a) => [a.id, a.type]),
+  );
+  const rows = ((catData ?? []) as KnowledgeCatalogRow[]).filter(
+    (r) => !isExemptRow(r, artifactTypeById),
+  );
   const labeled = new Set(
     ((sigData ?? []) as KnowledgeLabelSignalRow[]).map((s) =>
       anchorKey({
@@ -144,7 +204,10 @@ export async function labelCatalogBatchAction(
   if (selectable.length === 0) return empty;
 
   const batch = selectable.slice(0, labelBatchSize());
-  const stakeholders = await loadStakeholders(projectId);
+  const [stakeholders, metaMap] = await Promise.all([
+    loadStakeholders(projectId),
+    loadSourceMetaMap(projectId, batch),
+  ]);
   let done = 0;
   let doubtful = 0;
   let failed = 0;
@@ -153,7 +216,14 @@ export async function labelCatalogBatchAction(
   const failedAnchors: KnowledgeAnchor[] = [];
   for (const row of batch) {
     const anchor = anchorOfCatalogRow(row);
-    const res = await labelOneItem(db, projectId, anchor, cedulaText(row), stakeholders);
+    const res = await labelOneItem(
+      db,
+      projectId,
+      anchor,
+      cedulaText(row),
+      stakeholders,
+      sourceMetaOf(row, metaMap),
+    );
     if (!res.ok) {
       failed++;
       failedAnchors.push(anchor);
@@ -195,7 +265,26 @@ export async function relabelItemAction(
   const t = await getTranslations("catalog");
   const db = createServiceSupabaseClient();
   const stakeholders = await loadStakeholders(projectId);
-  const res = await labelOneItem(db, projectId, anchor, text, stakeholders);
+  // A forrás-metaadat feloldásához a cédula katalógus-sora kell (a
+  // source_input_ids a nézetből jön); a horgony-kulcs egyezéssel keresünk.
+  const { data: catData } = await db
+    .from("knowledge_catalog")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("block_type", anchor.block_type);
+  const wanted = anchorKey(anchor);
+  const row = ((catData ?? []) as KnowledgeCatalogRow[]).find(
+    (r) => anchorKey(anchorOfCatalogRow(r)) === wanted,
+  );
+  const metaMap = await loadSourceMetaMap(projectId, row ? [row] : []);
+  const res = await labelOneItem(
+    db,
+    projectId,
+    anchor,
+    text,
+    stakeholders,
+    sourceMetaOf(row, metaMap),
+  );
   revalidatePath(`/project/${projectId}/catalog`);
   if (!res.ok) return { ok: false, error: res.error };
   return {
@@ -223,12 +312,16 @@ export async function saveLabelsAction(
   const kind = String(formData.get("sourceKind") ?? "").trim();
   const personId = String(formData.get("sourcePersonStakeholderId") ?? "");
   const lang = String(formData.get("lang") ?? "").trim();
+  const evidence = String(formData.get("evidenceKind") ?? "");
 
   if (!MODALITIES.includes(modality as Modality)) {
     return { ok: false, error: t("errInvalidModality") };
   }
   if (!ORG_LEVELS.includes(orgLevel as SourceOrgLevel)) {
     return { ok: false, error: t("errInvalidOrgLevel") };
+  }
+  if (!EVIDENCE_KINDS.includes(evidence as EvidenceKind)) {
+    return { ok: false, error: t("errInvalidEvidence") };
   }
 
   let personName: string | null = null;
@@ -246,6 +339,7 @@ export async function saveLabelsAction(
     sourcePersonStakeholderId: personId === "" ? null : personId,
     sourcePersonName: personName,
     lang: lang === "" ? null : lang,
+    evidenceKind: evidence as EvidenceKind,
   };
   const res = await applyLabelCorrection(db, projectId, anchor, patch, {
     approveDoubtful: true,
@@ -263,7 +357,7 @@ export async function saveLabelsAction(
 export async function resolveDimensionAction(
   projectId: string,
   anchor: KnowledgeAnchor,
-  dimension: "modality" | "valid_time" | "scope" | "source" | "lang",
+  dimension: "modality" | "valid_time" | "scope" | "source" | "lang" | "evidence",
   value: string | null,
 ): Promise<FormState> {
   const t = await getTranslations("catalog");
@@ -291,6 +385,12 @@ export async function resolveDimensionAction(
       break;
     case "lang":
       patch.lang = value;
+      break;
+    case "evidence":
+      if (!EVIDENCE_KINDS.includes((value ?? "") as EvidenceKind)) {
+        return { ok: false, error: t("errInvalidEvidence") };
+      }
+      patch.evidenceKind = value as EvidenceKind;
       break;
   }
   const res = await applyLabelCorrection(db, projectId, anchor, patch, {
