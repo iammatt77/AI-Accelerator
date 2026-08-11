@@ -2789,10 +2789,12 @@ function mockClassifyKnowledge(
   let evidence: KnowledgeLabelSample["evidence"];
   if (MEASURED.test(text)) {
     evidence = { label: "mert_adat", confidence: 0.85, reason: "Számszerű, mért érték az állításban.", evidence: snippetAround(text, MEASURED) };
+  } else if (REFERENCE.test(text)) {
+    // A hivatkozás-jel ELŐBB fut, mint a vélemény-jel: „a szabályzat
+    // szerint" hivatkozó nyelv — a csupasz „szerint" névutó nem vélemény.
+    evidence = { label: "hivatkozas", confidence: 0.8, reason: "Dokumentumra/szabályra hivatkozó állítás.", evidence: snippetAround(text, REFERENCE) };
   } else if (OPINION.test(text)) {
     evidence = { label: "velekedes", confidence: 0.8, reason: "Vélemény-jelzés a szövegben.", evidence: snippetAround(text, OPINION) };
-  } else if (REFERENCE.test(text)) {
-    evidence = { label: "hivatkozas", confidence: 0.8, reason: "Dokumentumra/szabályra hivatkozó állítás.", evidence: snippetAround(text, REFERENCE) };
   } else if (asis) {
     evidence = { label: "megfigyeles", confidence: 0.75, reason: "Tapasztalt működés leírása.", evidence: snippetAround(text, ASIS) };
   } else {
