@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { LabelDimension } from "@/lib/db/types";
 import {
+  formatValidTime,
   groupByScope,
   majorityValues,
   zeroResultSuggestions,
@@ -191,7 +192,7 @@ function BrowseRow({
           </span>
           {m?.validTime && (
             <span className="flex-shrink-0 rounded-[3px] border border-line px-1.5 py-px font-mono text-[10px] font-semibold text-ink-tertiary">
-              {m.validTime}
+              {formatValidTime(m.validTime)}
             </span>
           )}
           {m && m.sourceOrgLevel !== "ismeretlen" && m.sourceOrgLevel !== suppression.sourceOrgLevel && (
@@ -374,7 +375,7 @@ function ReaderPanel({
           {dimRow(t("dim.scope"), m?.scope ?? null, true)}
           {dimRow(t("dim.source"), m ? t(`org.${m.sourceOrgLevel}`) : null, false)}
           {dimRow(t("dim.lang"), m?.lang ?? null, false)}
-          {dimRow(t("dim.valid_time"), m?.validTime ?? null, false)}
+          {dimRow(t("dim.valid_time"), formatValidTime(m?.validTime ?? null), false)}
         </div>
         {sig && doubt && sig[doubt.dim]?.confidence !== undefined && (
           <div className="mt-2 font-mono text-[10.5px] text-gate-text">

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { resolveDimensionAction } from "@/app/catalog-actions";
 import type { FormState } from "@/app/actions";
 import type { DimensionSignal, LabelDimension } from "@/lib/db/types";
+import { formatValidTime } from "@/lib/knowledge/browse";
 import {
   DIM_ORDER,
   Feedback,
@@ -406,7 +407,7 @@ export function CatalogReview({
                                   : null
                                 : d === "lang"
                                   ? md?.lang
-                                  : md?.validTime;
+                                  : formatValidTime(md?.validTime ?? null);
                         return `${t(`dim.${d}`)}: ${v ?? t("notSpecified")}`;
                       })
                       .join(" · ")}

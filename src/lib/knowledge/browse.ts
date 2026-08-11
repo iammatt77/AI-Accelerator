@@ -35,31 +35,47 @@ export interface CatalogOrigin {
   artifactLabel: string | null;
 }
 
-/** Mi az ÁLLÍTÁS szövege egy katalógus-soron? A technikai címűeknél
- *  (artifact_field mező-kulcs, requirement display-id) a tartalom (excerpt),
- *  különben a cím. Üres tartalomnál fallback a címre — nem találunk ki
- *  szöveget. */
+/** Blokk-típusok, ahol a tartalom (excerpt) az ÁLLÍTÁS, a cím pedig csak
+ *  név/azonosító (a design elve: a sor a kijelentést mutatja, nem a
+ *  címkéjét). A stakeholder/artifact/térkép-féléknél a cím maga a tartalom. */
+const EXCERPT_FIRST = new Set([
+  "pain_point",
+  "use_case",
+  "requirement",
+  "artifact_field",
+  "eval_case",
+  "user_story",
+]);
+
+/** Mi az ÁLLÍTÁS szövege egy katalógus-soron? A tartalom-hordozó típusoknál
+ *  (EXCERPT_FIRST) és a technikai címűeknél (display-id) az excerpt; üres
+ *  tartalomnál fallback a címre — nem találunk ki szöveget. */
 export function claimOf(row: {
   block_type: string;
   title: string;
   excerpt: string | null;
 }): string {
-  const technicalTitle =
-    row.block_type === "artifact_field" || /^[A-Z]{1,4}-\d+$/.test(row.title.trim());
-  if (technicalTitle && row.excerpt && row.excerpt.trim() !== "") {
+  const excerptFirst =
+    EXCERPT_FIRST.has(row.block_type) || /^[A-Z]{1,4}-\d+$/.test(row.title.trim());
+  if (excerptFirst && row.excerpt && row.excerpt.trim() !== "") {
     return row.excerpt.trim();
+  }
+  if (row.block_type === "stakeholder" && row.excerpt && row.excerpt.trim() !== "") {
+    return `${row.title} — ${row.excerpt.trim()}`;
   }
   return row.title;
 }
 
 /** Igaz, ha az állítás a tartalomból (excerpt) jött — ilyenkor a cím
- *  (mező-kulcs / display-id) az eredet-sorban jelenik meg. */
+ *  (név / mező-kulcs / display-id) az eredet-sorban jelenik meg. */
 export function claimUsesExcerpt(row: {
   block_type: string;
   title: string;
   excerpt: string | null;
 }): boolean {
-  return claimOf(row) !== row.title;
+  const excerptFirst =
+    EXCERPT_FIRST.has(row.block_type) || /^[A-Z]{1,4}-\d+$/.test(row.title.trim());
+  return excerptFirst && !!row.excerpt && row.excerpt.trim() !== "";
 }
 
 export function resolveOrigin(
@@ -219,6 +235,38 @@ export function groupByScope<
     });
   }
   return named;
+}
+
+/** A tárolt tstzrange OLVASHATÓ alakja a chipekhez/panelhez — csak
+ *  formázás, nem értelmezés: teljes év → "2024"; nyitott vég →
+ *  "2025. 07. 01-től"; különben "kezdet – vég". Ismeretlen alaknál a nyers
+ *  szöveg marad (nem találunk ki dátumot). */
+export function formatValidTime(raw: string | null): string | null {
+  if (!raw) return null;
+  const m = raw.match(/^[[(]\s*"?([^",\])]*)"?\s*,\s*"?([^",\])]*)"?\s*[\])]$/);
+  if (!m) return raw;
+  const parse = (s: string): Date | null => {
+    if (!s.trim()) return null;
+    // PG-alak: "2024-01-01 00:00:00+00" → ISO: T-elválasztó + teljes offset
+    const iso = s.trim().replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+  const start = parse(m[1]);
+  const end = parse(m[2]);
+  const day = (d: Date) =>
+    `${d.getUTCFullYear()}. ${String(d.getUTCMonth() + 1).padStart(2, "0")}. ${String(d.getUTCDate()).padStart(2, "0")}.`;
+  const isJan1 = (d: Date) => d.getUTCMonth() === 0 && d.getUTCDate() === 1;
+  if (start && end && isJan1(start) && isJan1(end)) {
+    const y0 = start.getUTCFullYear();
+    const y1 = end.getUTCFullYear();
+    if (y1 === y0 + 1) return `${y0}`;
+    return `${y0}–${y1 - 1}`;
+  }
+  if (start && !end) return `${day(start).replace(/\.$/, "")}-től`;
+  if (!start && end) return `${day(end).replace(/\.$/, "")}-ig`;
+  if (start && end) return `${day(start)} – ${day(end)}`;
+  return raw;
 }
 
 /** Rövid dátum az eredet-sorba: "03. 04." (év nélkül, a design szerint). */
