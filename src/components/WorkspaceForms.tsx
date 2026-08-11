@@ -13,6 +13,7 @@ import {
   generateBodyAction,
 } from "@/app/artifact-actions";
 import type { ArtifactFieldValue } from "@/lib/artifacts/config";
+import { ORG_LEVELS, SOURCE_KINDS } from "@/lib/sources/meta";
 import { FieldStateBadge } from "@/components/FieldStateBadge";
 import { SubmitButton } from "@/components/SubmitButton";
 
@@ -56,6 +57,7 @@ export function PhaseInputForm({
   const t = useTranslations("workspace");
   const tInputs = useTranslations("inputs");
   const tCommon = useTranslations("common");
+  const tMeta = useTranslations("sourceMeta");
   const [state, formAction] = useActionState(
     addPhaseInput.bind(null, projectId, phase),
     initialState,
@@ -80,6 +82,43 @@ export function PhaseInputForm({
         placeholder={tInputs("placeholder")}
         className="w-full rounded-control border border-line bg-surface px-3 py-2 text-body placeholder:text-ink-tertiary"
       />
+      {/* 4.2b-a: a forrás típusa + szervezeti szintje a feltöltő tudása —
+          nem kötelező (nem teher), de a hiány NULL-ként látható marad, és a
+          Források-oldalon utólag pótolható. */}
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-mono-sm text-ink-tertiary">{tMeta("kindLabel")}</span>
+          <select
+            key={`k${state.nonce ?? 0}`}
+            name="sourceKind"
+            defaultValue=""
+            className="rounded-control border border-line bg-surface px-3 py-2 text-body"
+          >
+            <option value="">{tMeta("notGiven")}</option>
+            {SOURCE_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {tMeta(`kind.${k}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-mono-sm text-ink-tertiary">{tMeta("levelLabel")}</span>
+          <select
+            key={`l${state.nonce ?? 0}`}
+            name="orgLevel"
+            defaultValue=""
+            className="rounded-control border border-line bg-surface px-3 py-2 text-body"
+          >
+            <option value="">{tMeta("notGiven")}</option>
+            {ORG_LEVELS.map((l) => (
+              <option key={l} value={l}>
+                {tMeta(`level.${l}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <ErrorAlert error={state.error} />
       {state.ok && <p className="text-body text-done">{tInputs("saved")}</p>}
       <div className="flex items-center gap-3">

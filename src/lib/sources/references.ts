@@ -52,6 +52,10 @@ export interface SourceRow {
   groupId: string;
   version: number;
   history: SourceVersionRow[];
+  /** 4.2b-a: a feltöltő által megadott forrás-metaadat (null = nincs
+   *  megadva — a felületen LÁTHATÓ hiány, itt pótolható). */
+  sourceKind: string | null;
+  orgLevel: string | null;
 }
 
 /**

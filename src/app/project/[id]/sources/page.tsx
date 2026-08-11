@@ -186,6 +186,8 @@ export default async function ProjectSourcesPage({
       groupId: input.group_id ?? input.id,
       version: input.version ?? 1,
       history,
+      sourceKind: input.source_kind,
+      orgLevel: input.org_level,
     };
   });
 

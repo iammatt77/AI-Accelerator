@@ -42,6 +42,10 @@ export interface InputItemRow {
    *  csoportban; a kanonikus [n] számozás csoportonként él. */
   group_id: string;
   version: number;
+  /** A forrás-dokumentum típusa (0019, 4.2b) — null = nincs megadva. */
+  source_kind: SourceDocKind | null;
+  /** A forrás szervezeti szintje (0019, 4.2b) — null = nincs megadva. */
+  org_level: SourceOrgLevel | null;
   created_at: string;
 }
 
@@ -523,6 +527,26 @@ export type Modality =
 
 export type SourceOrgLevel = "hq" | "helyi" | "kulso" | "ismeretlen";
 
+/** A FORRÁS-DOKUMENTUM típusa (0019, 4.2b) — a feltöltő adja meg; null =
+ *  nincs megadva (látható hiány). NEM azonos a knowledge_metadata
+ *  source_kind attribúció-jellegével. */
+export type SourceDocKind =
+  | "interju_atirat"
+  | "hivatalos_dokumentacio"
+  | "workshop_jegyzokonyv"
+  | "rendszeradat_riport"
+  | "levelezes"
+  | "prezentacio"
+  | "egyeb";
+
+/** Evidencia-jelleg (0019, 4.2b-d): mit ér az állítás bizonyítékként. */
+export type EvidenceKind =
+  | "mert_adat"
+  | "megfigyeles"
+  | "velekedes"
+  | "hivatkozas"
+  | "ismeretlen";
+
 /** knowledge_metadata sora (0017) — a négydimenziós keret + explicit
  *  elavítás. A horgony a katalógus-cédula. valid_time PG tstzrange
  *  szövegként (pl. "[2024-01-01,)"). */
@@ -540,6 +564,8 @@ export interface KnowledgeMetadataRow {
   source_org_level: SourceOrgLevel;
   source_kind: string | null;
   scope: string | null;
+  /** Evidencia-jelleg (0019, 4.2b-d). */
+  evidence_kind: EvidenceKind;
   deprecated_at: string | null;
   deprecated_reason: string | null;
   created_at: string;
@@ -646,7 +672,13 @@ export interface KnowledgeDismissalRow {
 // ── Epic 4 · 4.2 (0018): címkézés konfidencia-jelei + javítás-napló ──
 
 /** A címkézés öt dimenziója (a 0018 CHECK-listája). */
-export type LabelDimension = "modality" | "valid_time" | "scope" | "source" | "lang";
+export type LabelDimension =
+  | "modality"
+  | "valid_time"
+  | "scope"
+  | "source"
+  | "lang"
+  | "evidence";
 
 /** Egy dimenzió konfidencia-jele a signals jsonb-ben. A label a gép JELÖLTJE
  *  (kétesnél is — a felülvizsgálat ezt kínálja fel); accepted mondja meg,
@@ -670,6 +702,8 @@ export interface DimensionSignal {
   person_name?: string | null;
   /** source-dimenziónál: forrás-típus (dokumentum/interju/…). */
   kind?: string | null;
+  /** 4.2b-c: a címke a FORRÁS METAADATÁBÓL jött (nem a szövegből tippelve). */
+  derived_from?: "forras-metaadat";
 }
 
 /** knowledge_label_signals sora (0018) — horgonyonként egy; újracímkézés

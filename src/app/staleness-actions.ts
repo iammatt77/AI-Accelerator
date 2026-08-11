@@ -62,6 +62,8 @@ export async function newSourceVersionAction(
   const latest = data as InputItemRow;
 
   // Új sor ugyanabban a csoportban — cím/fázis öröklődik, a tartalom új.
+  // 4.2b-a: a forrás-metaadat (típus + szervezeti szint) IS öröklődik — a
+  // frissítés nem változtatja meg, ki adta ki és milyen dokumentum.
   // Az uq (group_id, version) index véd a párhuzamos beszúrás ellen.
   const { error: insErr } = await supabase.from("input_items").insert({
     project_id: projectId,
@@ -70,6 +72,8 @@ export async function newSourceVersionAction(
     phase: latest.phase,
     group_id: groupId,
     version: (latest.version ?? 1) + 1,
+    source_kind: latest.source_kind,
+    org_level: latest.org_level,
   });
   if (insErr) {
     return {

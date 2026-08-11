@@ -14,6 +14,7 @@ import {
   type ArtifactTypeDef,
 } from "@/lib/artifacts/config";
 import { isPhaseId } from "@/lib/phases/config";
+import { parseOrgLevel, parseSourceKind } from "@/lib/sources/meta";
 import { parseAiAct } from "@/lib/entities/evaluators";
 import { loadNumberedSources } from "@/lib/sources";
 import { replaceRenderLinks, type RenderTarget } from "@/lib/render-links";
@@ -101,6 +102,10 @@ export async function addPhaseInput(
   const tErrors = await getTranslations("errors");
   const rawText = String(formData.get("rawText") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
+  // 4.2b-a: a forrás típusa/szintje a FELTÖLTŐ tudása — itt kérjük be
+  // (opcionális: a hiány NULL-ként tárolódik és a felületen látszik).
+  const sourceKind = parseSourceKind(String(formData.get("sourceKind") ?? ""));
+  const orgLevel = parseOrgLevel(String(formData.get("orgLevel") ?? ""));
   const nonce = Date.now();
   if (!rawText) {
     return { ok: false, error: tErrors("emptyInput"), nonce };
@@ -121,6 +126,8 @@ export async function addPhaseInput(
     raw_text: rawText,
     phase,
     group_id: id,
+    source_kind: sourceKind,
+    org_level: orgLevel,
   });
   if (error) {
     return {

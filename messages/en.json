@@ -1030,7 +1030,18 @@
     "viewRaw": "Open raw ↗",
     "viewFormatted": "Formatted view",
     "insertCitation": "Insert reference",
-    "citationCopied": "Copied ✓"
+    "citationCopied": "Copied ✓",
+    "metaMissingBadge": "META?",
+    "metaMissingLabel": "Source metadata — not provided",
+    "metaLabel": "Source metadata",
+    "metaSaveCta": "Save",
+    "metaSaving": "Saving…",
+    "metaSaved": "Source metadata saved — applies to every version in the group.",
+    "metaNothingToSave": "Nothing to save — pick a type or a level.",
+    "metaBannerText": "{n} sources are missing their type or org level — without them, classification relies on text alone.",
+    "metaBulkCta": "Fill in the missing",
+    "metaBulkHint": "Fills only the missing field; already-set values are not overwritten.",
+    "metaBulkSaved": "Bulk fill done — {n} sources updated."
   },
   "stakeholders": {
     "sectionTitle": "Stakeholders",
@@ -2155,7 +2166,8 @@
       "valid_time": "validity",
       "scope": "scope",
       "source": "source",
-      "lang": "language"
+      "lang": "language",
+      "evidence": "evidence"
     },
     "modality": {
       "historikus": "historical",
@@ -2266,6 +2278,35 @@
     "zeroDropTwo": "Drop “{a}” + “{b}”",
     "zeroHits": "{n} results",
     "zeroClearAll": "Clear all filters",
-    "searchClaims": "Search statements…"
+    "searchClaims": "Search statements…",
+    "evidence": {
+      "mert_adat": "measured data",
+      "megfigyeles": "observation",
+      "velekedes": "opinion",
+      "hivatkozas": "reference",
+      "ismeretlen": "unknown"
+    },
+    "fieldEvidence": "Evidence type",
+    "errInvalidEvidence": "Invalid evidence type."
+  },
+  "sourceMeta": {
+    "kindLabel": "Source type",
+    "levelLabel": "Org level",
+    "notGiven": "— not provided —",
+    "kind": {
+      "interju_atirat": "interview transcript",
+      "hivatalos_dokumentacio": "official documentation",
+      "workshop_jegyzokonyv": "workshop minutes",
+      "rendszeradat_riport": "system data report",
+      "levelezes": "correspondence",
+      "prezentacio": "presentation",
+      "egyeb": "other"
+    },
+    "level": {
+      "hq": "headquarters (HQ)",
+      "helyi": "local",
+      "kulso": "external",
+      "ismeretlen": "unknown"
+    }
   }
 }

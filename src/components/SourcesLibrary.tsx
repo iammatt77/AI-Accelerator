@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -9,6 +9,8 @@ import {
   type SourceRow,
 } from "@/lib/sources/references";
 import { newSourceVersionAction } from "@/app/staleness-actions";
+import { bulkSetSourceMetaAction, setSourceMetaAction } from "@/app/source-meta-actions";
+import { ORG_LEVELS, SOURCE_KINDS } from "@/lib/sources/meta";
 import type { FormState } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 
@@ -166,8 +168,16 @@ export function SourcesLibrary({
     );
   }
 
+  const missingMeta = rows.filter((r) => !r.sourceKind || !r.orgLevel);
+
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-[600px] overflow-hidden rounded-shell border border-line bg-surface shadow-card">
+    <div className="space-y-3">
+      {/* 4.2b-a (F1/F2): a metaadat-hiány LÁTHATÓ + kötegben pótolható —
+          a pótlás csak a HIÁNYZÓ mezőket tölti, a megadottat nem írja felül. */}
+      {missingMeta.length > 0 && (
+        <BulkMetaBanner projectId={projectId} missingCount={missingMeta.length} />
+      )}
+      <div className="flex h-[calc(100vh-7rem)] min-h-[600px] overflow-hidden rounded-shell border border-line bg-surface shadow-card">
       {/* ── Bal: forráslista ── */}
       <div className="flex w-[336px] shrink-0 flex-col border-r border-line bg-soft">
         <div className="border-b border-line px-4 pb-3 pt-4">
@@ -243,6 +253,12 @@ export function SourcesLibrary({
                           {r.fileBadge}
                         </span>
                       )}
+                      {/* 4.2b-a (F1): a hiányzó forrás-metaadat LÁTHATÓ */}
+                      {(!r.sourceKind || !r.orgLevel) && (
+                        <span className="rounded-3 border border-tint-gate-border bg-tint-gate px-1.5 py-px font-mono text-[9px] font-bold text-gate-text">
+                          {t("metaMissingBadge")}
+                        </span>
+                      )}
                       <span className="font-mono text-[10px] text-ink-tertiary">{r.dateLabel}</span>
                       {r.refCount > 0 && (
                         <span className="font-mono text-[10px] text-ink-tertiary">
@@ -278,6 +294,7 @@ export function SourcesLibrary({
             onCopy={() => copyCitation(selected.index)}
           />
         )}
+      </div>
       </div>
     </div>
   );
@@ -376,6 +393,10 @@ function ReaderPane({
             ))
           )}
         </div>
+
+        {/* 4.2b-a: forrás-metaadat (típus + szervezeti szint) — a feltöltő
+            tudása, itt pótolható/javítható; a csoport MINDEN verziójára él. */}
+        <SourceMetaEditor key={`${row.groupId}:${row.sourceKind}:${row.orgLevel}`} projectId={projectId} row={row} />
       </div>
 
       {/* törzs */}
@@ -448,6 +469,141 @@ function ReaderPane({
 }
 
 const initialFormState: FormState = { ok: false, error: null };
+
+// ── 4.2b-a: forrás-metaadat szerkesztő (olvasó-fejléc) ────────
+// A hiány LÁTHATÓ (amber keret + „nincs megadva”); a mentés a verzió-
+// csoport minden sorára ír (setSourceMetaAction).
+
+function SourceMetaEditor({ projectId, row }: { projectId: string; row: SourceRow }) {
+  const t = useTranslations("sourcesPage");
+  const tMeta = useTranslations("sourceMeta");
+  const [pending, startTransition] = useTransition();
+  const [state, setState] = useState<FormState>(initialFormState);
+  const [kind, setKind] = useState(row.sourceKind ?? "");
+  const [level, setLevel] = useState(row.orgLevel ?? "");
+  const missing = !row.sourceKind || !row.orgLevel;
+  const dirty = kind !== (row.sourceKind ?? "") || level !== (row.orgLevel ?? "");
+
+  const save = () => {
+    if (pending) return;
+    startTransition(async () => {
+      setState(await setSourceMetaAction(projectId, row.groupId, kind, level));
+    });
+  };
+
+  const sel = "rounded-control border border-line bg-surface px-2 py-1 text-[12px]";
+  return (
+    <div
+      className={`mt-3 flex flex-wrap items-center gap-2 rounded-tile border px-3 py-2 ${
+        missing ? "border-tint-gate-border bg-tint-gate" : "border-line-soft bg-soft"
+      }`}
+    >
+      <span
+        className={`font-mono text-[10px] font-bold uppercase tracking-[0.08em] ${
+          missing ? "text-gate-text" : "text-ink-tertiary"
+        }`}
+      >
+        {missing ? t("metaMissingLabel") : t("metaLabel")}
+      </span>
+      <label className="flex items-center gap-1.5 text-[11.5px] text-ink-secondary">
+        {tMeta("kindLabel")}
+        <select value={kind} onChange={(e) => setKind(e.target.value)} className={sel}>
+          <option value="">{tMeta("notGiven")}</option>
+          {SOURCE_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {tMeta(`kind.${k}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-1.5 text-[11.5px] text-ink-secondary">
+        {tMeta("levelLabel")}
+        <select value={level} onChange={(e) => setLevel(e.target.value)} className={sel}>
+          <option value="">{tMeta("notGiven")}</option>
+          {ORG_LEVELS.map((l) => (
+            <option key={l} value={l}>
+              {tMeta(`level.${l}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      {dirty && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={save}
+          className="rounded-control bg-action px-3 py-1 text-[12px] font-semibold text-white hover:bg-action-hover disabled:opacity-50"
+        >
+          {pending ? t("metaSaving") : t("metaSaveCta")}
+        </button>
+      )}
+      {state.error && (
+        <span role="alert" className="text-[11.5px] text-danger">
+          {state.error}
+        </span>
+      )}
+      {state.ok && state.notice && <span className="text-[11.5px] text-done">{state.notice}</span>}
+    </div>
+  );
+}
+
+// ── 4.2b-a (F2): kötegelt pótlás-sáv — „ne egyesével, ha sok van” ──
+
+function BulkMetaBanner({ projectId, missingCount }: { projectId: string; missingCount: number }) {
+  const t = useTranslations("sourcesPage");
+  const tMeta = useTranslations("sourceMeta");
+  const [pending, startTransition] = useTransition();
+  const [state, setState] = useState<FormState>(initialFormState);
+  const [kind, setKind] = useState("");
+  const [level, setLevel] = useState("");
+
+  const apply = () => {
+    if (pending || (!kind && !level)) return;
+    startTransition(async () => {
+      setState(await bulkSetSourceMetaAction(projectId, kind, level));
+    });
+  };
+
+  const sel = "rounded-control border border-line bg-surface px-2 py-1.5 text-[12px]";
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 rounded-tile border border-tint-gate-border bg-tint-gate px-4 py-2.5">
+      <span className="text-[12.5px] font-semibold text-gate-text">
+        {t("metaBannerText", { n: missingCount })}
+      </span>
+      <select value={kind} onChange={(e) => setKind(e.target.value)} className={sel}>
+        <option value="">{tMeta("kindLabel")}: —</option>
+        {SOURCE_KINDS.map((k) => (
+          <option key={k} value={k}>
+            {tMeta(`kind.${k}`)}
+          </option>
+        ))}
+      </select>
+      <select value={level} onChange={(e) => setLevel(e.target.value)} className={sel}>
+        <option value="">{tMeta("levelLabel")}: —</option>
+        {ORG_LEVELS.map((l) => (
+          <option key={l} value={l}>
+            {tMeta(`level.${l}`)}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        disabled={pending || (!kind && !level)}
+        onClick={apply}
+        className="rounded-control bg-action px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-action-hover disabled:opacity-50"
+      >
+        {pending ? t("metaSaving") : t("metaBulkCta")}
+      </button>
+      <span className="text-[11.5px] text-ink-tertiary">{t("metaBulkHint")}</span>
+      {state.error && (
+        <span role="alert" className="text-[11.5px] text-danger">
+          {state.error}
+        </span>
+      )}
+      {state.ok && state.notice && <span className="text-[11.5px] text-done">{state.notice}</span>}
+    </div>
+  );
+}
 
 function NewVersionForm({ projectId, groupId }: { projectId: string; groupId: string }) {
   const t = useTranslations("sourcesPage");

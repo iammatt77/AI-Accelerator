@@ -1030,7 +1030,18 @@
     "viewRaw": "Megnyitás ↗",
     "viewFormatted": "Formázott nézet",
     "insertCitation": "Hivatkozás beszúrása",
-    "citationCopied": "Másolva ✓"
+    "citationCopied": "Másolva ✓",
+    "metaMissingBadge": "META?",
+    "metaMissingLabel": "Forrás-metaadat — nincs megadva",
+    "metaLabel": "Forrás-metaadat",
+    "metaSaveCta": "Mentés",
+    "metaSaving": "Mentés…",
+    "metaSaved": "Forrás-metaadat elmentve — a csoport minden verziójára.",
+    "metaNothingToSave": "Nincs mit menteni — válassz típust vagy szintet.",
+    "metaBannerText": "{n} forrásnál hiányzik a típus vagy a szervezeti szint — a besorolás ezek nélkül csak a szövegre támaszkodik.",
+    "metaBulkCta": "Pótlás a hiányzóknál",
+    "metaBulkHint": "Csak a hiányzó mezőt tölti; a már megadott értéket nem írja felül.",
+    "metaBulkSaved": "Kötegelt pótlás kész — {n} forrás frissült."
   },
   "stakeholders": {
     "sectionTitle": "Stakeholderek",
@@ -2155,7 +2166,8 @@
       "valid_time": "érvényesség",
       "scope": "hatókör",
       "source": "forrás",
-      "lang": "nyelv"
+      "lang": "nyelv",
+      "evidence": "evidencia"
     },
     "modality": {
       "historikus": "historikus",
@@ -2266,6 +2278,35 @@
     "zeroDropTwo": "„{a}” + „{b}” elhagyása",
     "zeroHits": "{n} találat",
     "zeroClearAll": "Összes szűrő törlése",
-    "searchClaims": "Keresés az állításokban…"
+    "searchClaims": "Keresés az állításokban…",
+    "evidence": {
+      "mert_adat": "mért adat",
+      "megfigyeles": "megfigyelés",
+      "velekedes": "vélekedés",
+      "hivatkozas": "hivatkozás",
+      "ismeretlen": "ismeretlen"
+    },
+    "fieldEvidence": "Evidencia-jelleg",
+    "errInvalidEvidence": "Érvénytelen evidencia-jelleg."
+  },
+  "sourceMeta": {
+    "kindLabel": "Forrás típusa",
+    "levelLabel": "Szervezeti szint",
+    "notGiven": "— nincs megadva —",
+    "kind": {
+      "interju_atirat": "interjú-átirat",
+      "hivatalos_dokumentacio": "hivatalos dokumentáció",
+      "workshop_jegyzokonyv": "workshop-jegyzőkönyv",
+      "rendszeradat_riport": "rendszeradat-riport",
+      "levelezes": "levelezés",
+      "prezentacio": "prezentáció",
+      "egyeb": "egyéb"
+    },
+    "level": {
+      "hq": "központi (HQ)",
+      "helyi": "helyi",
+      "kulso": "külső",
+      "ismeretlen": "ismeretlen"
+    }
   }
 }
