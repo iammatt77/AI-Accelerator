@@ -396,7 +396,9 @@ function ReaderPane({
 
         {/* 4.2b-a: forrás-metaadat (típus + szervezeti szint) — a feltöltő
             tudása, itt pótolható/javítható; a csoport MINDEN verziójára él. */}
-        <SourceMetaEditor key={`${row.groupId}:${row.sourceKind}:${row.orgLevel}`} projectId={projectId} row={row} />
+        {/* key: CSAK a csoport — forrás-váltásra remountol (friss defaultok),
+            de a mentés utáni revalidate nem nyeli el a visszajelzést. */}
+        <SourceMetaEditor key={row.groupId} projectId={projectId} row={row} />
       </div>
 
       {/* törzs */}

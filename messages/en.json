@@ -2111,7 +2111,7 @@
     "usageBadgeCount": "used in {n} places",
     "usageBadgeNone": "not used yet",
     "title": "Knowledge catalog",
-    "subtitle": "Labeling and review — modality · validity · scope · source · language",
+    "subtitle": "Labeling and review — modality · validity · scope · source · evidence · language",
     "statItems": "{n} cards",
     "statLabeled": "{n} labeled",
     "statDoubtful": "{n} doubtful",
