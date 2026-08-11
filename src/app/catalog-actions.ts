@@ -255,6 +255,52 @@ export async function saveLabelsAction(
   return { ok: true, error: null, notice: t("labelsSaved"), nonce: Date.now() };
 }
 
+/** Egyetlen dimenzió feloldása a felülvizsgálat-módból (17 · 1b): a
+ *  kiválasztott érték a megadott dimenzióra kerül, a TÖBBI kétes dimenzió
+ *  érintetlen marad (approveDoubtful: false). A napló-írás, az 'ember'
+ *  eredet és a kétes-újraszámítás a meglévő applyLabelCorrection-ben —
+ *  a címkézés logikája változatlan. */
+export async function resolveDimensionAction(
+  projectId: string,
+  anchor: KnowledgeAnchor,
+  dimension: "modality" | "valid_time" | "scope" | "source" | "lang",
+  value: string | null,
+): Promise<FormState> {
+  const t = await getTranslations("catalog");
+  const db = createServiceSupabaseClient();
+
+  const patch: CorrectionPatch = {};
+  switch (dimension) {
+    case "modality":
+      if (!MODALITIES.includes((value ?? "") as Modality)) {
+        return { ok: false, error: t("errInvalidModality") };
+      }
+      patch.modality = value as Modality;
+      break;
+    case "source":
+      if (!ORG_LEVELS.includes((value ?? "") as SourceOrgLevel)) {
+        return { ok: false, error: t("errInvalidOrgLevel") };
+      }
+      patch.sourceOrgLevel = value as SourceOrgLevel;
+      break;
+    case "valid_time":
+      patch.validTime = value;
+      break;
+    case "scope":
+      patch.scope = value;
+      break;
+    case "lang":
+      patch.lang = value;
+      break;
+  }
+  const res = await applyLabelCorrection(db, projectId, anchor, patch, {
+    approveDoubtful: false,
+  });
+  revalidatePath(`/project/${projectId}/catalog`);
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, error: null, notice: null };
+}
+
 /** Kétes elem(ek) jóváhagyása a gépi JELÖLTEKKEL, változtatás nélkül —
  *  a felülvizsgálati sor gyors útja (batch is). A napló old=new sorai a
  *  „túl óvatos volt" irányt mérik (F5). */

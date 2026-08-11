@@ -4,7 +4,11 @@ import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { CatalogAdmin, type CatalogAdminItem } from "@/components/CatalogAdmin";
 import { anchorKey } from "@/lib/knowledge/anchor";
 import { summarizeCorrections } from "@/lib/knowledge/labeling";
+import { claimOf, claimUsesExcerpt, resolveOrigin } from "@/lib/knowledge/browse";
 import type {
+  ArtifactRow,
+  ClientRow,
+  InputItemRow,
   KnowledgeCatalogRow,
   KnowledgeLabelCorrectionRow,
   KnowledgeLabelSignalRow,
@@ -16,11 +20,11 @@ import type {
 export const dynamic = "force-dynamic";
 
 // ─────────────────────────────────────────────────────────────
-// Tudáskatalógus admin (Epic 4 · 4.2-e) — a jóváhagyott cédulák címkézése
-// és felülvizsgálata. A lista a knowledge_catalog nézetből (2.1) jön; a
+// Tudáselem-katalógus (17 · 4.2-e) — az átkeretezett admin-felület: egy
+// tudáselem EGY ÁLLÍTÁS. A lista a knowledge_catalog nézetből (2.1) jön; a
 // címkék a 4.1 metaadat-rétegéből; a konfidencia-jelek a 4.2 signal-
-// táblájából. A kétesek felülvizsgálati sora + böngészhető/szűrhető
-// katalógus + javítás-napló összegzés (küszöb-hangolás iránya).
+// táblájából; az EREDET (forrás-dokumentum · személy · dátum) az
+// input_items + stakeholders + artifacts CSAK-OLVASÁS merge-éből.
 // ─────────────────────────────────────────────────────────────
 
 export default async function CatalogPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,6 +39,8 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
     { data: sigData },
     { data: corrData },
     { data: shData },
+    { data: inputData },
+    { data: artData },
   ] = await Promise.all([
     supabase.from("projects").select("*").eq("id", id).maybeSingle(),
     supabase.from("knowledge_catalog").select("*").eq("project_id", id),
@@ -42,31 +48,46 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
     supabase.from("knowledge_label_signals").select("*").eq("project_id", id),
     supabase.from("knowledge_label_corrections").select("*").eq("project_id", id),
     supabase.from("stakeholders").select("*").eq("project_id", id),
+    supabase.from("input_items").select("*").eq("project_id", id),
+    supabase.from("artifacts").select("*").eq("project_id", id),
   ]);
   if (!projectData) notFound();
   const project = projectData as ProjectRow;
 
+  const { data: clientData } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("id", project.client_id)
+    .maybeSingle();
+  const client = (clientData ?? null) as ClientRow | null;
+
+  const keyOf = (r: {
+    block_type: string;
+    block_id: string | null;
+    artifact_id: string | null;
+    field_key: string | null;
+  }) =>
+    anchorKey({
+      block_type: r.block_type,
+      block_id: r.block_id,
+      artifact_id: r.artifact_id,
+      field_key: r.field_key,
+    });
+
   const metaByKey = new Map(
-    ((metaData ?? []) as KnowledgeMetadataRow[]).map((m) => [
-      anchorKey({
-        block_type: m.block_type,
-        block_id: m.block_id,
-        artifact_id: m.artifact_id,
-        field_key: m.field_key,
-      }),
-      m,
-    ]),
+    ((metaData ?? []) as KnowledgeMetadataRow[]).map((m) => [keyOf(m), m]),
   );
   const sigByKey = new Map(
-    ((sigData ?? []) as KnowledgeLabelSignalRow[]).map((s) => [
-      anchorKey({
-        block_type: s.block_type,
-        block_id: s.block_id,
-        artifact_id: s.artifact_id,
-        field_key: s.field_key,
-      }),
-      s,
-    ]),
+    ((sigData ?? []) as KnowledgeLabelSignalRow[]).map((s) => [keyOf(s), s]),
+  );
+  const inputsById = new Map(
+    ((inputData ?? []) as InputItemRow[]).map((i) => [i.id, i]),
+  );
+  const artifactsById = new Map(
+    ((artData ?? []) as ArtifactRow[]).map((a) => [a.id, a]),
+  );
+  const stakeholdersById = new Map(
+    ((shData ?? []) as StakeholderRow[]).map((s) => [s.id, s]),
   );
 
   const items: CatalogAdminItem[] = ((catData ?? []) as KnowledgeCatalogRow[])
@@ -88,6 +109,16 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
         phase: row.phase,
         blockType: row.block_type,
         cedulaText: [row.title, row.excerpt ?? ""].filter(Boolean).join(" — "),
+        claim: claimOf(row),
+        claimFromExcerpt: claimUsesExcerpt(row),
+        origin: resolveOrigin(row, {
+          clientName: client?.name ?? null,
+          projectName: project.name,
+          inputsById,
+          artifactsById,
+          stakeholdersById,
+          labeledPersonId: meta?.source_person_stakeholder_id ?? null,
+        }),
         metadata: meta
           ? {
               modality: meta.modality,
@@ -102,7 +133,7 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
         signal,
       };
     })
-    .sort((a, b) => a.title.localeCompare(b.title, "hu"));
+    .sort((a, b) => a.claim.localeCompare(b.claim, "hu"));
 
   const corrections = (corrData ?? []) as KnowledgeLabelCorrectionRow[];
   const stakeholders = ((shData ?? []) as StakeholderRow[]).map((s) => ({
@@ -110,19 +141,25 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
     name: s.name,
   }));
 
+  // „Utolsó címkézés" a fejlécbe (kinyerés-futás rekord nincs — a signals
+  // legfrissebb labeled_at-ja az őszinte megfelelő).
+  const lastLabeledAt = ((sigData ?? []) as KnowledgeLabelSignalRow[])
+    .map((s) => s.labeled_at)
+    .sort()
+    .at(-1) ?? null;
+
   return (
-    <div className="mx-auto w-full max-w-[1080px] px-5 py-6">
-      <header className="mb-5">
-        <h1 className="text-title font-bold">{t("title")}</h1>
-        <p className="mt-0.5 text-body text-ink-secondary">
-          {project.name} · {t("subtitle")}
-        </p>
-      </header>
+    <div className="mx-auto w-full max-w-[1480px] px-5 py-6">
       <CatalogAdmin
         projectId={id}
+        projectName={project.name}
+        clientName={client?.name ?? null}
         items={items}
         stakeholders={stakeholders}
         tuning={summarizeCorrections(corrections)}
+        sourceCount={(inputData ?? []).length}
+        lastLabeledAt={lastLabeledAt}
+        headerTitle={t("title")}
       />
     </div>
   );
