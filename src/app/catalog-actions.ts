@@ -56,17 +56,54 @@ async function loadStakeholders(projectId: string) {
   return ((data ?? []) as StakeholderRow[]).map((s) => ({ id: s.id, name: s.name }));
 }
 
+/** Egy köteg mérete — konzervatívan a serverless funkció-időkorlát alatt
+ *  (elemenként 1-5 LLM-hívás + 1 embedding-hívás; a pontos korlát Vercel
+ *  csomagtól függ, ezért env-ből hangolható, konzervatív alapértékkel). */
+function labelBatchSize(): number {
+  const n = parseInt(process.env.KNOWLEDGE_LABEL_BATCH_SIZE ?? "5", 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 20) : 5;
+}
+
+export interface LabelBatchResult {
+  /** Ebben a kötegben megkísérelt elemek száma. */
+  processed: number;
+  done: number;
+  doubtful: number;
+  failed: number;
+  embeddingFailed: number;
+  /** Még címkézetlen elemek e köteg UTÁN. */
+  remaining: number;
+  /** Még címkézetlen elemek e köteg ELŐTT (a teljes hátralévő munka). */
+  totalTodo: number;
+  firstError: string | null;
+  /** Az e kötegben hibázott elemek horgonyai — a hívó a KÖVETKEZŐ hívásba
+   *  skipAnchorKeys-ként adja vissza, hogy egy tartósan hibázó elem ne
+   *  foglaljon le minden kötegből egy helyet (l. lent). */
+  failedAnchors: KnowledgeAnchor[];
+}
+
 /**
- * A projekt MÉG CÍMKÉZETLEN cédulái címkézése (4.2-a/b/c). A már címkézett
- * (signal-lal bíró) elemeket kihagyja — az újracímkézés elemenként, a
- * felületről történik. Visszaad: hány elem, ebből hány kétes, hány hiba.
+ * A projekt MÉG CÍMKÉZETLEN cédulái közül EGY KÖTEGNYIT címkéz (4.2-a/b/c).
+ * A köteg mérete a serverless funkció-időkorlát alatt marad (lásd
+ * labelBatchSize). A felület kötegenként hívja, amíg `remaining` nullára
+ * nem fogy — ez FOKOZATOS (NF2): minden hívás elölről lekérdezi a még
+ * címkézetlen listát, így megszakadás (timeout, hálózati hiba, oldal-
+ * bezárás) után a következő hívás onnan folytatja, ahol a legutóbbi
+ * SIKERESEN elmentett elem volt.
+ *
+ * skipAnchorKeys: az EZEN A FUTTATÁSON belül már hibázott elemek horgony-
+ * kulcsai. Egy hibázott elem NEM kap signal-sort, tehát enélkül a kizárás
+ * nélkül minden következő hívás újra kiválasztaná — egyetlen tartósan
+ * hibázó elem (pl. üres cédula-szöveg) így minden kötegből elvinne egy
+ * helyet, feleslegesen sokszorozva a hiba-számot és az LLM-hívásokat. A
+ * kizárás CSAK erre a futtatásra érvényes (memóriában, a kliensen) — egy
+ * ÚJ "Címkézés futtatása" kattintás mindent újra megkísérel, esélyt adva a
+ * tranziens hibáknak (pl. átmeneti LLM-hívási hiba) is.
  */
-export async function labelCatalogAction(
+export async function labelCatalogBatchAction(
   projectId: string,
-  _prevState: FormState,
-  _formData: FormData,
-): Promise<FormState> {
-  const t = await getTranslations("catalog");
+  skipAnchorKeys: string[] = [],
+): Promise<LabelBatchResult> {
   const db = createServiceSupabaseClient();
 
   const [{ data: catData }, { data: sigData }] = await Promise.all([
@@ -85,26 +122,41 @@ export async function labelCatalogAction(
     ),
   );
   const todo = rows.filter((r) => !labeled.has(anchorKey(anchorOfCatalogRow(r))));
-  if (todo.length === 0) {
-    return { ok: true, error: null, notice: t("runNothingToLabel") };
-  }
+  const totalTodo = todo.length;
+  const empty: LabelBatchResult = {
+    processed: 0,
+    done: 0,
+    doubtful: 0,
+    failed: 0,
+    embeddingFailed: 0,
+    remaining: totalTodo,
+    totalTodo,
+    firstError: null,
+    failedAnchors: [],
+  };
+  if (totalTodo === 0) return empty;
 
+  const skip = new Set(skipAnchorKeys);
+  const selectable = todo.filter((r) => !skip.has(anchorKey(anchorOfCatalogRow(r))));
+  // Minden hátralévő elem már hibázott ezen a futtatáson — nincs mit
+  // megkísérelni; a hívó ezt a "processed: 0" jelzésből ismeri fel és
+  // leállítja a ciklust (a hibaszám a felhalmozott failedSoFar-ban látszik).
+  if (selectable.length === 0) return empty;
+
+  const batch = selectable.slice(0, labelBatchSize());
   const stakeholders = await loadStakeholders(projectId);
   let done = 0;
   let doubtful = 0;
   let failed = 0;
   let embeddingFailed = 0;
   let firstError: string | null = null;
-  for (const row of todo) {
-    const res = await labelOneItem(
-      db,
-      projectId,
-      anchorOfCatalogRow(row),
-      cedulaText(row),
-      stakeholders,
-    );
+  const failedAnchors: KnowledgeAnchor[] = [];
+  for (const row of batch) {
+    const anchor = anchorOfCatalogRow(row);
+    const res = await labelOneItem(db, projectId, anchor, cedulaText(row), stakeholders);
     if (!res.ok) {
       failed++;
+      failedAnchors.push(anchor);
       if (!firstError) firstError = res.error;
       continue;
     }
@@ -117,20 +169,19 @@ export async function labelCatalogAction(
   }
 
   revalidatePath(`/project/${projectId}/catalog`);
-  if (failed > 0 || embeddingFailed > 0) {
-    return {
-      ok: false,
-      error: t("runPartialError", {
-        done,
-        failed: failed + embeddingFailed,
-        message: firstError ?? "?",
-      }),
-    };
-  }
   return {
-    ok: true,
-    error: null,
-    notice: t("runDone", { done, doubtful }),
+    processed: batch.length,
+    done,
+    doubtful,
+    failed,
+    embeddingFailed,
+    // A sikertelen elem (failed) NEM kap signal-sort, tehát a "todo"
+    // önmagában nem fogy le miatta — csak a SIKERES (done) elemek
+    // csökkentik a hátralévőt (a skip-lista tartja kordában a hibázottakat).
+    remaining: totalTodo - done,
+    totalTodo,
+    firstError,
+    failedAnchors,
   };
 }
 

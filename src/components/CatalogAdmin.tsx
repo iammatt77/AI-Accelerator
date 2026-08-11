@@ -4,7 +4,7 @@ import { useActionState, useMemo, useRef, useState, useTransition } from "react"
 import { useTranslations } from "next-intl";
 import {
   approveDoubtfulAction,
-  labelCatalogAction,
+  labelCatalogBatchAction,
   relabelItemAction,
   saveLabelsAction,
 } from "@/app/catalog-actions";
@@ -42,6 +42,15 @@ const MODALITY_OPTIONS = ["historikus", "as_is", "normativ", "to_be", "ismeretle
 const ORG_OPTIONS = ["hq", "helyi", "kulso", "ismeretlen"];
 const KIND_OPTIONS = ["dokumentum", "interju", "megfigyeles", "rendszeradat"];
 const LANG_OPTIONS = ["hu", "en", "hu-en"];
+
+/** Kliens-biztos horgony-kulcs — az anchor.ts anchorKey()-jét NEM importáljuk
+ *  ide, mert az a modul node:crypto-t is használ (contentFingerprint); a
+ *  formátum (NUL-elválasztó, ütközésmentes) PONTOSAN megegyezik vele —
+ *  kizárólag a kötegelt futtatás run-menti skip-listájához kell (l.
+ *  runLabeling). */
+function anchorKeyOf(a: KnowledgeAnchor): string {
+  return [a.block_type, a.block_id ?? "", a.artifact_id ?? "", a.field_key ?? ""].join("\0");
+}
 
 export interface CatalogAdminItem {
   key: string;
@@ -290,10 +299,8 @@ export function CatalogAdmin({
   tuning: CorrectionStats;
 }) {
   const t = useTranslations("catalog");
-  const [runState, runAction] = useActionState(
-    labelCatalogAction.bind(null, projectId),
-    INITIAL,
-  );
+  const [runFlash, setRunFlash] = useState<FormState>(INITIAL);
+  const [runProgress, setRunProgress] = useState<{ done: number; total: number } | null>(null);
   const [flash, setFlash] = useState<FormState>(INITIAL);
   const [pending, startTransition] = useTransition();
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -320,6 +327,70 @@ export function CatalogAdmin({
   }, [doubtfulItems]);
 
   const flatReview = useMemo(() => groups.flatMap((g) => g.items), [groups]);
+
+  // Kötegelt futtatás: a szerver egyszerre csak egy KONZERVATÍV köteget
+  // dolgoz fel (labelBatchSize), hogy egyetlen hívás se lépje túl a
+  // serverless funkció-időkorlátot. A kliens addig hívja újra, amíg a
+  // szerver 0 hátralévőt nem jelez — a haladás élőben látszik. Megszakadás
+  // (hálózati hiba, oldal-bezárás) esetén a már feldolgozott elemek
+  // megmaradnak (minden köteg elölről lekérdezi a még címkézetlen
+  // listát) — a következő futtatás onnan folytatja.
+  const MAX_BATCH_ITERATIONS = 500;
+  const runLabeling = () => {
+    setRunFlash(INITIAL);
+    startTransition(async () => {
+      let doneSoFar = 0;
+      let doubtfulSoFar = 0;
+      let failedSoFar = 0;
+      let total: number | null = null;
+      let remaining = 0;
+      let lastError: string | null = null;
+      let crashed = false;
+      // Az EZEN a futtatáson belül hibázott elemek horgony-kulcsai — a
+      // szerver ezeket kihagyja a következő kötegből, így egy tartósan
+      // hibázó elem (pl. üres cédula-szöveg) nem foglal le minden kötegből
+      // egy helyet a ciklus végéig (l. labelCatalogBatchAction doksi).
+      const skipKeys = new Set<string>();
+      for (let i = 0; i < MAX_BATCH_ITERATIONS; i++) {
+        let res;
+        try {
+          res = await labelCatalogBatchAction(projectId, [...skipKeys]);
+        } catch (e) {
+          crashed = true;
+          lastError = e instanceof Error ? e.message : String(e);
+          break;
+        }
+        if (total === null) total = res.totalTodo;
+        doneSoFar += res.done;
+        doubtfulSoFar += res.doubtful;
+        failedSoFar += res.failed + res.embeddingFailed;
+        if (res.firstError && !lastError) lastError = res.firstError;
+        for (const a of res.failedAnchors) skipKeys.add(anchorKeyOf(a));
+        remaining = res.remaining;
+        setRunProgress({ done: doneSoFar, total: total ?? 0 });
+        if (res.remaining <= 0 || res.processed === 0) break;
+      }
+      setRunProgress(null);
+      if (total === 0) {
+        setRunFlash({ ok: true, error: null, notice: t("runNothingToLabel") });
+      } else if (failedSoFar > 0) {
+        // A hibaszám mindig pontosan látszik — a skip-lista miatt nem
+        // sokszorozódik ugyanaz az elem.
+        setRunFlash({
+          ok: false,
+          error: t("runPartialError", { done: doneSoFar, failed: failedSoFar, message: lastError ?? "?" }),
+        });
+      } else if (crashed || remaining > 0) {
+        setRunFlash({
+          ok: true,
+          error: null,
+          notice: t("runInterrupted", { done: doneSoFar, total: total ?? doneSoFar }),
+        });
+      } else {
+        setRunFlash({ ok: true, error: null, notice: t("runDone", { done: doneSoFar, doubtful: doubtfulSoFar }) });
+      }
+    });
+  };
 
   const approve = (anchors: KnowledgeAnchor[]) => {
     startTransition(async () => {
@@ -390,11 +461,23 @@ export function CatalogAdmin({
               {t("statDoubtful", { n: doubtfulItems.length })}
             </span>
           </div>
-          <form action={runAction} className="ml-auto">
-            <SubmitButton pendingLabel={t("runningLabel")}>{t("runCta")} ✦</SubmitButton>
-          </form>
+          <div className="ml-auto flex items-center gap-2">
+            {runProgress && (
+              <span className="font-mono text-[11px] text-ink-tertiary">
+                {t("runProgress", { done: runProgress.done, total: runProgress.total })}
+              </span>
+            )}
+            <button
+              type="button"
+              disabled={pending}
+              onClick={runLabeling}
+              className="rounded-control bg-action px-3 py-2 text-[13px] font-semibold text-white hover:bg-action-deep disabled:opacity-50"
+            >
+              {pending && runProgress ? t("runningLabel") : t("runCta")} ✦
+            </button>
+          </div>
         </div>
-        <Feedback state={runState} />
+        <Feedback state={runFlash} />
         <Feedback state={flash} />
         {/* Javítás-napló összegzés — a küszöb-hangolás iránya (4.2-d) */}
         <div className="mt-3 border-t border-line-soft pt-2.5">

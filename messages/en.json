@@ -2109,6 +2109,8 @@
     "runNothingToLabel": "Nothing left to label — every card is processed.",
     "runDone": "{done} items labeled, {doubtful} doubtful (awaiting review).",
     "runPartialError": "{done} items labeled, {failed} failed: {message}",
+    "runProgress": "Labeling… {done}/{total} done",
+    "runInterrupted": "Interrupted — {done}/{total} done. Click Run labeling again to continue.",
     "reviewTitle": "Review queue",
     "reviewSubtitle": "Each item shows why it is doubtful: vote distribution, reasoning, evidence quote.",
     "reviewEmpty": "Nothing to review — every label is above the threshold.",

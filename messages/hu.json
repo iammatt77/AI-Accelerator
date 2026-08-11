@@ -2109,6 +2109,8 @@
     "runNothingToLabel": "Nincs címkézetlen elem — minden cédula fel van dolgozva.",
     "runDone": "{done} elem címkézve, ebből {doubtful} kétes (felülvizsgálatra vár).",
     "runPartialError": "{done} elem címkézve, {failed} hibával: {message}",
+    "runProgress": "Címkézés… {done}/{total} kész",
+    "runInterrupted": "Megszakadt — {done}/{total} kész. Kattints újra a Címkézés futtatása gombra a folytatáshoz.",
     "reviewTitle": "Felülvizsgálati sor",
     "reviewSubtitle": "Minden tételnél látszik, miért kétes: szavazatmegoszlás, indoklás, bizonyíték-idézet.",
     "reviewEmpty": "Nincs felülvizsgálandó elem — minden címke a küszöb felett.",
