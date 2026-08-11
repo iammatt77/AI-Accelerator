@@ -176,6 +176,15 @@ export async function extractPainPoints(
     "ténylegesen megjelenik. TILOS kitalálni, általánosítani vagy általános tudásból",
     "pótolni. Ha a források nem tartalmaznak fájdalompontot, üres tömböt adsz vissza",
     "— az üres tömb a KÍVÁNT viselkedés ilyenkor, nem hiba.",
+    "ATOMICITÁS-KÉNYSZER (4.2b-b): minden elem EGY teljes, önmagában megálló",
+    "állítás — a forrás elolvasása nélkül is értelmes. Ha egy bekezdés több",
+    "állítást tartalmaz, bontsd KÜLÖN elemekre; csonka, mondat közben megszakadó",
+    "szöveget SOHA ne adj vissza.",
+    "SZERKEZET-TILALOM: dokumentum-szerkezeti elemből TILOS elemet képezni —",
+    "napirendi pontból, címsorból, tartalomjegyzék-sorból, sorszámozott vagy",
+    "felsorolásjeles lista-elemből, résztvevő-listából NEM lesz fájdalompont.",
+    "Egy csupa-szerkezet forrásból (pl. kickoff-napirend) a helyes kimenet az",
+    "üres tömb — kevesebb, de valódi állítás többet ér, mint sok törmelék.",
     "A quote mező SZÓ SZERINTI idézet a forrásból — nem átfogalmazás; ha nincs",
     "alkalmas idézet, legyen null.",
     "A source_indices mezőben csak olyan forrás sorszáma szerepelhet, amelyből a",
@@ -317,6 +326,10 @@ export async function extractStakeholders(
     "(befolyás/hatás-utalás). Ha nincs ilyen alap, HAGYD KI a mezőt — tilos",
     "tippelni. A source_indices csak olyan forrás sorszáma lehet, amelyből a",
     "stakeholder ténylegesen származik.",
+    "SZERKEZET-TILALOM (4.2b-b): napirendi pontból, címsorból vagy",
+    "tartalomjegyzék-sorból TILOS stakeholdert képezni — a sorszámozott sor",
+    "(„1. Helyzetértékelés…”) nem személy. Egy elem EGY személy vagy szerepkör;",
+    "ha egy sor több nevet tartalmaz, bontsd külön elemekre.",
     "A kommunikációs stratégiát SOHA ne add meg — az kizárólag emberi, manuális mező.",
     "A kimenet magyarul készül.",
   ].join(" ");
@@ -552,44 +565,89 @@ function mockExtract(sources: LlmSource[], typeDef: ArtifactTypeDef): ExtractRes
   return result;
 }
 
-// Fájdalompont-fixture: 3 determinisztikus javaslat (idézettel, súlyosság-
-// szórással); a forrás-indexek a tényleges számozásra szűrve. A 3. javaslat
+// ── 4.2b-b: szerkezet-felismerés a mock-kinyerőhöz ───────────
+// A valós prompt SZERKEZET-TILALMÁNAK determinisztikus tükre: a mock is
+// sorokra bontja a forrást, és a szerkezet-sorokból (napirendi pont, címsor,
+// TOC-sor, felsorolás, résztvevő-lista) SOHA nem képez elemet — így a
+// kickoff-agenda próba (csupa szerkezet → nulla elem; vegyes forrás →
+// kevesebb, de valódi állítás) MOCK-on is értelmesen fut.
+
+/** Szerkezet-sor: ebből TILOS állítást képezni (4.2b-b). */
+function isStructureLine(line: string): boolean {
+  const s = line.trim();
+  if (!s) return true;
+  if (/^\d+[\.\)]\s/.test(s)) return true; // sorszámozott (napirendi) pont
+  if (/^[-–•*]\s/.test(s)) return true; // felsorolás-jel
+  if (/^#{1,6}\s/.test(s)) return true; // markdown-címsor
+  if (/\.{3,}\s*\d+\s*$/.test(s)) return true; // tartalomjegyzék-sor („… 12")
+  if (s.length < 40 && !/[.!?]$/.test(s)) return true; // rövid cím-/fejléc-sor
+  return false;
+}
+
+// Fájdalompont-fixture (4.2b-b, szerkezet-tudatos): a javaslatok CSAK a
+// források ÁLLÍTÁS-soraiból születnek (isStructureLine-on átesett, teljes
+// mondatok); kulcsszó-szabályonként legfeljebb egy, az idézet a találó sor
+// szó szerinti szövege (a parse idézet-ellenőrzése így valóban átmegy).
+// Csupa-szerkezet forrás (kickoff-napirend, TOC) → ÜRES lista. A 3. szabály
 // szándékosan idézet és severity nélkül jön (a null-ág is látszik).
-// A 0-találat ág (→ látható notice) is determinisztikusan tesztelhető:
-// ha MINDEN forrás triviálisan rövid (<40 karakter), a fixture üres
-// listát ad — az „irreleváns bemenet" él-esetének megfelelője.
+// A 0-találat ág is determinisztikus: ha MINDEN forrás triviálisan rövid
+// (<40 karakter), üres lista — az „irreleváns bemenet" él-esete.
 function mockExtractPainPoints(sources: LlmSource[]): PainPointProposal[] {
   if (sources.every((s) => s.text.trim().length < 40)) {
     return [];
   }
-  const validIndices = new Set(sources.map((s) => s.index));
-  const cite = (indices: number[]) => indices.filter((n) => validIndices.has(n));
-  return [
+  // Forrásonként az állítás-sorok (a szerkezet-sorok kiesnek).
+  const statements: { index: number; line: string }[] = [];
+  for (const s of sources) {
+    for (const line of s.text.split(/\r?\n/)) {
+      if (!isStructureLine(line)) statements.push({ index: s.index, line: line.trim() });
+    }
+  }
+  if (statements.length === 0) return []; // csupa szerkezet → nulla elem
+
+  const rules: {
+    re: RegExp;
+    title: string;
+    description: string;
+    severity: PainPointProposal["severity"];
+    withQuote: boolean;
+  }[] = [
     {
+      re: /panasz|hetekig|átfutás|lassú/i,
       title: "Lassú panasz-átfutás",
       description:
         "A panaszok átfutási ideje hosszú, a státuszról nincs visszajelzés az ügyfél felé.",
-      quote: "hetekig ül a panasz, mire bárki ránéz",
       severity: "high",
-      source_indices: cite([1]),
+      withQuote: true,
     },
     {
+      re: /kézzel|kétszer|duplik|rögzít/i,
       title: "Kézi adatrögzítés duplikációja",
-      description:
-        "Ugyanazt az adatot több rendszerbe kézzel rögzítik, ami hibaforrás.",
-      quote: "kétszer-háromszor visszük fel ugyanazt",
+      description: "Ugyanazt az adatot több rendszerbe kézzel rögzítik, ami hibaforrás.",
       severity: "medium",
-      source_indices: cite([1, 2]),
+      withQuote: true,
     },
     {
+      re: /fejekben|nincs dokumentálva|kollégán múlik/i,
       title: "Tudás a fejekben",
-      description:
-        "A folyamattudás nincs dokumentálva, egy-egy kollégán múlik a működés.",
-      quote: null,
+      description: "A folyamattudás nincs dokumentálva, egy-egy kollégán múlik a működés.",
       severity: null,
-      source_indices: cite([2]),
+      withQuote: false,
     },
   ];
+  const out: PainPointProposal[] = [];
+  for (const rule of rules) {
+    const hit = statements.find((st) => rule.re.test(st.line));
+    if (!hit) continue;
+    out.push({
+      title: rule.title,
+      description: rule.description,
+      quote: rule.withQuote ? hit.line : null,
+      severity: rule.severity,
+      source_indices: [hit.index],
+    });
+  }
+  return out;
 }
 
 // Use case-fixture: 2 determinisztikus javaslat lánc-hivatkozással; a
@@ -1170,7 +1228,7 @@ import {
   type StoryDraft,
   type StoryPackage,
 } from "@/lib/requirements/parse";
-import type { Moscow, RequirementSubtype } from "@/lib/db/types";
+import type { Moscow, RequirementSubtype, SourceDocKind } from "@/lib/db/types";
 export type {
   AcDraft,
   RequirementProposal,
@@ -2437,7 +2495,21 @@ export interface KnowledgeClassifyContext {
   stakeholderNames?: string[];
   /** Mock-variancia index (0-tól); valós hívásnál figyelmen kívül marad. */
   sampleIndex?: number;
+  /** A forrás-dokumentum típusa (4.2b, a feltöltő adta meg) — a promptban
+   *  KIINDULÓPONTKÉNT jelenik meg; null/undefined = nincs megadva. */
+  sourceKind?: SourceDocKind | null;
 }
+
+/** A forrás-típus ember-olvasható neve a prompthoz (locale-független HU). */
+const SOURCE_KIND_HU: Record<string, string> = {
+  interju_atirat: "interjú-átirat",
+  hivatalos_dokumentacio: "hivatalos dokumentáció (SZMSZ, szerződés, policy)",
+  workshop_jegyzokonyv: "workshop-jegyzőkönyv",
+  rendszeradat_riport: "rendszeradat / riport",
+  levelezes: "levelezés",
+  prezentacio: "prezentáció / belső anyag",
+  egyeb: "egyéb",
+};
 
 export async function classifyKnowledgeItem(
   text: string,
@@ -2473,10 +2545,27 @@ export async function classifyKnowledgeItem(
     "interju / megfigyeles / rendszeradat vagy null.",
     "scope: RÖVID téma-címke (1-3 szó), miről szól az elem.",
     "lang: hu / en / hu-en (kevert).",
+    "EVIDENCIA-JELLEG: mert_adat (számszerű, mért érték) · megfigyeles",
+    "(látott/tapasztalt működés) · velekedes (vélemény, benyomás — „szerintem",
+    "sokáig tart”) · hivatkozas (dokumentumra/szabályra hivatkozó állítás) ·",
+    "ismeretlen. A „szerintem sokáig tart” és az „átlagosan 4 óra” NEM ugyanaz.",
   ].join(" ");
+
+  const kindHint =
+    ctx.sourceKind && SOURCE_KIND_HU[ctx.sourceKind]
+      ? [
+          `── A forrás típusa (a feltöltő adta meg) ──`,
+          `${SOURCE_KIND_HU[ctx.sourceKind]}. Ez ERŐS KIINDULÓPONT a modalitáshoz`,
+          `és az evidenciához (pl. hivatalos dokumentáció → jellemzően előírás/`,
+          `hivatkozás; rendszeradat → megfigyelés/mért adat; interjú → megfigyelés`,
+          `vagy vélekedés) — de a SZÖVEG felülírhatja, ha egyértelműen mást mond.`,
+          "",
+        ].join("\n")
+      : "";
 
   const names = (ctx.stakeholderNames ?? []).filter(Boolean);
   const userPrompt = [
+    kindHint,
     "── A tudáselem cédula-szövege ──",
     text,
     "",
@@ -2490,7 +2579,8 @@ export async function classifyKnowledgeItem(
       `"scope":{"label":"panaszkezelés","confidence":0.8,"reason":"…","evidence":"…"},` +
       `"source":{"person":null,"org_level":"helyi","kind":"interju",` +
       `"confidence":0.7,"reason":"…","evidence":"…"},` +
-      `"lang":{"label":"hu","confidence":0.95,"reason":"…","evidence":"…"}}`,
+      `"lang":{"label":"hu","confidence":0.95,"reason":"…","evidence":"…"},` +
+      `"evidence":{"label":"megfigyeles","confidence":0.8,"reason":"…","evidence":"…"}}`,
     "Csak JSON-t adj vissza.",
   ].join("\n");
 
@@ -2688,6 +2778,27 @@ function mockClassifyKnowledge(
     lang = { label: "hu", confidence: 0.5, reason: "Nyelvi jelzés nélküli rövid szöveg.", evidence: text.trim().slice(0, 40) };
   }
 
+  // Evidencia-jelleg (4.2b-d) — determinisztikus heurisztika:
+  // szám/%/óra → mért adat; „szerint(em)/úgy érzi/talán" → vélekedés;
+  // szabályzat/policy/szerződés-hivatkozás → hivatkozás; jelen idejű
+  // működés-leírás → megfigyelés; egyéb → ismeretlen (alacsony konf →
+  // a forrás-típus alapértéke oldhatja fel, ha van).
+  const MEASURED = /\d+\s*(%|óra|perc|nap|db|ft|eur)|átlagosan|\d+[.,]\d+/i;
+  const OPINION = /szerint(em|e)?\b|úgy érz|talán|valószínűleg|benyomás/i;
+  const REFERENCE = /szabályzat|policy|szerződés|szmsz|kézikönyv|előírás|rendelet/i;
+  let evidence: KnowledgeLabelSample["evidence"];
+  if (MEASURED.test(text)) {
+    evidence = { label: "mert_adat", confidence: 0.85, reason: "Számszerű, mért érték az állításban.", evidence: snippetAround(text, MEASURED) };
+  } else if (OPINION.test(text)) {
+    evidence = { label: "velekedes", confidence: 0.8, reason: "Vélemény-jelzés a szövegben.", evidence: snippetAround(text, OPINION) };
+  } else if (REFERENCE.test(text)) {
+    evidence = { label: "hivatkozas", confidence: 0.8, reason: "Dokumentumra/szabályra hivatkozó állítás.", evidence: snippetAround(text, REFERENCE) };
+  } else if (asis) {
+    evidence = { label: "megfigyeles", confidence: 0.75, reason: "Tapasztalt működés leírása.", evidence: snippetAround(text, ASIS) };
+  } else {
+    evidence = { label: "ismeretlen", confidence: 0.45, reason: "Az evidencia jellege a szövegből nem egyértelmű.", evidence: text.trim().slice(0, 40) };
+  }
+
   // A parse-on át adjuk vissza (ugyanaz a koerciós út, mint élesben — a
   // fixture nem kerülheti meg a parse-t, MOCK-rés elv).
   return parseKnowledgeLabelSample(
@@ -2704,6 +2815,7 @@ function mockClassifyKnowledge(
         evidence: source.evidence,
       },
       lang,
+      evidence,
     }),
   );
 }

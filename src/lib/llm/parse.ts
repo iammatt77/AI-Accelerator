@@ -199,6 +199,21 @@ function normalizeForQuoteCheck(text: string): string {
  * valamelyik forrás szövegében — a fabrikált „idézet" lekerül (null), a
  * javaslat maga megmarad (ugyanaz az elv, mint a hamis citációnál).
  */
+/** 4.2b-b defenzív őr: dokumentum-szerkezeti törmelék kiszűrése — a prompt
+ *  tiltja, de a parse nem bízik benne. Törmelék: sorszámozott napirendi/
+ *  lista-elem címként vagy leírásként, TOC-sor, félbevágott szöveg, amely
+ *  egy következő sorszámozott pont elején szakad meg („…élesítés). 2. A"). */
+export function isStructuralDebris(title: string, description: string | null): boolean {
+  const t = title.trim();
+  const d = (description ?? "").trim();
+  if (/^\d+[\.\)]\s/.test(t) || /^\d+[\.\)]\s/.test(d)) return true;
+  if (/\.{3,}\s*\d+\s*$/.test(t)) return true;
+  if (/\s\d+[\.\)]\s*[A-ZÁÉÍÓÖŐÚÜŰ]?$/.test(t) || /\s\d+[\.\)]\s*[A-ZÁÉÍÓÖŐÚÜŰ]?$/.test(d)) {
+    return true;
+  }
+  return false;
+}
+
 export function parsePainPointsResult(
   raw: string,
   sources: LlmSource[],
@@ -212,6 +227,7 @@ export function parsePainPointsResult(
     const obj = item as Record<string, unknown>;
     const title = optionalText(obj.title);
     if (!title) continue;
+    if (isStructuralDebris(title, optionalText(obj.description))) continue;
     const severityRaw =
       typeof obj.severity === "string" ? obj.severity.trim().toLowerCase() : "";
     const rawQuote = optionalText(obj.quote);
@@ -391,10 +407,14 @@ export interface KnowledgeLabelSample {
   scope: LabelAxisResult;
   source: LabelAxisResult & { personName: string | null; kind: string | null };
   lang: LabelAxisResult;
+  /** Evidencia-jelleg (4.2b-d): mert_adat / megfigyeles / velekedes /
+   *  hivatkozas / ismeretlen. */
+  evidence: LabelAxisResult;
 }
 
 const LABEL_MODALITIES = ["historikus", "as_is", "normativ", "to_be", "ismeretlen"];
 const LABEL_ORG_LEVELS = ["hq", "helyi", "kulso", "ismeretlen"];
+const LABEL_EVIDENCE = ["mert_adat", "megfigyeles", "velekedes", "hivatkozas", "ismeretlen"];
 
 function clamp01(v: unknown): number {
   const n = typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : NaN;
@@ -467,11 +487,19 @@ export function parseKnowledgeLabelSample(raw: string): KnowledgeLabelSample {
     kind: strOrNull2(srcObj.kind),
   };
 
+  const ev = axisOf(parsed.evidence);
+  const evidence = {
+    ...ev,
+    label: ev.label && LABEL_EVIDENCE.includes(ev.label) ? ev.label : "ismeretlen",
+    confidence: ev.label && LABEL_EVIDENCE.includes(ev.label) ? ev.confidence : 0,
+  };
+
   return {
     modality,
     validTime,
     scope: axisOf(parsed.scope),
     source,
     lang: axisOf(parsed.lang),
+    evidence,
   };
 }
