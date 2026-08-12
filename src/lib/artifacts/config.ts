@@ -425,12 +425,107 @@ export function getTypeDef(key: string): ArtifactTypeDef | null {
   return ARTIFACT_TYPES.find((t) => t.key === key) ?? null;
 }
 
-/** 4.2b (F3-b): szerkezet-mező-e a (típus, mező-kulcs) pár — a tudáselem-
- *  katalógus 4.2 fogyasztói (címkéző köteg, katalógus-oldal) ennek alapján
- *  hagyják ki a cédulát. Ismeretlen típus/mező → NEM kivétel (konzervatív). */
+// ── Réteg-szűrő: a katalógus KIZÁRÓLAG ÜGYFÉL-TUDÁS (2026-08-13) ──
+// Három réteg, és csak az első kerül a tudáselem-katalógusba:
+//   ÜGYFÉL-TUDÁS   — állítás az ügyfél valóságáról            → BENT
+//   PROJEKT-TUDÁS  — a mi munkánk az ügyfélen (döntéseink)    → KI
+//   MÓDSZERTANI    — a mi működésünk (skálák, sablonok)       → KI
+// A vágás MEZŐ-SZINTŰ, mert a generált dokumentumok vegyesek: a
+// Use case-shortlist `ertekelesi_szempontok` mezője módszertan, de a
+// use case-ek maguk ügyfél-tudás; a TO-BE terv lépései ügyfél-tudás.
+//
+// A teljes, indoklásos leltár (96 forrás besorolva, valós példákkal):
+//   docs/state/2026-08-13-knowledge-layers-inventory.md
+// A HATÁRESETEK (16 mező + 6 block-type, H-1…H-6) NEM szerepelnek itt —
+// azokban Máté dönt, addig a cédulák bent maradnak.
+//
+// Adatot NEM töröl: a kiszűrt cédulák a 2.1 `knowledge_catalog` nézetben
+// (traceability) változatlanul megvannak, csak a 4.2 katalógus-felület és
+// a címkézés hagyja ki őket.
+
+/** Mező-kulcsok artefaktum-típusonként, amelyek NEM ügyfél-tudást
+ *  hordoznak. A 4.2b szerkezet-jelölés (`knowledgeExempt` a mező-defen)
+ *  ezen kívül külön is él — a kettő uniója a kivétel. */
+const NON_CLIENT_FIELDS: Record<string, readonly string[]> = {
+  // A charter a PROJEKTRŐL szól; az ügyfél szervezetéről csak a
+  // `stakeholderek` (bent). A `szponzor` határeset → nincs itt.
+  "Projekt-charter": ["cel", "scope", "idokeret", "sikerkriterium"],
+  // Az engagement a MI együttműködési keretünk. `stakeholder_kor`: haráteset.
+  "Engagement-terv": ["merfoldkovek", "kommunikacios_ritmus", "munkamodszer", "kockazatok"],
+  // A résztvevők/napirend/előkészületek már a 4.2b óta kivétel (szerkezet).
+  "Kickoff-agenda": ["celok"],
+  // A rangsorolás a MI döntésünk; a use case-ek entitás-cédulaként bent
+  // maradnak. Az `ertekelesi_szempontok` a kiváltó példa (módszertan).
+  "Priorizált use case-shortlist": [
+    "shortlist",
+    "ertekelesi_szempontok",
+    "quick_win",
+    "kizart_jeloltek",
+  ],
+  // Felmérési riport: TELJES EGÉSZÉBEN ügyfél-tudás (a `megallapitasok`
+  // haráteset) — ezért nem szerepel itt egyetlen mezője sem.
+  "Business case": ["koltsegek", "outcome_metrika"],
+  // A `baseline` (mért kiinduló érték) ÜGYFÉL-TUDÁS — nincs a listán.
+  "Pilot-terv": [
+    "hipotezis",
+    "resztvevok_idotartam",
+    "szamszeru_kuszob",
+    "dontesi_szabaly",
+    "meresi_mod",
+  ],
+  "Megoldási javaslat": ["valasztott_use_case", "opcio_osszevetes", "dontesi_kriterium"],
+  // TO-BE terv: a lépések és a változás hatása ügyfél-tudás; a
+  // beavatkozási pontok és a HITL-kontrollok haráteset → egyik sincs itt.
+  "Megoldás-dokumentáció": [
+    "architektura",
+    "komponensek",
+    "prompt_konyvtar",
+    "guardrail_hitl",
+    "uzemeltetesi_jegyzet",
+  ],
+  "Tesztriport": ["golden_set_eredmeny", "atmenesi_arany", "hibak_javitasok", "maradek_kockazat"],
+  // A `visszajelzesek` (az ügyfél munkatársainak szava) ügyfél-tudás.
+  "Pilot-riport": ["kuszob_ertekeles", "tanulsagok"],
+  "Döntési brief": ["javasolt_dontes", "indoklas"],
+  "Rollout-terv": ["utemezes", "change_beavatkozasok", "champion_halozat"],
+  // A `baseline_osszefoglalo` és az `emberi_sztori` ügyfél-tudás.
+  "Impact-riport": ["beavatkozas", "kovetkezo_lepesek"],
+  "Képzési terv": ["alkalmak_utem", "anyagok"],
+  "Havi státuszriport": [
+    "idoszak",
+    "uzemeltetesi_osszefoglalo",
+    "incidensek",
+    "backlog_kiemelesek",
+  ],
+  "Javaslat-dokumentum": ["javaslat", "varhato_ertek", "kovetkezo_use_case"],
+};
+
+/** Entitás-cédula típusok, amelyek NEM ügyfél-tudást hordoznak (a 0015
+ *  nézet block_type-jai). A haráteset-típusok (requirement, user_story,
+ *  acceptance_criterion, solution_component, control_point, artifact)
+ *  szándékosan NINCSENEK itt — azokban Máté dönt. */
+export const NON_CLIENT_BLOCK_TYPES: ReadonlySet<string> = new Set([
+  "build_component", // a mi implementációnk építőeleme (P3)
+  "prompt_item", // a mi prompt-könyvtárunk
+  "eval_case", // a mi golden set teszt-esetünk (minta, nem állítás)
+  "eval_criterion", // értékelési kritérium — a kiváltó példa családja
+  "epic", // backlog-csoportosító címke, nulla ügyfél-állítással
+]);
+
+/** Nem-ügyfél-tudás-e a (típus, mező-kulcs) pár — a tudáselem-katalógus
+ *  4.2 fogyasztói (címkéző köteg, katalógus-oldal) ennek alapján hagyják
+ *  ki a cédulát. A 4.2b szerkezet-jelölés (`knowledgeExempt`) VAGY a
+ *  réteg-tábla dönt. Ismeretlen típus/mező → NEM kivétel (konzervatív:
+ *  inkább maradjon bent, mint hogy ügyfél-tudás vesszen el). */
 export function isKnowledgeExemptField(artifactType: string, fieldKey: string): boolean {
   const def = getTypeDef(artifactType);
-  return def?.fields.find((fd) => fd.key === fieldKey)?.knowledgeExempt === true;
+  if (def?.fields.find((fd) => fd.key === fieldKey)?.knowledgeExempt === true) return true;
+  return (NON_CLIENT_FIELDS[artifactType] ?? []).includes(fieldKey);
+}
+
+/** Nem-ügyfél-tudás-e egy egész cédula-típus (entitás-ág). */
+export function isKnowledgeExemptBlockType(blockType: string): boolean {
+  return NON_CLIENT_BLOCK_TYPES.has(blockType);
 }
 
 /** A fázishoz kötött artefaktum-típusok (①–③ zónák ebből dolgoznak).

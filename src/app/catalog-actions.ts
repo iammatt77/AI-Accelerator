@@ -12,7 +12,7 @@ import type {
   SourceOrgLevel,
   StakeholderRow,
 } from "@/lib/db/types";
-import { isKnowledgeExemptField } from "@/lib/artifacts/config";
+import { isKnowledgeExemptBlockType, isKnowledgeExemptField } from "@/lib/artifacts/config";
 import { anchorKey, type KnowledgeAnchor } from "@/lib/knowledge/anchor";
 import {
   applyLabelCorrection,
@@ -49,10 +49,13 @@ function cedulaText(row: KnowledgeCatalogRow): string {
   return [row.title, row.excerpt ?? ""].filter(Boolean).join(" — ");
 }
 
-/** 4.2b (F3-b): szerkezet-mező cédulája-e a sor — ezek NEM tudáselemek, a
- *  címkéző köteg kihagyja őket (a 2.1 nézet érintetlen; a katalógus-oldal
- *  ugyanígy szűr). Az artifact-típust a hívó oldja fel (a nézet nem hordozza). */
+/** Nem-ügyfél-tudás-e a sor (2026-08-13 réteg-döntés + 4.2b szerkezet):
+ *  ezek NEM tudáselemek, a címkéző köteg kihagyja őket (a 2.1 nézet
+ *  érintetlen; a katalógus-oldal ugyanígy szűr). Két ág: egész cédula-típus
+ *  (entitás) VAGY (artefaktum-típus, mező-kulcs) pár — utóbbihoz a hívó
+ *  oldja fel az artifact-típust, mert a nézet nem hordozza. */
 function isExemptRow(row: KnowledgeCatalogRow, artifactTypeById: Map<string, string>): boolean {
+  if (isKnowledgeExemptBlockType(row.block_type)) return true;
   if (row.block_type !== "artifact_field" || !row.artifact_id || !row.field_key) return false;
   const type = artifactTypeById.get(row.artifact_id);
   return !!type && isKnowledgeExemptField(type, row.field_key);

@@ -5,7 +5,7 @@ import { CatalogAdmin, type CatalogAdminItem } from "@/components/CatalogAdmin";
 import { anchorKey } from "@/lib/knowledge/anchor";
 import { summarizeCorrections } from "@/lib/knowledge/labeling";
 import { claimOf, claimUsesExcerpt, resolveOrigin } from "@/lib/knowledge/browse";
-import { isKnowledgeExemptField } from "@/lib/artifacts/config";
+import { isKnowledgeExemptBlockType, isKnowledgeExemptField } from "@/lib/artifacts/config";
 import type {
   ArtifactRow,
   ClientRow,
@@ -92,20 +92,19 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
   );
 
   const items: CatalogAdminItem[] = ((catData ?? []) as KnowledgeCatalogRow[])
-    // 4.2b (F3-b): a szerkezet-mezők (napirend, résztvevő-lista, …) cédulái
-    // NEM tudáselemek — a 4.2 felület kihagyja őket (a 2.1 nézet érintetlen).
-    .filter(
-      (row) =>
-        !(
-          row.block_type === "artifact_field" &&
-          row.artifact_id &&
-          row.field_key &&
-          isKnowledgeExemptField(
-            artifactsById.get(row.artifact_id)?.type ?? "",
-            row.field_key,
-          )
-        ),
-    )
+    // A katalógus KIZÁRÓLAG ÜGYFÉL-TUDÁS (2026-08-13 döntés): a projekt- és
+    // módszertani tudás cédulái (értékelési szempontok, a mi döntéseink, a
+    // build-artefaktumaink), valamint a 4.2b szerkezet-mezői kimaradnak.
+    // A 2.1 `knowledge_catalog` nézet ÉRINTETLEN — adat nem vész el.
+    .filter((row) => {
+      if (isKnowledgeExemptBlockType(row.block_type)) return false;
+      return !(
+        row.block_type === "artifact_field" &&
+        row.artifact_id &&
+        row.field_key &&
+        isKnowledgeExemptField(artifactsById.get(row.artifact_id)?.type ?? "", row.field_key)
+      );
+    })
     .map((row) => {
       const anchor = {
         block_type: row.block_type,
