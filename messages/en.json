@@ -2287,7 +2287,37 @@
       "ismeretlen": "unknown"
     },
     "fieldEvidence": "Evidence type",
-    "errInvalidEvidence": "Invalid evidence type."
+    "errInvalidEvidence": "Invalid evidence type.",
+    "reviewTotals": "/ {total} done · {items} items total",
+    "reviewBatchesTitle": "Batches · by doubtful dimension",
+    "reviewWindowTitle": "{dim} batch · you are here",
+    "reviewWindowMore": "+ {n} more in this batch",
+    "reviewNowMarker": "NOW",
+    "reviewCollapseNav": "Collapse batch rail",
+    "reviewExpandNav": "Expand batch rail",
+    "reviewBatchDoneTitle": "Batch done: {dim}",
+    "reviewBatchDoneStats": "{decided} decisions · {skipped} skipped",
+    "reviewNextBatchCta": "Next batch: {dim} ({n})",
+    "reviewBackToListCta": "Back to the list",
+    "reviewClaimTitle": "The claim",
+    "reviewExpandClaim": "Full claim",
+    "reviewCollapseClaim": "Less",
+    "reviewEvidenceTitle": "Evidence from the source",
+    "reviewWhyTitle": "Why doubtful",
+    "reviewWhyVotes": "Out of {samples} samples: {dist}.",
+    "reviewWhySource": "Source: {source}.",
+    "reviewOriginLabel": "Origin:",
+    "reviewQ": {
+      "modality": "Is this claim a rule (binding requirement), a plan (intent not yet in force), an observation, or a past state?",
+      "valid_time": "When is the claim valid? Keep the machine candidate or leave it empty.",
+      "scope": "Which topic / process should this claim belong to?",
+      "source": "Which organizational level does the claim come from?",
+      "lang": "What language is the claim written in?",
+      "evidence": "What does the claim rest on: measured data, observation, opinion, or a document reference?"
+    },
+    "bulkOfferText": "This choice can be applied to the other {n} items in this batch from the same source — tick to apply to all.",
+    "bulkApplyDone": "Bulk apply done — {n} items updated (logged per item).",
+    "bulkApplyPartialError": "{applied} items updated, {failed} failed: {message}"
   },
   "sourceMeta": {
     "kindLabel": "Source type",

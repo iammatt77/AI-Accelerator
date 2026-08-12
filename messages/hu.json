@@ -2287,7 +2287,37 @@
       "ismeretlen": "ismeretlen"
     },
     "fieldEvidence": "Evidencia-jelleg",
-    "errInvalidEvidence": "Érvénytelen evidencia-jelleg."
+    "errInvalidEvidence": "Érvénytelen evidencia-jelleg.",
+    "reviewTotals": "/ {total} kész · {items} elem összesen",
+    "reviewBatchesTitle": "Kötegek · kétes dimenzió szerint",
+    "reviewWindowTitle": "{dim}-köteg · itt tartasz",
+    "reviewWindowMore": "+ {n} további a kötegben",
+    "reviewNowMarker": "MOST",
+    "reviewCollapseNav": "Köteg-sáv összecsukása",
+    "reviewExpandNav": "Köteg-sáv kinyitása",
+    "reviewBatchDoneTitle": "Köteg kész: {dim}",
+    "reviewBatchDoneStats": "{decided} döntés · {skipped} kihagyva",
+    "reviewNextBatchCta": "Következő köteg: {dim} ({n})",
+    "reviewBackToListCta": "Vissza a listához",
+    "reviewClaimTitle": "Az állítás",
+    "reviewExpandClaim": "Teljes állítás",
+    "reviewCollapseClaim": "Kevesebb",
+    "reviewEvidenceTitle": "Bizonyíték a forrásból",
+    "reviewWhyTitle": "Miért kétes",
+    "reviewWhyVotes": "A(z) {samples} mintából: {dist}.",
+    "reviewWhySource": "A forrás: {source}.",
+    "reviewOriginLabel": "Eredet:",
+    "reviewQ": {
+      "modality": "Ez az állítás előírás (kötelező szabály), terv (még nem hatályos szándék), megfigyelés vagy múltbeli állapot?",
+      "valid_time": "Mikorra érvényes az állítás? A gépi jelölt megtartható vagy üresen hagyható.",
+      "scope": "Melyik témához / folyamathoz tartozzon az állítás?",
+      "source": "Melyik szervezeti szintről származik az állítás?",
+      "lang": "Milyen nyelvű az állítás szövege?",
+      "evidence": "Mire támaszkodik az állítás: mért adatra, megfigyelésre, vélekedésre vagy dokumentum-hivatkozásra?"
+    },
+    "bulkOfferText": "A választás ugyanerre a forrásra alkalmazható a köteg többi {n} elemére is — pipáld be, ha mindre érvényes.",
+    "bulkApplyDone": "Tömeges alkalmazás kész — {n} elem frissült (elemenként naplózva).",
+    "bulkApplyPartialError": "{applied} elem frissült, {failed} hibával: {message}"
   },
   "sourceMeta": {
     "kindLabel": "Forrás típusa",
