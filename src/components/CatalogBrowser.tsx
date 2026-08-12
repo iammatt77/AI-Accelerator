@@ -15,6 +15,7 @@ import {
   DoubtTag,
   HumanTag,
   LabelEditForm,
+  MODALITY_GLYPH,
   ModalityChip,
   originLineParts,
   pct,
@@ -167,24 +168,45 @@ function BrowseRow({
     );
   }
 
+  // 17v2: KÁRTYA — minden elem külön fehér lap; a bal sáv hordozza a
+  // modalitást és a kétes/kiválasztott állapot színét, így az egyenetlen
+  // szöveghossznál is látszik, hol ér véget egy elem.
+  const railTone = doubt
+    ? "border-tint-gate-border bg-tint-gate"
+    : selected
+      ? "border-accent-tint bg-accent-fill"
+      : "border-neutral-100 bg-neutral-50";
   return (
     <div
       onClick={onSelect}
-      className={`flex cursor-pointer border-b border-neutral-100 ${
-        selected ? "bg-accent-tint" : "bg-surface hover:bg-neutral-50"
+      className={`flex cursor-pointer overflow-hidden rounded-tile border bg-surface ${
+        selected
+          ? "border-action shadow-sm"
+          : doubt
+            ? "border-tint-gate-border hover:shadow-sm"
+            : "border-line hover:shadow-sm"
       }`}
     >
-      <div className={`w-[3px] flex-shrink-0 ${doubt ? "bg-gate" : selected ? "bg-action" : "bg-transparent"}`} />
+      <div className={`flex w-[84px] flex-shrink-0 flex-col gap-1 border-r px-2.5 py-3 ${railTone}`}>
+        <span
+          className={`font-mono text-[9.5px] font-bold uppercase tracking-[0.05em] ${
+            doubt ? "text-gate-text" : selected ? "text-action-deep" : "text-ink-secondary"
+          }`}
+        >
+          <span className="mr-0.5 opacity-70">{MODALITY_GLYPH[m?.modality ?? "ismeretlen"] ?? "?"}</span>
+          {t(`modality.${m?.modality ?? "ismeretlen"}`).split(" ")[0]}
+        </span>
+        {human && !doubt && <span className="font-mono text-[9px] font-bold text-done">✓</span>}
+      </div>
       <div className="min-w-0 flex-1 px-4 py-3">
         <div
-          className={`text-[14.5px] leading-[1.45] text-ink ${selected ? "font-semibold" : "font-medium"} ${
+          className={`text-[14.5px] leading-[1.5] text-ink ${selected ? "font-semibold" : "font-medium"} ${
             long && !expanded ? "line-clamp-3" : ""
           }`}
         >
           {item.claim}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <ModalityChip modality={m?.modality ?? null} />
           <span className="min-w-0 truncate font-mono text-[11px] text-ink-tertiary">
             <b className="font-semibold text-ink-secondary">{item.origin.clientName ?? item.origin.projectName}</b>
             {originLineParts(item).length > 0 && " · "}
@@ -563,7 +585,12 @@ export function CatalogBrowser({
 
   return (
     <div className="flex min-h-0 flex-1">
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
+      {/* 17v2: kártya-nézetben az alap süllyesztett — a fehér lapok elválnak */}
+      <div
+        className={`flex min-w-0 flex-1 flex-col overflow-y-auto ${
+          density === "comfortable" ? "bg-sunken" : "bg-surface"
+        }`}
+      >
         {/* Felülvizsgálat-hívó sáv */}
         {doubtfulCount > 0 && (
           <div className="flex items-center gap-3 border-b border-tint-gate-border bg-tint-gate-band px-4 py-2.5">
@@ -594,12 +621,19 @@ export function CatalogBrowser({
             {groups.map((group) => {
               const gkey = group.scope ?? "__none__";
               const isCollapsed = collapsed.has(gkey);
+              const cards = density === "comfortable";
               return (
-                <div key={gkey}>
+                <div key={gkey} className={cards ? "px-3 pt-2" : undefined}>
+                  {/* 17v2: kártya-nézetben a csoport-fejléc lebegő sor
+                      hajszál-vonallal — a kártyák süllyesztett alapon ülnek */}
                   <button
                     type="button"
                     onClick={() => toggleGroup(gkey)}
-                    className="flex w-full items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-left"
+                    className={
+                      cards
+                        ? "flex w-full items-center gap-2 px-1 py-2 text-left"
+                        : "flex w-full items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-left"
+                    }
                   >
                     <span className={`text-[10px] text-ink-tertiary transition-transform ${isCollapsed ? "-rotate-90" : ""}`}>
                       ▾
@@ -612,18 +646,22 @@ export function CatalogBrowser({
                         ? t("groupCountDoubtful", { n: group.items.length, d: group.doubtfulCount })
                         : t("groupCount", { n: group.items.length })}
                     </span>
+                    {cards && <span className="ml-2 h-px flex-1 bg-neutral-200" />}
                   </button>
-                  {!isCollapsed &&
-                    group.items.map((item) => (
-                      <BrowseRow
-                        key={item.key}
-                        item={item}
-                        selected={item.key === selectedKey}
-                        density={density}
-                        suppression={suppression}
-                        onSelect={() => onSelect(item.key === selectedKey ? null : item.key)}
-                      />
-                    ))}
+                  {!isCollapsed && (
+                    <div className={cards ? "flex flex-col gap-2 pb-1" : undefined}>
+                      {group.items.map((item) => (
+                        <BrowseRow
+                          key={item.key}
+                          item={item}
+                          selected={item.key === selectedKey}
+                          density={density}
+                          suppression={suppression}
+                          onSelect={() => onSelect(item.key === selectedKey ? null : item.key)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
