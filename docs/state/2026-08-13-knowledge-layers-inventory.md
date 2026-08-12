@@ -52,7 +52,7 @@ besorolva; nincs besorolatlan.
 | 7 | `acceptance_criterion` | title + Given/When/Then | **HATÁRESET** | A követelmény elfogadási feltétele — a követelménnyel együtt mozog | l. §4/H-1 |
 | 8 | `solution_component` | name + description | **HATÁRESET** | A mi megoldás-tervünk komponense, de az ügyfél jövőbeli rendszerének része lesz | l. §4/H-2 |
 | 9 | `control_point` | name + description | **HATÁRESET** | HITL-kontroll: a mi tervezésünk, de az ügyfél jövőbeli folyamatának kontrollja | l. §4/H-2 |
-| 10 | `artifact` (egész dokumentum) | „Típus vN" + a body első 240 karaktere | **HATÁRESET** | Nem atomi állítás, hanem dokumentum-fej; tartalma vegyes, és az atomi állításai már mező-/entitás-cédulaként bent vannak | „# Projekt-charter — AI-felmérés: panaszkezelés ⏎⏎ ## Cél ⏎ A pan" (lokális — **szó szerint markdown-szerkezet**) |
+| 10 | `artifact` (egész dokumentum) | „Típus vN" + a body első 240 karaktere | ~~HATÁRESET~~ → **KI (Máté döntése, 2026-08-13)** | Nem atomi állítás, hanem dokumentum-fej; tartalma vegyes, és az atomi állításai már mező-/entitás-cédulaként bent vannak (duplikátum). Élesben 31 elem = a 273 katalógus-elem 11%-a. L. §4/H-6 | „# Projekt-charter — AI-felmérés: panaszkezelés ⏎⏎ ## Cél ⏎ A pan" (lokális — **szó szerint markdown-szerkezet**) |
 | 11 | `build_component` | name + description | **PROJEKT** | A mi implementációnk építőeleme (P3) | — |
 | 12 | `prompt_item` | name + purpose | **PROJEKT/MÓDSZERTAN** | A mi prompt-könyvtárunk; semmit nem mond az ügyfélről | — |
 | 13 | `eval_case` | display_id + input_text | **PROJEKT** | A mi golden set teszt-esetünk (minta, nem állítás) | — |
@@ -284,13 +284,19 @@ BENT — átfedés.)
 Definíció szerint két réteget kevernek egy mezőben („megállapítások **és
 javaslatok**"). Mező-szinten nem szétvághatók — vagy bent, vagy kint.
 
-### H-6 · Egész-dokumentum cédula (`artifact` block_type)
+### ~~H-6~~ · Egész-dokumentum cédula (`artifact` block_type) — **ELDÖNTVE**
 A jóváhagyott artefaktum EGY cédulaként is megjelenik, a body első 240
 karakterével. Lokálisan ez szó szerint: `„# Projekt-charter — AI-felmérés:
 panaszkezelés ⏎⏎ ## Cél ⏎ A pan"` — markdown-szerkezet, nem állítás.
 Az atomi tartalma már mező-cédulaként bent van.
-**Javaslatom: KI** (nem atomi + duplikátum), de ez egy TELJES block-type
-kivezetése, ezért Máté döntése. Amíg nem dönt, marad.
+
+> **DÖNTÉS (Máté, 2026-08-13): KIVEZETVE.** Élesben 31 elem, a 273
+> katalógus-elem 11%-a. Végrehajtva: `NON_CLIENT_BLOCK_TYPES` +
+> `artifact`. Hivatkozás-ellenőrzés: nem szakadt el semmi (a
+> `RenderTargetType` unió nem tartalmaz `artifact`-ot, tehát render-él
+> strukturálisan sem mutathat rá; a render-élek az `artifacts` TÁBLÁRA
+> mutatnak, nem a cédulára). Jelentés:
+> docs/state/2026-08-13-artifact-cedula.md
 
 ---
 
@@ -358,8 +364,9 @@ from knowledge_catalog c;
 
 1. **Szűrés kiterjesztése a NEM VITATOTT esetekre:** 50 új mező-kivétel +
    5 entitás-block-type (`build_component`, `prompt_item`, `eval_case`,
-   `eval_criterion`, `epic`).
-2. **A 16 mező-határeset + 6 entitás-határeset (H-1…H-6) ÉRINTETLEN marad**,
-   amíg Máté nem dönt.
+   `eval_criterion`, `epic`). ✅ kész (969182f)
+2. **A határesetek ÉRINTETLENEK maradnak**, amíg Máté nem dönt.
+   A H-6 (`artifact`) 2026-08-13-án eldőlt → kivezetve; marad
+   **16 mező-határeset + 5 entitás-határeset (H-1…H-5)**.
 3. **A 2.1 `knowledge_catalog` nézet változatlan** — a traceability alapja;
    a szűrés a 4.2 fogyasztói szintjén él. Adat nem törlődik.

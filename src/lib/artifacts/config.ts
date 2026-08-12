@@ -501,8 +501,8 @@ const NON_CLIENT_FIELDS: Record<string, readonly string[]> = {
 };
 
 /** Entitás-cédula típusok, amelyek NEM ügyfél-tudást hordoznak (a 0015
- *  nézet block_type-jai). A haráteset-típusok (requirement, user_story,
- *  acceptance_criterion, solution_component, control_point, artifact)
+ *  nézet block_type-jai). A maradék haráteset-típusok (requirement,
+ *  user_story, acceptance_criterion, solution_component, control_point)
  *  szándékosan NINCSENEK itt — azokban Máté dönt. */
 export const NON_CLIENT_BLOCK_TYPES: ReadonlySet<string> = new Set([
   "build_component", // a mi implementációnk építőeleme (P3)
@@ -510,6 +510,12 @@ export const NON_CLIENT_BLOCK_TYPES: ReadonlySet<string> = new Set([
   "eval_case", // a mi golden set teszt-esetünk (minta, nem állítás)
   "eval_criterion", // értékelési kritérium — a kiváltó példa családja
   "epic", // backlog-csoportosító címke, nulla ügyfél-állítással
+  // Egész-dokumentum cédula (leltár H-6, Máté döntése 2026-08-13): nem
+  // atomi állítás, hanem dokumentum-fej (a body első 240 karaktere, azaz
+  // jellemzően markdown-címsor), ráadásul DUPLIKÁL — a benne lévő valódi
+  // tartalom mező-cédulaként külön is bent van. Élesben 31 elem (a 273
+  // katalógus-elem 11%-a). A `knowledge_catalog` nézet változatlan.
+  "artifact",
 ]);
 
 /** Nem-ügyfél-tudás-e a (típus, mező-kulcs) pár — a tudáselem-katalógus
