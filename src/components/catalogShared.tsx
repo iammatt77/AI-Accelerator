@@ -61,6 +61,9 @@ export interface CatalogAdminItem {
   claim: string;
   /** Igaz, ha az állítás a tartalomból jött (a cím technikai). */
   claimFromExcerpt: boolean;
+  /** A cédula első forrás-hivatkozása (source_input_ids[0]) — a forrás-
+   *  szintű tömeges alkalmazás (17v2) ezen csoportosít; null = nincs. */
+  sourceInputId: string | null;
   origin: CatalogOrigin;
   metadata: {
     modality: string;

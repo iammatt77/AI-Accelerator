@@ -401,6 +401,75 @@ export async function resolveDimensionAction(
   return { ok: true, error: null, notice: null };
 }
 
+/** Forrás-szintű tömeges alkalmazás (17v2): UGYANAZ az érték UGYANARRA a
+ *  dimenzióra több elemen — a felület csak akkor ajánlja fel, ha az elemek
+ *  ugyanabból a forrásból származnak és ugyanazon a dimenzión kétesek.
+ *  A motor-út elemenként fut (applyLabelCorrection), így a javítás-napló
+ *  szemantikája változatlan: minden elem saját correction-sort kap, az
+ *  'ember' eredet és a kétes-újraszámítás elemenként áll be. */
+export async function resolveDimensionBulkAction(
+  projectId: string,
+  anchors: KnowledgeAnchor[],
+  dimension: "modality" | "valid_time" | "scope" | "source" | "lang" | "evidence",
+  value: string | null,
+): Promise<FormState> {
+  const t = await getTranslations("catalog");
+  const db = createServiceSupabaseClient();
+
+  const patch: CorrectionPatch = {};
+  switch (dimension) {
+    case "modality":
+      if (!MODALITIES.includes((value ?? "") as Modality)) {
+        return { ok: false, error: t("errInvalidModality") };
+      }
+      patch.modality = value as Modality;
+      break;
+    case "source":
+      if (!ORG_LEVELS.includes((value ?? "") as SourceOrgLevel)) {
+        return { ok: false, error: t("errInvalidOrgLevel") };
+      }
+      patch.sourceOrgLevel = value as SourceOrgLevel;
+      break;
+    case "evidence":
+      if (!EVIDENCE_KINDS.includes((value ?? "") as EvidenceKind)) {
+        return { ok: false, error: t("errInvalidEvidence") };
+      }
+      patch.evidenceKind = value as EvidenceKind;
+      break;
+    case "valid_time":
+      patch.validTime = value;
+      break;
+    case "scope":
+      patch.scope = value;
+      break;
+    case "lang":
+      patch.lang = value;
+      break;
+  }
+
+  let applied = 0;
+  let failed = 0;
+  let firstError: string | null = null;
+  for (const anchor of anchors) {
+    const res = await applyLabelCorrection(db, projectId, anchor, patch, {
+      approveDoubtful: false,
+    });
+    if (res.ok) applied++;
+    else {
+      failed++;
+      if (!firstError) firstError = res.error;
+    }
+  }
+  revalidatePath(`/project/${projectId}/catalog`);
+  if (failed > 0) {
+    return {
+      ok: false,
+      error: t("bulkApplyPartialError", { applied, failed, message: firstError ?? "?" }),
+    };
+  }
+  return { ok: true, error: null, notice: t("bulkApplyDone", { n: applied }) };
+}
+
 /** Kétes elem(ek) jóváhagyása a gépi JELÖLTEKKEL, változtatás nélkül —
  *  a felülvizsgálati sor gyors útja (batch is). A napló old=new sorai a
  *  „túl óvatos volt" irányt mérik (F5). */

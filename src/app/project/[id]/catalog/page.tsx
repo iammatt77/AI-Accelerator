@@ -126,6 +126,7 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
         cedulaText: [row.title, row.excerpt ?? ""].filter(Boolean).join(" — "),
         claim: claimOf(row),
         claimFromExcerpt: claimUsesExcerpt(row),
+        sourceInputId: row.source_input_ids?.[0] ?? null,
         origin: resolveOrigin(row, {
           clientName: client?.name ?? null,
           projectName: project.name,
