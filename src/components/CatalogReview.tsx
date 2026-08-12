@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { resolveDimensionAction, resolveDimensionBulkAction } from "@/app/catalog-actions";
@@ -71,8 +71,10 @@ function optionsFor(j: Judgment): { value: string | null; free?: boolean }[] {
   }
 }
 
-/** ~7 sor fölött vágjuk az állítást (kibontható) — hossz-heurisztika. */
-const CLAMP_CHARS = 320;
+/** Az állítás 7 sor után kibontható — a vágás mindig él, a kibontó gomb
+ *  viszont MÉRÉSBŐL jön (túlcsordul-e ténylegesen), nem hossz-tippből:
+ *  így keskeny hasábon és hosszú szövegen egyaránt őszinte. */
+const CLAIM_CLAMP_LINES = 7;
 
 export function CatalogReview({
   projectId,
@@ -124,9 +126,16 @@ export function CatalogReview({
   const [editing, setEditing] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [claimExpanded, setClaimExpanded] = useState(false);
+  const [claimOverflows, setClaimOverflows] = useState(false);
+  const claimRef = useRef<HTMLDivElement | null>(null);
   const [bulkChecked, setBulkChecked] = useState(false);
   /** Köteg-kész közjáték: melyik köteg zárult le épp (null = ítélkezés). */
   const [doneBatch, setDoneBatch] = useState<Batch | null>(null);
+
+  // Belépéskor az oldal tetejére — a 100vh-keret a viewporthoz igazodik.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const current = queue[index] ?? null;
   const batch = useMemo(
@@ -145,6 +154,18 @@ export function CatalogReview({
     setClaimExpanded(false);
     setBulkChecked(false);
   }, [index, current, options]);
+
+  // Túlcsordulás-mérés: a 7 soros vágás mellett tényleg levágódik-e a
+  // szöveg (elem- és ablakméret-függő) — a kibontó gomb ezen múlik.
+  useEffect(() => {
+    const el = claimRef.current;
+    if (!el) return;
+    const measure = () => setClaimOverflows(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [index, claimExpanded, current?.item.claim]);
 
   const doneCount = decisions.size;
   const doneInBatch = useCallback(
@@ -371,7 +392,11 @@ export function CatalogReview({
   const origin0 = queue[0]?.item.origin;
 
   return (
-    <div className="flex min-h-0 flex-1">
+    /* Viewport-magasságú keret: e NÉLKÜL az oldal nőne a tartalommal és a
+       döntés-hasáb elgörögne — a v2 fő ígérete, hogy SOHA nem görög el.
+       Nagyon alacsony ablaknál a jobb hasáb opciólistája görget belül,
+       a Megerősítés-láb akkor is látható marad. */
+    <div className="flex h-[calc(100vh-215px)] min-h-[430px] overflow-hidden rounded-shell border border-line bg-surface">
       {/* ══ BAL: köteg-sáv (összecsukható) ══ */}
       {navCollapsed ? (
         <div className="flex w-[44px] flex-shrink-0 flex-col items-center border-r border-neutral-200 bg-surface py-3">
@@ -648,12 +673,13 @@ export function CatalogReview({
                 {t("reviewClaimTitle")}
               </div>
               <div
+                ref={claimRef}
                 className="mt-2 max-w-[680px] text-[22px] font-bold leading-[1.4] tracking-[-0.02em] text-ink"
                 style={
-                  !claimExpanded && current.item.claim.length > CLAMP_CHARS
+                  !claimExpanded
                     ? {
                         display: "-webkit-box",
-                        WebkitLineClamp: 7,
+                        WebkitLineClamp: CLAIM_CLAMP_LINES,
                         WebkitBoxOrient: "vertical",
                         overflow: "hidden",
                       }
@@ -662,7 +688,7 @@ export function CatalogReview({
               >
                 {current.item.claim}
               </div>
-              {current.item.claim.length > CLAMP_CHARS && (
+              {(claimOverflows || claimExpanded) && (
                 <button
                   type="button"
                   onClick={() => setClaimExpanded((v) => !v)}
