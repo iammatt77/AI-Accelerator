@@ -291,9 +291,15 @@ export function CatalogAdmin({
       </div>
 
       {mode === "browse" && (
-        <>
-          {/* ── Szűrősor ── */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200 bg-surface px-5 py-2.5">
+        /* 17v2-fix: a böngészés-mód is VIEWPORT-MAGASSÁGÚ keretben él —
+           ugyanaz a mérték, mint a Felülvizsgálaton (215px felette a
+           fejléc+fülek azonos magasak, mindkét mód ugyanide, a fejléc alá
+           kerül). Enélkül a lap a lista hosszával nő, és a jobb oldali
+           olvasó-panel a lappal együtt görgetett — a szűrősor (fix) és a
+           javítás-napló sáv (fix) között csak a lista+panel görög belül. */
+        <div className="flex h-[calc(100vh-215px)] min-h-[430px] flex-col overflow-hidden">
+          {/* ── Szűrősor (fix) ── */}
+          <div className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-neutral-200 bg-surface px-5 py-2.5">
             <select
               value={filters.modality}
               onChange={(e) => setFilters((f) => ({ ...f, modality: e.target.value }))}
@@ -430,8 +436,8 @@ export function CatalogAdmin({
             relabelPending={pending}
           />
 
-          {/* Javítás-napló összegzés — a küszöb-hangolás iránya (4.2-d, változatlan) */}
-          <div className="border-t border-neutral-100 bg-neutral-50 px-5 py-2">
+          {/* Javítás-napló összegzés (fix) — a küszöb-hangolás iránya (4.2-d, változatlan) */}
+          <div className="flex-shrink-0 border-t border-neutral-100 bg-neutral-50 px-5 py-2">
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-ink-tertiary">
               {t("tuningTitle")}
             </span>
@@ -448,7 +454,7 @@ export function CatalogAdmin({
               </span>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {/* A felülvizsgálat sora BELÉPÉSKOR készül pillanatfelvételként (a
