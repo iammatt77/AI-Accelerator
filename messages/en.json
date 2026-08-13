@@ -2317,7 +2317,15 @@
     },
     "bulkOfferText": "This choice can be applied to the other {n} items in this batch from the same source — tick to apply to all.",
     "bulkApplyDone": "Bulk apply done — {n} items updated (logged per item).",
-    "bulkApplyPartialError": "{applied} items updated, {failed} failed: {message}"
+    "bulkApplyPartialError": "{applied} items updated, {failed} failed: {message}",
+    "staleTag": "STALE LABEL",
+    "staleTooltip": "The classification was made for different text than the item's current text — the text has been rewritten since labeling.",
+    "staleReaderTitle": "The classification is stale",
+    "staleReaderBody": "This classification was made for an EARLIER version of the item's text; the text has changed since. The labels remain visible, but the next labeling run will recompute them.",
+    "staleReviewNote": "This item's classification is stale — the text changed after labeling.",
+    "staleFilter": "stale label",
+    "staleNudge": "{n} items have a stale classification — their text changed after labeling.",
+    "runStaleIncluded": "Of these, {n} were re-labels (stale classification)."
   },
   "sourceMeta": {
     "kindLabel": "Source type",

@@ -546,6 +546,12 @@ export function CatalogReview({
                           <span
                             className={`block truncate text-[12.5px] leading-[1.4] ${isCur ? "font-bold text-ink" : "text-ink-secondary"}`}
                           >
+                            {/* 0020: elavult címke — ⟳ az ablak-sorban is */}
+                            {j.item.labelStale && (
+                              <span aria-hidden className="mr-1 text-gate-text" title={t("staleTooltip")}>
+                                ⟳
+                              </span>
+                            )}
                             {j.item.claim}
                           </span>
                           <span className="mt-0.5 block font-mono text-[9.5px] text-ink-tertiary">
@@ -669,6 +675,18 @@ export function CatalogReview({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+              {/* 0020: itt születik a döntés — ha a címke elavult, azt a
+                  fókusz-kártya tetején kell tudni, a szavazatok előtt. */}
+              {current.item.labelStale && (
+                <div className="mb-4 flex items-start gap-2 rounded-tile border border-tint-gate-border bg-tint-gate px-3.5 py-2.5">
+                  <span aria-hidden className="mt-px text-[12px] text-gate-text">
+                    ⟳
+                  </span>
+                  <span className="text-[12.5px] leading-[1.55] text-gate-text">
+                    <b>{t("staleReaderTitle")}</b> — {t("staleReviewNote")}
+                  </span>
+                </div>
+              )}
               <div className="font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-neutral-450">
                 {t("reviewClaimTitle")}
               </div>

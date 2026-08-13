@@ -2317,7 +2317,15 @@
     },
     "bulkOfferText": "A választás ugyanerre a forrásra alkalmazható a köteg többi {n} elemére is — pipáld be, ha mindre érvényes.",
     "bulkApplyDone": "Tömeges alkalmazás kész — {n} elem frissült (elemenként naplózva).",
-    "bulkApplyPartialError": "{applied} elem frissült, {failed} hibával: {message}"
+    "bulkApplyPartialError": "{applied} elem frissült, {failed} hibával: {message}",
+    "staleTag": "ELAVULT CÍMKE",
+    "staleTooltip": "A besorolás más szövegre készült, mint a cédula mai szövege — a szöveget a címkézés óta átírták.",
+    "staleReaderTitle": "A besorolás elavult",
+    "staleReaderBody": "Ez a besorolás a cédula KORÁBBI szövegére készült; a szöveget azóta átírták. A címkék láthatók maradnak, de a következő címkézés-futtatás újraszámolja őket.",
+    "staleReviewNote": "Ennek az elemnek a besorolása elavult — a szöveg a címkézés óta változott.",
+    "staleFilter": "elavult címke",
+    "staleNudge": "{n} elem besorolása elavult — a szövegük a címkézés óta változott.",
+    "runStaleIncluded": "Ebből {n} újracímkézés (elavult besorolás)."
   },
   "sourceMeta": {
     "kindLabel": "Forrás típusa",

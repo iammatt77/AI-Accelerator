@@ -76,6 +76,10 @@ export interface CatalogAdminItem {
     evidenceKind: string;
   } | null;
   signal: KnowledgeLabelSignalRow | null;
+  /** 0020: a címke MÁS SZÖVEGRE készült, mint a cédula mai szövege.
+   *  DERIVÁLT (a szerver számítja lenyomat-összevetésből, mint a
+   *  render_stale-t) — nincs perzisztált flag. A régi címke LÁTHATÓ marad. */
+  labelStale: boolean;
 }
 
 export interface StakeholderOption {
@@ -165,6 +169,23 @@ export function DoubtTag({ dim, extra = 0 }: { dim: LabelDimension; extra?: numb
     <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-[3px] border border-tint-gate-border bg-tint-gate px-2 py-px font-mono text-[10px] font-bold tracking-[0.05em] text-gate-text">
       {t("doubtfulTag", { dim: t(`dim.${dim}`).toUpperCase() })}
       {extra > 0 && ` +${extra}`}
+    </span>
+  );
+}
+
+/** Elavult-címke jelvény (0020): a besorolás más szövegre készült, mint a
+ *  cédula mai szövege. A meglévő elavulás-nyelvet viszi tovább (⟳ glif +
+ *  amber pill, mint a StaleFlag) — de NINCS „Ellenőrizve" akciója: ezt nem
+ *  nyugtázni kell, hanem újracímkézni (a köteg-futtatás beveszi). */
+export function StaleLabelTag() {
+  const t = useTranslations("catalog");
+  return (
+    <span
+      title={t("staleTooltip")}
+      className="inline-flex flex-shrink-0 items-center gap-1 rounded-[3px] border border-tint-gate-border bg-tint-gate px-1.5 py-px font-mono text-[10px] font-bold tracking-[0.05em] text-gate-text"
+    >
+      <span aria-hidden>⟳</span>
+      {t("staleTag")}
     </span>
   );
 }

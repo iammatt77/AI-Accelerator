@@ -96,6 +96,9 @@ export function CatalogAdmin({
     startTransition(async () => {
       let doneSoFar = 0;
       let doubtfulSoFar = 0;
+      // 0020: az ELSŐ köteg mondja meg, hány elcsúszott elem volt a
+      // futtatandók közt (a későbbi kötegeknél ez már fogy).
+      let staleAtStart: number | null = null;
       let failedSoFar = 0;
       let total: number | null = null;
       let remaining = 0;
@@ -112,6 +115,7 @@ export function CatalogAdmin({
           break;
         }
         if (total === null) total = res.totalTodo;
+        if (staleAtStart === null) staleAtStart = res.staleTodo;
         doneSoFar += res.done;
         doubtfulSoFar += res.doubtful;
         failedSoFar += res.failed + res.embeddingFailed;
@@ -136,7 +140,13 @@ export function CatalogAdmin({
           notice: t("runInterrupted", { done: doneSoFar, total: total ?? doneSoFar }),
         });
       } else {
-        setRunFlash({ ok: true, error: null, notice: t("runDone", { done: doneSoFar, doubtful: doubtfulSoFar }) });
+        const base = t("runDone", { done: doneSoFar, doubtful: doubtfulSoFar });
+        // Őszinte jelentés: ha volt köztük újracímkézés (elavult besorolás),
+        // az nem ugyanaz, mint egy első címkézés — mondjuk ki.
+        const withStale = staleAtStart
+          ? `${base} ${t("runStaleIncluded", { n: staleAtStart })}`
+          : base;
+        setRunFlash({ ok: true, error: null, notice: withStale });
       }
     });
   };
@@ -389,6 +399,7 @@ export function CatalogAdmin({
               <option value="doubtful">{t("statusDoubtful")}</option>
               <option value="confident">{t("statusConfident")}</option>
               <option value="unlabeled">{t("statusUnlabeled")}</option>
+              <option value="stale">{t("staleFilter")}</option>
             </select>
             <div className="ml-auto flex items-center gap-2.5">
               <span className="font-mono text-[11px] text-ink-tertiary">

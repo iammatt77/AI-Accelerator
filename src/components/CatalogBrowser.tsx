@@ -14,6 +14,7 @@ import {
 import {
   DoubtTag,
   HumanTag,
+  StaleLabelTag,
   LabelEditForm,
   MODALITY_GLYPH,
   ModalityChip,
@@ -42,7 +43,7 @@ export interface BrowseFilters {
   org: string;
   lang: string;
   validity: "" | "has" | "none";
-  status: "" | "doubtful" | "confident" | "unlabeled";
+  status: "" | "doubtful" | "confident" | "unlabeled" | "stale";
 }
 
 export const EMPTY_FILTERS: BrowseFilters = {
@@ -119,7 +120,9 @@ export function filterPredicates(
           ? !!i.signal?.doubtful
           : filters.status === "confident"
             ? !!i.signal && !i.signal.doubtful
-            : !i.signal,
+            : filters.status === "stale"
+              ? i.labelStale
+              : !i.signal,
     });
   return preds;
 }
@@ -245,6 +248,7 @@ function BrowseRow({
             </button>
           )}
           <span className="ml-auto flex flex-shrink-0 items-center gap-2">
+            {item.labelStale && <StaleLabelTag />}
             {human && !doubt && <HumanTag />}
             {doubt && <DoubtTag dim={doubt.dim} extra={doubt.extra} />}
           </span>
@@ -327,6 +331,7 @@ function ReaderPanel({
         <div className="text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-ink">{item.claim}</div>
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <ModalityChip modality={m?.modality ?? null} />
+          {item.labelStale && <StaleLabelTag />}
           {doubt ? (
             <DoubtTag dim={doubt.dim} extra={doubt.extra} />
           ) : human ? (
@@ -338,6 +343,18 @@ function ReaderPanel({
           ) : null}
         </div>
         {human && <div className="mt-1.5 text-[11.5px] text-ink-tertiary">{t("readerHumanNote")}</div>}
+        {/* 0020: a régi címke LÁTHATÓ marad — a magyarázat mondja meg, hogy
+            elavult, és mi oldja fel (a következő címkézés-futtatás). */}
+        {item.labelStale && (
+          <div className="mt-2.5 rounded-tile border border-tint-gate-border bg-tint-gate px-3 py-2">
+            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-gate-text">
+              ⟳ {t("staleReaderTitle")}
+            </div>
+            <div className="mt-1 text-[12px] leading-[1.55] text-gate-text">
+              {t("staleReaderBody")}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Eredet */}
@@ -556,6 +573,7 @@ export function CatalogBrowser({
   const suppression = useMemo(() => majorityValues(filtered), [filtered]);
   const groups = useMemo(() => groupByScope(filtered), [filtered]);
   const doubtfulCount = filtered.filter((i) => i.signal?.doubtful).length;
+  const staleCount = filtered.filter((i) => i.labelStale).length;
   const selected = filtered.find((i) => i.key === selectedKey) ?? null;
   const selectedIndex = selected ? filtered.indexOf(selected) : -1;
 
@@ -572,7 +590,9 @@ export function CatalogBrowser({
         ? t("statusDoubtful")
         : filters.status === "confident"
           ? t("statusConfident")
-          : t("statusUnlabeled"),
+          : filters.status === "stale"
+            ? t("staleFilter")
+            : t("statusUnlabeled"),
   };
 
   const toggleGroup = (key: string) =>
@@ -604,6 +624,14 @@ export function CatalogBrowser({
             >
               {t("reviewNudgeCta")} ›
             </button>
+          </div>
+        )}
+        {/* 0020: elavult besorolások — a feloldás nem felülvizsgálat, hanem
+            a címkézés-futtatás (az az elcsúszottakat magától beveszi). */}
+        {staleCount > 0 && (
+          <div className="flex items-center gap-2.5 border-b border-tint-gate-border bg-tint-gate px-4 py-2">
+            <span aria-hidden className="text-[12px] text-gate-text">⟳</span>
+            <span className="text-[12.5px] text-gate-text">{t("staleNudge", { n: staleCount })}</span>
           </div>
         )}
 

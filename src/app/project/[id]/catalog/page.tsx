@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { CatalogAdmin, type CatalogAdminItem } from "@/components/CatalogAdmin";
 import { anchorKey } from "@/lib/knowledge/anchor";
-import { summarizeCorrections } from "@/lib/knowledge/labeling";
+import { isLabelStale, summarizeCorrections } from "@/lib/knowledge/labeling";
 import { claimOf, claimUsesExcerpt, resolveOrigin } from "@/lib/knowledge/browse";
 import { isKnowledgeExemptBlockType, isKnowledgeExemptField } from "@/lib/artifacts/config";
 import type {
@@ -115,6 +115,9 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
       const key = anchorKey(anchor);
       const meta = metaByKey.get(key) ?? null;
       const signal = sigByKey.get(key) ?? null;
+      // A cédula-szöveg AZONOS azzal, amit a címkéző motor kap (cedulaText a
+      // catalog-actions-ben) — az elcsúszás-összevetés csak így értelmes.
+      const cedulaText = [row.title, row.excerpt ?? ""].filter(Boolean).join(" — ");
       return {
         key,
         anchor,
@@ -122,7 +125,10 @@ export default async function CatalogPage({ params }: { params: Promise<{ id: st
         excerpt: row.excerpt,
         phase: row.phase,
         blockType: row.block_type,
-        cedulaText: [row.title, row.excerpt ?? ""].filter(Boolean).join(" — "),
+        cedulaText,
+        // DERIVÁLT elcsúszás (0020): szerveroldalon számolva, mert a
+        // lenyomat node:crypto-t használ; a kliens kész booleant kap.
+        labelStale: isLabelStale(signal, cedulaText),
         claim: claimOf(row),
         claimFromExcerpt: claimUsesExcerpt(row),
         sourceInputId: row.source_input_ids?.[0] ?? null,
