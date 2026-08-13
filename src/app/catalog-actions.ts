@@ -16,6 +16,7 @@ import { isKnowledgeExemptBlockType, isKnowledgeExemptField } from "@/lib/artifa
 import { anchorKey, type KnowledgeAnchor } from "@/lib/knowledge/anchor";
 import {
   applyLabelCorrection,
+  isLabelStale,
   labelOneItem,
   type CorrectionPatch,
   type SourceMeta,
@@ -132,6 +133,8 @@ export interface LabelBatchResult {
   remaining: number;
   /** Még címkézetlen elemek e köteg ELŐTT (a teljes hátralévő munka). */
   totalTodo: number;
+  /** Ebből ELCSÚSZOTT (már volt címkéjük, de más szövegre készült) — 0020. */
+  staleTodo: number;
   firstError: string | null;
   /** Az e kötegben hibázott elemek horgonyai — a hívó a KÖVETKEZŐ hívásba
    *  skipAnchorKeys-ként adja vissza, hogy egy tartósan hibázó elem ne
@@ -174,17 +177,29 @@ export async function labelCatalogBatchAction(
   const rows = ((catData ?? []) as KnowledgeCatalogRow[]).filter(
     (r) => !isExemptRow(r, artifactTypeById),
   );
-  const labeled = new Set(
-    ((sigData ?? []) as KnowledgeLabelSignalRow[]).map((s) =>
+  const signalByKey = new Map(
+    ((sigData ?? []) as KnowledgeLabelSignalRow[]).map((s) => [
       anchorKey({
         block_type: s.block_type,
         block_id: s.block_id,
         artifact_id: s.artifact_id,
         field_key: s.field_key,
       }),
-    ),
+      s,
+    ]),
   );
-  const todo = rows.filter((r) => !labeled.has(anchorKey(anchorOfCatalogRow(r))));
+  // Futtatandó: a CÍMKÉZETLEN elemek (NF2 fokozatosság, változatlan) ÉS az
+  // ELCSÚSZOTTAK (0020) — utóbbiak címkéje más szövegre készült, mint a
+  // cédula mai szövege, ezért újra kell számolni. A lista minden hívásnál
+  // elölről épül, így a megszakadás utáni folytatás változatlanul működik.
+  const todo = rows.filter((r) => {
+    const sig = signalByKey.get(anchorKey(anchorOfCatalogRow(r)));
+    if (!sig) return true;
+    return isLabelStale(sig, cedulaText(r));
+  });
+  const staleTodo = todo.filter((r) =>
+    signalByKey.has(anchorKey(anchorOfCatalogRow(r))),
+  ).length;
   const totalTodo = todo.length;
   const empty: LabelBatchResult = {
     processed: 0,
@@ -194,6 +209,7 @@ export async function labelCatalogBatchAction(
     embeddingFailed: 0,
     remaining: totalTodo,
     totalTodo,
+    staleTodo,
     firstError: null,
     failedAnchors: [],
   };
@@ -253,6 +269,7 @@ export async function labelCatalogBatchAction(
     // csökkentik a hátralévőt (a skip-lista tartja kordában a hibázottakat).
     remaining: totalTodo - done,
     totalTodo,
+    staleTodo,
     firstError,
     failedAnchors,
   };

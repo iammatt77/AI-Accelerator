@@ -9,7 +9,12 @@ import type {
   SourceDocKind,
   SourceOrgLevel,
 } from "@/lib/db/types";
-import { anchorColumns, isValidAnchor, type KnowledgeAnchor } from "@/lib/knowledge/anchor";
+import {
+  anchorColumns,
+  contentFingerprint,
+  isValidAnchor,
+  type KnowledgeAnchor,
+} from "@/lib/knowledge/anchor";
 import { generateEmbedding, setMetadata, type Result } from "@/lib/knowledge/store";
 import { classifyKnowledgeItem, type KnowledgeLabelSample } from "@/lib/llm";
 import { evidencePriorOf, modalityPriorOf } from "@/lib/sources/meta";
@@ -380,6 +385,9 @@ export async function labelOneItem(
     signals,
     doubtful,
     doubtful_dimensions: doubtfulDimensions,
+    // 0020: MIRE készült a címke — az elcsúszás ebből derivált (isLabelStale).
+    // Ugyanaz a lenyomat-forma, mint a sticky dismissalnál (F8).
+    content_fingerprint: contentFingerprint(cedula),
     labeled_at: now,
     updated_at: now,
   };
@@ -427,6 +435,30 @@ function tally(labels: string[]): {
   let leader = labels[0];
   for (const [l, n] of Object.entries(votes)) if (n > (votes[leader] ?? 0)) leader = l;
   return { votes, leader, fraction: (votes[leader] ?? 0) / labels.length };
+}
+
+// ── Címke-elcsúszás (0020) — DERIVÁLT, nem perzisztált ───────
+// A cédula horgonya stabil marad a szöveg átírásakor, ezért a régi címke
+// némán rátapadna az új szövegre. Az elcsúszás ugyanúgy ÖSSZEHASONLÍTÁSBÓL
+// adódik, mint a render_stale — nincs tárolt flag, nincs mit karbantartani.
+//
+// GRACEFUL a régi sorokra: `content_fingerprint IS NULL` = „nem tudjuk,
+// mire készült", ami NEM elcsúszás. Így a lenyomat bevezetése visszamenőleg
+// egyetlen elemet sem jelöl elavultnak; a lenyomat a következő
+// címkézéskor/újracímkézéskor magától feltöltődik.
+//
+// SZERVEROLDALI: a contentFingerprint node:crypto-t használ — a hívók
+// (katalógus-oldal, köteg-akció) szerver-környezetben futnak, és a KÉSZ
+// boolean-t adják tovább a kliens-komponenseknek.
+
+/** Elcsúszott-e a címke: más szövegre készült, mint a cédula mai szövege. */
+export function isLabelStale(
+  signal: Pick<KnowledgeLabelSignalRow, "content_fingerprint"> | null | undefined,
+  currentText: string,
+): boolean {
+  const fp = signal?.content_fingerprint;
+  if (!fp) return false; // nincs címke, vagy ismeretlen lenyomat → NEM elcsúszott
+  return fp !== contentFingerprint(currentText);
 }
 
 // ── 4.2-d: kézi javítás + napló ──────────────────────────────

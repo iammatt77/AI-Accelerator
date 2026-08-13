@@ -718,6 +718,10 @@ export interface KnowledgeLabelSignalRow {
   signals: Partial<Record<LabelDimension, DimensionSignal>>;
   doubtful: boolean;
   doubtful_dimensions: string[];
+  /** 0020: sha256-hex a cédula-szövegről, AMIRE a címke készült. Az
+   *  elcsúszás ebből DERIVÁLT (l. isLabelStale) — nincs perzisztált flag.
+   *  NULL = ismeretlen (a lenyomat bevezetése előtti sor), NEM elcsúszott. */
+  content_fingerprint: string | null;
   labeled_at: string;
   updated_at: string;
 }
