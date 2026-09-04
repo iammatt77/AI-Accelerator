@@ -30,6 +30,20 @@ Az „AI Consulting rendszer": egyfelhasználós belső munkakörnyezet, amely e
 - **Nincs háttérfutás / scope-bővítés:** a csomag scope-ját tartsd; új ötlet → parkoló-lista, nem a csomagba.
 - **Titkok:** `.env.local` (soha commitba, gitignore); a kulcsok listája `.env.example`-ben.
 
+## Döntési határ — mit nem dönthetsz el önállóan
+
+Az alábbiak specifikációs döntések. Ha egy feladat során ezek bármelyikéhez érsz, és a csomag vagy a hivatkozott spec nem ad rá egyértelmű választ: ÁLLJ MEG és kérdezz. Ne találgass, ne vezesd le a meglévő kódból, ne válaszd a "logikusnak tűnő" alapértelmezést.
+
+- üzleti szabály, küszöbérték, prioritási sorrend
+- adatmodell-döntés (új mező, tábla, migráció, meglévő entitás alakjának változása)
+- hibakezelési viselkedés, amit a felhasználó lát
+- HITL jóváhagyási kapu helye
+- scope-értelmezés (mi tartozik a feladathoz és mi nem)
+
+Amit viszont eldönthetsz: az implementáció konkrét formája a megkötéseken belül, a meglévő kódkonvenciókhoz igazodás, a lokális elnevezések és struktúra.
+
+Ha menet közben olyan feltételezésre kényszerülsz, amit a csomag nem fed le, azt ne oldd meg a kódban: jelezd, és a döntés a specbe kerül vissza.
+
 ## Otthonok (hol mi van)
 
 - **Konvenciók / keret:** project knowledge (Pool) + ez a CLAUDE.md
